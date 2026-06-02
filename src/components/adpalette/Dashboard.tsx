@@ -4,8 +4,24 @@ import { useTheme } from "./theme";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
-  TrendingUp, Clock, Activity,
+  TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
 } from "lucide-react";
+
+const DATE_RANGES = [
+  { label: "Last 7 Days", locked: false },
+  { label: "Last 30 Days", locked: false },
+  { label: "Last 3 Months", locked: true },
+  { label: "Last 6 Months", locked: true },
+  { label: "Last 12 Months", locked: true },
+  { label: "Last 24 Months", locked: true },
+];
+
+const VIDEO_FEED = [
+  { brand: "Sephora", hook: "UGC unboxing — 'first impression' format", channel: "TikTok", days: 12, length: "0:18" },
+  { brand: "Lululemon", hook: "Slow-mo product hero · minimalist b-roll", channel: "Meta", days: 47, length: "0:30" },
+  { brand: "Glossier", hook: "Founder-led story · direct address", channel: "YouTube", days: 9, length: "0:45" },
+  { brand: "Mecca", hook: "Tutorial split-screen · before/after", channel: "TikTok", days: 21, length: "0:22" },
+];
 
 type Competitor = {
   name: string;
@@ -34,6 +50,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [calibOpen, setCalibOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
   const [chatInput, setChatInput] = useState("");
+  const [dateRange, setDateRange] = useState("Last 30 Days");
+  const [dateMenuOpen, setDateMenuOpen] = useState(false);
+  const [upsellOpen, setUpsellOpen] = useState(false);
+  const [videoFilter, setVideoFilter] = useState<"all" | "short" | "long">("all");
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
   ]);
@@ -154,6 +174,37 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={() => setDateMenuOpen((o) => !o)}
+                className="btn-flat"
+              >
+                <Calendar size={14} /> {dateRange} <ChevronDown size={12} />
+              </button>
+              {dateMenuOpen && (
+                <div className="absolute right-0 mt-2 w-60 card-flat z-40 overflow-hidden">
+                  <div className="px-3 py-2 border-b-2 border-ink mono text-[10px] uppercase font-bold bg-secondary">Date Range</div>
+                  {DATE_RANGES.map((d) => (
+                    <button
+                      key={d.label}
+                      onClick={() => {
+                        setDateMenuOpen(false);
+                        if (d.locked) {
+                          setUpsellOpen(true);
+                        } else {
+                          setDateRange(d.label);
+                          toast(`Range set to ${d.label}`);
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-secondary border-b border-ink/20 last:border-0 ${dateRange === d.label ? "bg-primary" : ""}`}
+                    >
+                      <span>{d.label}</span>
+                      {d.locked && <Lock size={12} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-secondary">LIVE · synced 2m ago</span>
             <button onClick={toggle} className="btn-flat">
               <Palette size={14} /> {theme === "dark" ? "Warm Canvas Mode" : "Dark Workstation Mode"}
@@ -269,6 +320,58 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
 
+
+          {/* Continuous Inspiration Loop — video creative feed */}
+          <div className="card-flat overflow-hidden">
+            <div className="px-4 py-3 border-b-2 border-ink bg-secondary">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <Film size={14} /> The Continuous Inspiration Loop
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Filter by ad flight length to instantly inspect which video hooks are actively converting market share across YouTube, Meta, and TikTok.
+              </p>
+            </div>
+            <div className="px-4 py-2 border-b-2 border-ink flex items-center gap-2 bg-paper">
+              <span className="mono text-[10px] uppercase font-bold mr-1">Flight length:</span>
+              {([
+                { k: "all", label: "All flights" },
+                { k: "short", label: "< 14 days" },
+                { k: "long", label: "14+ days" },
+              ] as const).map((f) => (
+                <button
+                  key={f.k}
+                  onClick={() => setVideoFilter(f.k)}
+                  className={`btn-flat text-[11px] px-2 py-1 ${videoFilter === f.k ? "btn-primary" : ""}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-0">
+              {VIDEO_FEED
+                .filter((v) =>
+                  videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14
+                )
+                .map((v) => (
+                  <div key={v.brand} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
+                    <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative">
+                      <Play size={22} />
+                      <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-sm">{v.brand}</span>
+                      <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{v.channel}</span>
+                    </div>
+                    <p className="text-xs leading-snug">{v.hook}</p>
+                    <div className="flex items-center justify-between mono text-[10px] text-muted-foreground pt-1 border-t border-ink/30">
+                      <span>Flight: {v.days}d</span>
+                      <button onClick={() => toast(`${v.brand} · creative opened`)} className="underline font-semibold">Inspect →</button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+
           {/* 3-Second Rule Insight Cards */}
           <div>
             <div className="mono text-[10px] text-muted-foreground mb-2">THE 3-SECOND RULE / strategic conclusions</div>
@@ -306,8 +409,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="w-[420px] bg-paper border-l-2 border-ink h-full flex flex-col">
             <div className="px-5 py-4 border-b-2 border-ink flex items-center justify-between">
               <div>
-                <div className="font-bold">Calibrate spend model</div>
-                <div className="mono text-[10px] text-muted-foreground">Override indexed estimates · channel % stays fixed</div>
+                <div className="font-bold">Proprietary Media Mix Calibration Engine</div>
+                <div className="text-[11px] text-muted-foreground leading-snug mt-0.5 max-w-[300px]">Drop in known market intelligence to reverse-engineer and perfectly align competitor media distributions.</div>
               </div>
               <button onClick={() => setCalibOpen(false)} className="btn-flat text-xs px-2 py-1"><X size={12} /></button>
             </div>
@@ -333,6 +436,49 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div className="p-4 border-t-2 border-ink flex gap-2">
               <button onClick={() => { setRows(INITIAL); toast("Reset to baseline values"); }} className="btn-flat flex-1">Reset</button>
               <button onClick={() => { setCalibOpen(false); toast.success("Spend model calibrated"); }} className="btn-flat btn-primary flex-1">Save model</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 24-Month Historical Playbook Upsell Modal */}
+      {upsellOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-ink/50" onClick={() => setUpsellOpen(false)}>
+          <div
+            className="card-flat max-w-lg w-full bg-canvas shadow-flat overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3 border-b-2 border-ink bg-ink text-paper flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold">
+                <Lock size={14} /> Locked · Historical Range
+              </div>
+              <button onClick={() => setUpsellOpen(false)} className="hover:opacity-70"><X size={14} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="mono text-[10px] uppercase font-bold px-2 py-1 inline-block border-2 border-ink rounded-[3px] bg-primary">
+                Backtrack Engine · Add-on
+              </div>
+              <h2 className="text-2xl font-bold leading-tight">Unlock 24-Month Historical Playbook</h2>
+              <p className="text-sm leading-relaxed">
+                Activate the AdPalette Backtrack Engine. Our system will query cross-channel ad network archives to pull, compile, and future-save every advertising placement this brand has published past and present across Search, Video, and Programmatic networks.
+              </p>
+              <div className="card-flat-sm p-3 grid grid-cols-3 gap-2 mono text-[10px] uppercase font-bold text-center bg-paper">
+                <div>Search archives</div>
+                <div>Video archives</div>
+                <div>Programmatic</div>
+              </div>
+              <button
+                onClick={() => { setUpsellOpen(false); toast.success("Backtrack Engine activated · $2,499 charged via Stripe"); }}
+                className="w-full btn-flat btn-primary justify-center py-3 font-bold"
+              >
+                [ Activate Backtrack Engine — $2,499 via Stripe ]
+              </button>
+              <button
+                onClick={() => { setUpsellOpen(false); toast("Workspace upgrade flow opened"); }}
+                className="w-full text-center text-xs underline underline-offset-2 font-semibold"
+              >
+                Or upgrade permanently to the Network Hub workspace.
+              </button>
             </div>
           </div>
         </div>
