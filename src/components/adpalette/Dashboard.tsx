@@ -409,8 +409,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="w-[420px] bg-paper border-l-2 border-ink h-full flex flex-col">
             <div className="px-5 py-4 border-b-2 border-ink flex items-center justify-between">
               <div>
-                <div className="font-bold">Calibrate spend model</div>
-                <div className="mono text-[10px] text-muted-foreground">Override indexed estimates · channel % stays fixed</div>
+                <div className="font-bold">Proprietary Media Mix Calibration Engine</div>
+                <div className="text-[11px] text-muted-foreground leading-snug mt-0.5 max-w-[300px]">Drop in known market intelligence to reverse-engineer and perfectly align competitor media distributions.</div>
               </div>
               <button onClick={() => setCalibOpen(false)} className="btn-flat text-xs px-2 py-1"><X size={12} /></button>
             </div>
