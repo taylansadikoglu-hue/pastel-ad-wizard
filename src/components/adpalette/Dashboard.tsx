@@ -174,6 +174,37 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={() => setDateMenuOpen((o) => !o)}
+                className="btn-flat"
+              >
+                <Calendar size={14} /> {dateRange} <ChevronDown size={12} />
+              </button>
+              {dateMenuOpen && (
+                <div className="absolute right-0 mt-2 w-60 card-flat z-40 overflow-hidden">
+                  <div className="px-3 py-2 border-b-2 border-ink mono text-[10px] uppercase font-bold bg-secondary">Date Range</div>
+                  {DATE_RANGES.map((d) => (
+                    <button
+                      key={d.label}
+                      onClick={() => {
+                        setDateMenuOpen(false);
+                        if (d.locked) {
+                          setUpsellOpen(true);
+                        } else {
+                          setDateRange(d.label);
+                          toast(`Range set to ${d.label}`);
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-secondary border-b border-ink/20 last:border-0 ${dateRange === d.label ? "bg-primary" : ""}`}
+                    >
+                      <span>{d.label}</span>
+                      {d.locked && <Lock size={12} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-secondary">LIVE · synced 2m ago</span>
             <button onClick={toggle} className="btn-flat">
               <Palette size={14} /> {theme === "dark" ? "Warm Canvas Mode" : "Dark Workstation Mode"}
