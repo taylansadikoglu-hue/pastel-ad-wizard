@@ -247,7 +247,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               </div>
               {visible.length === 0 ? (
                 <div className="h-64 grid place-items-center mono text-xs text-muted-foreground border-2 border-dashed border-ink rounded-[4px]">
-                  Select at least one competitor
+                  Select at least one advertiser
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -259,7 +259,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                       </div>
                       <div className="flex h-7 border-2 border-ink rounded-[3px] overflow-hidden">
                         <div style={{ width: `${r.meta}%`, background: colors[0] }} className="border-r-2 border-ink grid place-items-center mono text-[10px] font-bold">{r.meta}</div>
-                        <div style={{ width: `${r.google}%`, background: colors[1], color: theme === "pastel" ? "var(--ink)" : "#fff" }} className="border-r-2 border-ink grid place-items-center mono text-[10px] font-bold">{r.google}</div>
+                        <div style={{ width: `${r.google}%`, background: colors[1], color: theme === "dark" ? "var(--ink)" : "#fff" }} className="border-r-2 border-ink grid place-items-center mono text-[10px] font-bold">{r.google}</div>
                         <div style={{ width: `${r.programmatic}%`, background: colors[2] }} className="grid place-items-center mono text-[10px] font-bold">{r.programmatic}</div>
                       </div>
                     </div>
