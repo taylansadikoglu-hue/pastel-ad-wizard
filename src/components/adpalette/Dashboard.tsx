@@ -81,7 +81,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div className="w-8 h-8 rounded-[3px] border-2 border-ink bg-secondary grid place-items-center mono text-xs font-bold">AC</div>
             <div className="leading-tight">
               <div className="text-sm font-semibold">Ava Chen</div>
-              <div className="mono text-[10px] text-muted-foreground">Growth · 14 rivals</div>
+              <div className="mono text-[10px] text-muted-foreground">Growth · 14 advertisers</div>
             </div>
           </div>
         </div>
@@ -90,7 +90,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           {[
             { icon: Home, label: "Workspace", active: true },
             { icon: Layers, label: "Creative library" },
-            { icon: Target, label: "Rivals" },
+            { icon: Target, label: "Advertisers" },
             { icon: TrendingUp, label: "Benchmarks" },
             { icon: Settings, label: "Settings" },
           ].map((it) => (
