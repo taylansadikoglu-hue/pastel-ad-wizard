@@ -35,11 +35,11 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [chatOpen, setChatOpen] = useState(true);
   const [chatInput, setChatInput] = useState("");
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
-    { role: "ai", text: "Hi Ava — ask me anything about the tracked rivals' creative." },
+    { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
   ]);
 
   const visible = rows.filter((r) => selected[r.name]);
-  const colors = theme === "pastel" ? CHANNEL_COLORS_PASTEL : CHANNEL_COLORS_STD;
+  const colors = theme === "dark" ? CHANNEL_COLORS_PASTEL : CHANNEL_COLORS_STD;
   const totalSpend = useMemo(() => visible.reduce((a, b) => a + b.spend, 0), [visible]);
 
   const toggleRow = (n: string) => setSelected((s) => ({ ...s, [n]: !s[n] }));
