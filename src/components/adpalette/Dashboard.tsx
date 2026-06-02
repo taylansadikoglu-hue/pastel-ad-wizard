@@ -307,7 +307,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div className="px-5 py-4 border-b-2 border-ink flex items-center justify-between">
               <div>
                 <div className="font-bold">Calibrate spend model</div>
-                <div className="mono text-[10px] text-muted-foreground">Override scraped estimates · channel % stays fixed</div>
+                <div className="mono text-[10px] text-muted-foreground">Override indexed estimates · channel % stays fixed</div>
               </div>
               <button onClick={() => setCalibOpen(false)} className="btn-flat text-xs px-2 py-1"><X size={12} /></button>
             </div>
