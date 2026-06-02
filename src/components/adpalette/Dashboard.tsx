@@ -440,6 +440,49 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         </div>
       )}
+
+      {/* 24-Month Historical Playbook Upsell Modal */}
+      {upsellOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-ink/50" onClick={() => setUpsellOpen(false)}>
+          <div
+            className="card-flat max-w-lg w-full bg-canvas shadow-flat overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-3 border-b-2 border-ink bg-ink text-paper flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold">
+                <Lock size={14} /> Locked · Historical Range
+              </div>
+              <button onClick={() => setUpsellOpen(false)} className="hover:opacity-70"><X size={14} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="mono text-[10px] uppercase font-bold px-2 py-1 inline-block border-2 border-ink rounded-[3px] bg-primary">
+                Backtrack Engine · Add-on
+              </div>
+              <h2 className="text-2xl font-bold leading-tight">Unlock 24-Month Historical Playbook</h2>
+              <p className="text-sm leading-relaxed">
+                Activate the AdPalette Backtrack Engine. Our system will query cross-channel ad network archives to pull, compile, and future-save every advertising placement this brand has published past and present across Search, Video, and Programmatic networks.
+              </p>
+              <div className="card-flat-sm p-3 grid grid-cols-3 gap-2 mono text-[10px] uppercase font-bold text-center bg-paper">
+                <div>Search archives</div>
+                <div>Video archives</div>
+                <div>Programmatic</div>
+              </div>
+              <button
+                onClick={() => { setUpsellOpen(false); toast.success("Backtrack Engine activated · $2,499 charged via Stripe"); }}
+                className="w-full btn-flat btn-primary justify-center py-3 font-bold"
+              >
+                [ Activate Backtrack Engine — $2,499 via Stripe ]
+              </button>
+              <button
+                onClick={() => { setUpsellOpen(false); toast("Workspace upgrade flow opened"); }}
+                className="w-full text-center text-xs underline underline-offset-2 font-semibold"
+              >
+                Or upgrade permanently to the Network Hub workspace.
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
