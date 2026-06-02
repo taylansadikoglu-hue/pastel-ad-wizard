@@ -331,7 +331,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               ))}
             </div>
             <div className="p-4 border-t-2 border-ink flex gap-2">
-              <button onClick={() => { setRows(INITIAL); toast("Reset to scraped values"); }} className="btn-flat flex-1">Reset</button>
+              <button onClick={() => { setRows(INITIAL); toast("Reset to baseline values"); }} className="btn-flat flex-1">Reset</button>
               <button onClick={() => { setCalibOpen(false); toast.success("Spend model calibrated"); }} className="btn-flat btn-primary flex-1">Save model</button>
             </div>
           </div>
