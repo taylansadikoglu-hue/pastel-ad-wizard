@@ -369,4 +369,4 @@ function StepSync({ progress }: { progress: number }) {
   );
 }
 
-@media (prefers-reduced-motion: no-preference) {}
+
