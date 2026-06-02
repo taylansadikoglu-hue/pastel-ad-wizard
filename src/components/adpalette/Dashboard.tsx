@@ -167,7 +167,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div>
               <div className="mono text-[10px] text-muted-foreground">WORKSPACE / MEDIA MIX</div>
               <h1 className="text-2xl font-bold mt-1">Media mix & share of voice matrix — beauty & activewear niche</h1>
-              <p className="text-sm text-muted-foreground mt-1">Channel allocation pulled from {visible.length} of {rows.length} tracked rivals. Recalibrate any total below.</p>
+              <p className="text-sm text-muted-foreground mt-1">Channel allocation pulled from {visible.length} of {rows.length} tracked advertisers. Recalibrate any total below.</p>
             </div>
             <div className="flex gap-2">
               <button className="btn-flat" onClick={() => toast.success("Pitch PDF queued · check downloads in 12s")}>
