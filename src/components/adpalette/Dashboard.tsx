@@ -186,7 +186,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
             <div className="card-flat overflow-hidden">
               <div className="px-4 py-3 border-b-2 border-ink flex items-center justify-between">
-                <div className="font-bold text-sm">Competitor matrix</div>
+                <div className="font-bold text-sm">Advertiser matrix</div>
                 <button onClick={() => setCalibOpen(true)} className="btn-flat text-xs px-2 py-1">
                   <Sliders size={12} /> Calibrate spend model
                 </button>
@@ -195,7 +195,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 <table className="w-full text-sm">
                   <thead className="border-b-2 border-ink bg-secondary">
                     <tr className="text-left">
-                      {["", "Competitor", "Est. monthly spend", "Meta %", "Google %", "Programmatic %", "Primary"].map((h) => (
+                      {["", "Advertiser", "Est. monthly spend", "Meta %", "Google %", "Programmatic %", "Primary"].map((h) => (
                         <th key={h} className="px-3 py-2 mono text-[10px] uppercase">{h}</th>
                       ))}
                     </tr>
