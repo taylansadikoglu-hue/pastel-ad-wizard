@@ -119,8 +119,8 @@ function Field({ label, children, hint }: { label: string; children: ReactNode; 
   );
 }
 
-type ReactNode = React.ReactNode;
-import type * as React from "react";
+
+
 
 function StepSignup({ data, setData }: any) {
   return (
