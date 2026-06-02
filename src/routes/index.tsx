@@ -1,29 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { ThemeProvider } from "@/components/adpalette/theme";
+import { OnboardingWizard } from "@/components/adpalette/Onboarding";
+import { Dashboard } from "@/components/adpalette/Dashboard";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "AdPalette — cross-channel ad intelligence for agencies" },
+      { name: "description", content: "AdPalette gives ad agencies x-ray vision into every rival creative running on Meta, Google, TikTok, and programmatic networks." },
+      { property: "og:title", content: "AdPalette — cross-channel ad intelligence" },
+      { property: "og:description", content: "Track rival ad spend, hooks, and creative velocity across every channel." },
     ],
   }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const [stage, setStage] = useState<"onboard" | "app">("onboard");
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <ThemeProvider>
+      {stage === "onboard"
+        ? <OnboardingWizard onComplete={() => setStage("app")} />
+        : <Dashboard onLogout={() => setStage("onboard")} />}
+    </ThemeProvider>
   );
 }
