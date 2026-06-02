@@ -50,6 +50,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [calibOpen, setCalibOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(true);
   const [chatInput, setChatInput] = useState("");
+  const [dateRange, setDateRange] = useState("Last 30 Days");
+  const [dateMenuOpen, setDateMenuOpen] = useState(false);
+  const [upsellOpen, setUpsellOpen] = useState(false);
+  const [videoFilter, setVideoFilter] = useState<"all" | "short" | "long">("all");
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
   ]);
