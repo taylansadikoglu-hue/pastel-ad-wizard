@@ -4,8 +4,24 @@ import { useTheme } from "./theme";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
-  TrendingUp, Clock, Activity,
+  TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
 } from "lucide-react";
+
+const DATE_RANGES = [
+  { label: "Last 7 Days", locked: false },
+  { label: "Last 30 Days", locked: false },
+  { label: "Last 3 Months", locked: true },
+  { label: "Last 6 Months", locked: true },
+  { label: "Last 12 Months", locked: true },
+  { label: "Last 24 Months", locked: true },
+];
+
+const VIDEO_FEED = [
+  { brand: "Sephora", hook: "UGC unboxing — 'first impression' format", channel: "TikTok", days: 12, length: "0:18" },
+  { brand: "Lululemon", hook: "Slow-mo product hero · minimalist b-roll", channel: "Meta", days: 47, length: "0:30" },
+  { brand: "Glossier", hook: "Founder-led story · direct address", channel: "YouTube", days: 9, length: "0:45" },
+  { brand: "Mecca", hook: "Tutorial split-screen · before/after", channel: "TikTok", days: 21, length: "0:22" },
+];
 
 type Competitor = {
   name: string;
