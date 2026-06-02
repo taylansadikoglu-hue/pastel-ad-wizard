@@ -2,20 +2,58 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import {
-  ArrowRight, ArrowLeft, Check, CreditCard, Lock, Loader2, Palette, Minus, Plus, Building2,
+  ArrowRight, ArrowLeft, Check, CreditCard, Lock, Loader2, Palette, Building2, Crosshair, Users, Network,
 } from "lucide-react";
 
 const STEPS = ["Sign up", "Agency", "Advertisers", "Plan", "Sync"];
+
+const FOCUS_OPTIONS = [
+  "Performance Creative (Meta/TikTok heavy)",
+  "High-Intent Search (Google PPC heavy)",
+  "Omnichannel Brand Mix",
+];
+
+type PlanKey = "solo" | "agency" | "network";
+
+const PLANS: { key: PlanKey; name: string; price: number; tag: string; advertisers: string; icon: any; badge?: string; perks: string[] }[] = [
+  {
+    key: "solo",
+    name: "The Solo Sniper",
+    price: 199,
+    tag: "FOCUSED",
+    advertisers: "Track 1 single advertiser",
+    icon: Crosshair,
+    perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports", "Strategy AI assistant"],
+  },
+  {
+    key: "agency",
+    name: "The Agency 10-Pack",
+    price: 799,
+    tag: "TEAM",
+    advertisers: "Track up to 10 advertisers",
+    icon: Users,
+    badge: "BEST VALUE — Save $1,190/mo",
+    perks: ["Everything in Solo Sniper", "Side-by-side advertiser benchmarks", "White-label pitch decks", "Hook & creative diff alerts"],
+  },
+  {
+    key: "network",
+    name: "The Network Hub",
+    price: 1499,
+    tag: "ENTERPRISE",
+    advertisers: "Track up to 25 advertisers",
+    icon: Network,
+    perks: ["Everything in Agency 10-Pack", "Full multi-channel mix matrix panels", "Hourly refresh cadence", "API + SSO + multi-seat"],
+  },
+];
 
 export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const { theme, toggle } = useTheme();
   const [step, setStep] = useState(0);
   const [data, setData] = useState({
     fullName: "", email: "", password: "",
-    agency: "", niche: "Beauty & Wellness",
+    agency: "", focus: FOCUS_OPTIONS[0],
     rivals: ["", "", ""],
-    plan: "Pay-Per-Advertiser",
-    advertiserCount: 3,
+    plan: "agency" as PlanKey,
     card: "", cardName: "", exp: "", cvc: "",
   });
   const [syncProgress, setSyncProgress] = useState(0);
@@ -32,7 +70,8 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
       if (!data.card || !data.cardName || !data.exp || !data.cvc) {
         toast.error("Complete payment details"); return;
       }
-      toast.success(`${data.plan} plan activated`);
+      const plan = PLANS.find((p) => p.key === data.plan)!;
+      toast.success(`${plan.name} activated`);
     }
     if (step === 4) { onComplete(); return; }
     if (step === 3) {
@@ -125,7 +164,7 @@ function StepSignup({ data, setData }: any) {
           AdPalette gives ad agencies x-ray vision into every advertiser creative running on Meta, Google, and programmatic networks.
         </p>
         <ul className="mt-6 space-y-2 text-sm">
-          {["Daily creative indexing across 14 channels", "Sentiment scoring on every hook", "Auto-generated pitch decks"].map((t) => (
+          {["Daily creative indexing across 14 channels", "Continuous video hook inspiration loop", "Auto-generated pitch decks"].map((t) => (
             <li key={t} className="flex items-center gap-2"><Check size={14} /> {t}</li>
           ))}
         </ul>
@@ -147,7 +186,6 @@ function StepSignup({ data, setData }: any) {
 }
 
 function StepAgency({ data, setData }: any) {
-  const niches = ["Beauty & Wellness", "Fashion Retail", "Lifestyle"];
   return (
     <div className="max-w-2xl mx-auto card-flat p-6 space-y-5">
       <div>
@@ -157,15 +195,15 @@ function StepAgency({ data, setData }: any) {
       <Field label="Registered agency name">
         <input className="input-flat" placeholder="North Studio Co." value={data.agency} onChange={(e) => setData({ ...data, agency: e.target.value })} />
       </Field>
-      <Field label="Target client niche">
-        <select className="input-flat" value={data.niche} onChange={(e) => setData({ ...data, niche: e.target.value })}>
-          {niches.map((n) => <option key={n}>{n}</option>)}
+      <Field label="Primary Agency Acquisition Focus">
+        <select className="input-flat" value={data.focus} onChange={(e) => setData({ ...data, focus: e.target.value })}>
+          {FOCUS_OPTIONS.map((n) => <option key={n}>{n}</option>)}
         </select>
       </Field>
-      <div className="grid grid-cols-3 gap-3 pt-2">
-        {niches.map((n) => (
-          <div key={n} className={`card-flat-sm p-3 cursor-pointer ${data.niche === n ? "bg-primary" : ""}`} onClick={() => setData({ ...data, niche: n })}>
-            <div className="mono text-[10px]">NICHE</div>
+      <div className="grid md:grid-cols-3 gap-3 pt-2">
+        {FOCUS_OPTIONS.map((n) => (
+          <div key={n} className={`card-flat-sm p-3 cursor-pointer ${data.focus === n ? "bg-primary" : ""}`} onClick={() => setData({ ...data, focus: n })}>
+            <div className="mono text-[10px]">FOCUS</div>
             <div className="font-semibold text-sm mt-1">{n}</div>
           </div>
         ))}
@@ -200,104 +238,43 @@ function StepAdvertisers({ data, setData }: any) {
 }
 
 function StepPaywall({ data, setData }: any) {
-  const perAdvertiser = 199;
-  const setCount = (n: number) => setData({ ...data, advertiserCount: Math.max(1, Math.min(50, n)) });
-  const ppaTotal = perAdvertiser * data.advertiserCount;
-
+  const selected = PLANS.find((p) => p.key === data.plan)!;
   return (
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold">Choose a plan, secure your seat</h1>
         <p className="text-sm text-muted-foreground mt-1">Cancel anytime. Billed monthly via Stripe.</p>
       </div>
-      <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
-        {/* Pay-Per-Advertiser */}
-        <button
-          type="button"
-          onClick={() => setData({ ...data, plan: "Pay-Per-Advertiser" })}
-          className={`card-flat p-5 text-left transition ${data.plan === "Pay-Per-Advertiser" ? "bg-primary" : ""}`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="font-bold">Pay-Per-Advertiser</div>
-            <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">FLEXIBLE</span>
-          </div>
-          <div className="mt-3 mono text-3xl font-bold">${perAdvertiser}<span className="text-sm font-normal">/mo · advertiser</span></div>
-          <div className="text-xs mt-1">Scale your tracked advertiser roster up or down at will.</div>
-
-          <div
-            className="mt-5 card-flat-sm p-3 space-y-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <span className="mono text-[10px] uppercase font-bold">Tracked advertisers</span>
-              <span className="mono text-xs">{data.advertiserCount}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCount(data.advertiserCount - 1)}
-                className="btn-flat px-2 py-1"
-                aria-label="Decrease"
-              >
-                <Minus size={12} />
-              </button>
-              <input
-                type="range"
-                min={1}
-                max={50}
-                step={1}
-                value={data.advertiserCount}
-                onChange={(e) => setCount(Number(e.target.value))}
-                className="flex-1 accent-[var(--ink)]"
-              />
-              <button
-                type="button"
-                onClick={() => setCount(data.advertiserCount + 1)}
-                className="btn-flat px-2 py-1"
-                aria-label="Increase"
-              >
-                <Plus size={12} />
-              </button>
-            </div>
-            <div className="flex items-center justify-between pt-1 border-t-2 border-ink">
-              <span className="mono text-[10px] uppercase font-bold">Monthly total</span>
-              <span className="mono text-sm font-bold">${ppaTotal.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <ul className="mt-4 space-y-1.5 text-sm">
-            {["Daily creative refresh", "Hook sentiment scoring", "CSV + PDF exports", "Strategy AI assistant"].map((f) => (
-              <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>
-            ))}
-          </ul>
-        </button>
-
-        {/* Holdco Workstation */}
-        <button
-          type="button"
-          onClick={() => setData({ ...data, plan: "Holdco Workstation" })}
-          className={`card-flat p-5 text-left transition ${data.plan === "Holdco Workstation" ? "bg-primary" : ""}`}
-        >
-          <div className="flex items-center justify-between">
-            <div className="font-bold flex items-center gap-1.5"><Building2 size={14} /> Holdco Workstation</div>
-            <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">ENTERPRISE</span>
-          </div>
-          <div className="mt-3 mono text-3xl font-bold">$799<span className="text-sm font-normal">/mo</span></div>
-          <div className="text-xs mt-1">Built for enterprise media groups and holdcos.</div>
-
-          <div className="mt-5 card-flat-sm p-3 space-y-1.5 mono text-[11px]">
-            <div className="flex items-center justify-between"><span>Unlimited advertisers</span><span className="font-bold">✓</span></div>
-            <div className="flex items-center justify-between"><span>Hourly refresh cadence</span><span className="font-bold">✓</span></div>
-            <div className="flex items-center justify-between"><span>Multi-seat workspace</span><span className="font-bold">✓</span></div>
-            <div className="flex items-center justify-between"><span>API + SSO</span><span className="font-bold">✓</span></div>
-          </div>
-
-          <ul className="mt-4 space-y-1.5 text-sm">
-            {["Unlimited tracked advertisers", "Dedicated CSM + onboarding", "White-label pitch decks", "Custom benchmark cohorts"].map((f) => (
-              <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>
-            ))}
-          </ul>
-        </button>
+      <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+        {PLANS.map((p) => {
+          const Icon = p.icon;
+          const active = data.plan === p.key;
+          return (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => setData({ ...data, plan: p.key })}
+              className={`relative card-flat p-5 text-left transition ${active ? "bg-primary" : ""}`}
+            >
+              {p.badge && (
+                <div className="absolute -top-3 left-3 mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-ink text-paper">
+                  {p.badge}
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <div className="font-bold flex items-center gap-1.5"><Icon size={14} /> {p.name}</div>
+                <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{p.tag}</span>
+              </div>
+              <div className="mt-3 mono text-3xl font-bold">${p.price.toLocaleString()}<span className="text-sm font-normal">/mo</span></div>
+              <div className="text-xs mt-1 font-semibold">{p.advertisers}</div>
+              <ul className="mt-4 space-y-1.5 text-sm">
+                {p.perks.map((f) => (
+                  <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>
+                ))}
+              </ul>
+            </button>
+          );
+        })}
       </div>
 
       <div className="max-w-xl mx-auto card-flat p-5 space-y-4">
@@ -316,10 +293,8 @@ function StepPaywall({ data, setData }: any) {
           <Field label="CVC"><input className="input-flat mono" placeholder="123" value={data.cvc} onChange={(e) => setData({ ...data, cvc: e.target.value })} /></Field>
         </div>
         <div className="flex items-center justify-between mono text-[11px] pt-1 border-t-2 border-ink">
-          <span>{data.plan}</span>
-          <span className="font-bold">
-            ${data.plan === "Holdco Workstation" ? "799" : ppaTotal.toLocaleString()} / mo
-          </span>
+          <span>{selected.name}</span>
+          <span className="font-bold">${selected.price.toLocaleString()} / mo</span>
         </div>
         <div className="mono text-[10px] text-muted-foreground flex items-center gap-1"><Lock size={11} /> 256-bit TLS · PCI DSS compliant</div>
       </div>
@@ -333,7 +308,7 @@ function StepSync({ progress }: { progress: number }) {
     "Indexing Google Ads Transparency Center...",
     "Fingerprinting TikTok Top Ads feed...",
     "Crawling programmatic DSP creative...",
-    "Scoring hooks with sentiment model...",
+    "Compiling continuous inspiration loop...",
   ];
   const activeIdx = Math.min(lines.length - 1, Math.floor((progress / 100) * lines.length));
   return (
@@ -368,5 +343,3 @@ function StepSync({ progress }: { progress: number }) {
     </div>
   );
 }
-
-
