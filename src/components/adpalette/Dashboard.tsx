@@ -35,11 +35,11 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [chatOpen, setChatOpen] = useState(true);
   const [chatInput, setChatInput] = useState("");
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
-    { role: "ai", text: "Hi Ava — ask me anything about the tracked rivals' creative." },
+    { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
   ]);
 
   const visible = rows.filter((r) => selected[r.name]);
-  const colors = theme === "pastel" ? CHANNEL_COLORS_PASTEL : CHANNEL_COLORS_STD;
+  const colors = theme === "dark" ? CHANNEL_COLORS_PASTEL : CHANNEL_COLORS_STD;
   const totalSpend = useMemo(() => visible.reduce((a, b) => a + b.spend, 0), [visible]);
 
   const toggleRow = (n: string) => setSelected((s) => ({ ...s, [n]: !s[n] }));
@@ -81,7 +81,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div className="w-8 h-8 rounded-[3px] border-2 border-ink bg-secondary grid place-items-center mono text-xs font-bold">AC</div>
             <div className="leading-tight">
               <div className="text-sm font-semibold">Ava Chen</div>
-              <div className="mono text-[10px] text-muted-foreground">Growth · 14 rivals</div>
+              <div className="mono text-[10px] text-muted-foreground">Growth · 14 advertisers</div>
             </div>
           </div>
         </div>
@@ -90,7 +90,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           {[
             { icon: Home, label: "Workspace", active: true },
             { icon: Layers, label: "Creative library" },
-            { icon: Target, label: "Rivals" },
+            { icon: Target, label: "Advertisers" },
             { icon: TrendingUp, label: "Benchmarks" },
             { icon: Settings, label: "Settings" },
           ].map((it) => (
@@ -149,14 +149,14 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <div className="flex items-center gap-2 input-flat">
               <Search size={14} />
-              <input className="flex-1 bg-transparent outline-none text-sm" placeholder="Search creative, hooks, rivals..." />
+              <input className="flex-1 bg-transparent outline-none text-sm" placeholder="Search creative, hooks, advertisers..." />
               <span className="mono text-[10px] px-1 border border-ink rounded-[2px]">⌘K</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-secondary">LIVE · synced 2m ago</span>
             <button onClick={toggle} className="btn-flat">
-              <Palette size={14} /> Toggle pastel palette · {theme === "pastel" ? "ON" : "OFF"}
+              <Palette size={14} /> {theme === "dark" ? "Warm Canvas Mode" : "Dark Workstation Mode"}
             </button>
           </div>
         </header>
@@ -167,7 +167,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div>
               <div className="mono text-[10px] text-muted-foreground">WORKSPACE / MEDIA MIX</div>
               <h1 className="text-2xl font-bold mt-1">Media mix & share of voice matrix — beauty & activewear niche</h1>
-              <p className="text-sm text-muted-foreground mt-1">Channel allocation pulled from {visible.length} of {rows.length} tracked rivals. Recalibrate any total below.</p>
+              <p className="text-sm text-muted-foreground mt-1">Channel allocation pulled from {visible.length} of {rows.length} tracked advertisers. Recalibrate any total below.</p>
             </div>
             <div className="flex gap-2">
               <button className="btn-flat" onClick={() => toast.success("Pitch PDF queued · check downloads in 12s")}>
@@ -186,7 +186,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
             <div className="card-flat overflow-hidden">
               <div className="px-4 py-3 border-b-2 border-ink flex items-center justify-between">
-                <div className="font-bold text-sm">Competitor matrix</div>
+                <div className="font-bold text-sm">Advertiser matrix</div>
                 <button onClick={() => setCalibOpen(true)} className="btn-flat text-xs px-2 py-1">
                   <Sliders size={12} /> Calibrate spend model
                 </button>
@@ -195,7 +195,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 <table className="w-full text-sm">
                   <thead className="border-b-2 border-ink bg-secondary">
                     <tr className="text-left">
-                      {["", "Competitor", "Est. monthly spend", "Meta %", "Google %", "Programmatic %", "Primary"].map((h) => (
+                      {["", "Advertiser", "Est. monthly spend", "Meta %", "Google %", "Programmatic %", "Primary"].map((h) => (
                         <th key={h} className="px-3 py-2 mono text-[10px] uppercase">{h}</th>
                       ))}
                     </tr>
@@ -247,7 +247,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               </div>
               {visible.length === 0 ? (
                 <div className="h-64 grid place-items-center mono text-xs text-muted-foreground border-2 border-dashed border-ink rounded-[4px]">
-                  Select at least one competitor
+                  Select at least one advertiser
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -259,7 +259,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                       </div>
                       <div className="flex h-7 border-2 border-ink rounded-[3px] overflow-hidden">
                         <div style={{ width: `${r.meta}%`, background: colors[0] }} className="border-r-2 border-ink grid place-items-center mono text-[10px] font-bold">{r.meta}</div>
-                        <div style={{ width: `${r.google}%`, background: colors[1], color: theme === "pastel" ? "var(--ink)" : "#fff" }} className="border-r-2 border-ink grid place-items-center mono text-[10px] font-bold">{r.google}</div>
+                        <div style={{ width: `${r.google}%`, background: colors[1], color: theme === "dark" ? "var(--ink)" : "#fff" }} className="border-r-2 border-ink grid place-items-center mono text-[10px] font-bold">{r.google}</div>
                         <div style={{ width: `${r.programmatic}%`, background: colors[2] }} className="grid place-items-center mono text-[10px] font-bold">{r.programmatic}</div>
                       </div>
                     </div>
@@ -307,7 +307,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div className="px-5 py-4 border-b-2 border-ink flex items-center justify-between">
               <div>
                 <div className="font-bold">Calibrate spend model</div>
-                <div className="mono text-[10px] text-muted-foreground">Override scraped estimates · channel % stays fixed</div>
+                <div className="mono text-[10px] text-muted-foreground">Override indexed estimates · channel % stays fixed</div>
               </div>
               <button onClick={() => setCalibOpen(false)} className="btn-flat text-xs px-2 py-1"><X size={12} /></button>
             </div>
@@ -331,7 +331,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               ))}
             </div>
             <div className="p-4 border-t-2 border-ink flex gap-2">
-              <button onClick={() => { setRows(INITIAL); toast("Reset to scraped values"); }} className="btn-flat flex-1">Reset</button>
+              <button onClick={() => { setRows(INITIAL); toast("Reset to baseline values"); }} className="btn-flat flex-1">Reset</button>
               <button onClick={() => { setCalibOpen(false); toast.success("Spend model calibrated"); }} className="btn-flat btn-primary flex-1">Save model</button>
             </div>
           </div>
@@ -368,10 +368,10 @@ function aiReply(q: string, visible: Competitor[]): string {
   const total = visible.reduce((a, b) => a + b.spend, 0);
   if (/mix|channel/i.test(q)) {
     const meta = Math.round(visible.reduce((a, b) => a + (b.meta * b.spend), 0) / Math.max(total, 1));
-    return `Across ${visible.length} rivals, weighted channel mix is ~${meta}% Meta, the rest split between Google and programmatic. Glossier is the most social-heavy.`;
+    return `Across ${visible.length} advertisers, weighted channel mix is ~${meta}% Meta, the rest split between Google and programmatic. Glossier is the most social-heavy.`;
   }
   if (/hook/i.test(q)) {
     return `Dominant hook patterns: 1) UGC unboxing (Sephora), 2) minimalist product hero (Lululemon), 3) founder-led story (Glossier). Pain-point hooks underused — opportunity.`;
   }
-  return `Tracked rivals account for ~$${(total/1_000_000).toFixed(2)}M in monthly spend. Ask about channel mix, hooks, or ad longevity.`;
+  return `Tracked advertisers account for ~$${(total/1_000_000).toFixed(2)}M in monthly spend. Ask about channel mix, hooks, or ad longevity.`;
 }
