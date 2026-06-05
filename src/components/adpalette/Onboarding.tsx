@@ -69,6 +69,17 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
     if (step === 4) { onComplete(); return; }
     if (step === 3) {
       setStep(4);
+      // Fire real backend: save profile + trigger live scan for each entered domain
+      (async () => {
+        try {
+          const domains = data.rivals.filter(Boolean);
+          await saveProfile({ data: { agency_name: data.agency || "My Agency", agency_domain: domains[0] ?? null } });
+          await Promise.all(domains.map((d: string) => startScan({ data: { domain: d } }).catch((e) => console.error("scan", d, e))));
+        } catch (e) {
+          console.error(e);
+          toast.error("Couldn't kick off scans — check Developer Integrations.");
+        }
+      })();
       const iv = setInterval(() => {
         setSyncProgress((p) => {
           if (p >= 100) { clearInterval(iv); return 100; }
@@ -78,6 +89,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
       return;
     }
     setStep((s) => s + 1);
+
   };
 
   const back = () => setStep((s) => Math.max(0, s - 1));
