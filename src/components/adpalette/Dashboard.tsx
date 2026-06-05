@@ -713,11 +713,15 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 <h2 className="text-2xl font-bold mt-1">AI Audience Sentiment Radar</h2>
                 <p className="text-sm text-muted-foreground mt-1">Social listening compiled per tracked advertiser fingerprint — what consumers love, where they friction, and the ad copy angle to weaponize.</p>
               </div>
-              {SENTIMENT_DATA.map((s) => (
-                <div key={s.brand} className="card-flat overflow-hidden">
+              {liveSentiment.length === 0 ? (
+                <div className="card-flat p-8 text-center text-sm text-muted-foreground">
+                  No live creative data found. Please add an active domain under the Advertisers tab.
+                </div>
+              ) : liveSentiment.map((s, i) => (
+                <div key={`${s.domain}-${i}`} className="card-flat overflow-hidden">
                   <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between">
-                    <div className="font-bold">{s.brand}</div>
-                    <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">{s.brand.toLowerCase()}.com</span>
+                    <div className="font-bold">{brandFromDomain(s.domain)}</div>
+                    <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">{s.domain}</span>
                   </div>
                   <div className="grid md:grid-cols-3 gap-0">
                     <div className="p-4 border-r-2 border-ink last:border-r-0">
@@ -725,31 +729,28 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                         <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-primary"><ThumbsUp size={14} /></div>
                         <div className="mono text-[10px] uppercase font-bold">The Good</div>
                       </div>
-                      <p className="text-sm leading-relaxed">{s.good}</p>
+                      <p className="text-sm leading-relaxed">{s.good ?? "Awaiting signal…"}</p>
                     </div>
                     <div className="p-4 border-r-2 border-ink last:border-r-0 border-t-2 md:border-t-0">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-ink text-paper"><AlertTriangle size={14} /></div>
                         <div className="mono text-[10px] uppercase font-bold">The Friction</div>
                       </div>
-                      <p className="text-sm leading-relaxed">{s.friction}</p>
+                      <p className="text-sm leading-relaxed">{s.friction ?? "Awaiting signal…"}</p>
                     </div>
                     <div className="p-4 border-t-2 md:border-t-0 bg-canvas">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-secondary"><PenTool size={14} /></div>
                         <div className="mono text-[10px] uppercase font-bold">The Ad Angle · Copy Blueprint</div>
                       </div>
-                      <p className="text-sm leading-relaxed font-medium">{s.blueprint}</p>
-                      <button onClick={() => toast.success(`${s.brand} blueprint copied`)} className="btn-flat text-[11px] px-2 py-1 mt-3">
+                      <p className="text-sm leading-relaxed font-medium">{s.blueprint ?? "Awaiting signal…"}</p>
+                      <button onClick={() => { navigator.clipboard?.writeText(s.blueprint ?? "").catch(() => {}); toast.success(`${brandFromDomain(s.domain)} blueprint copied`); }} className="btn-flat text-[11px] px-2 py-1 mt-3">
                         <Copy size={12} /> Copy blueprint
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
-              <div className="mono text-[11px] text-muted-foreground border-2 border-dashed border-ink rounded-[4px] p-3">
-                ► Sentiment streams are prepared via the master brand fingerprint and stay safely decoupled until you connect a listening source in Developer Integrations.
-              </div>
             </div>
           )}
 
