@@ -110,10 +110,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       <aside className="w-60 shrink-0 border-r-2 border-ink bg-paper flex flex-col">
         <div className="p-4 border-b-2 border-ink flex items-center gap-2">
           <div className="w-8 h-8 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-            <span className="mono text-xs font-bold">AP</span>
+            <span className="mono text-xs font-bold">RV</span>
           </div>
           <div>
-            <div className="font-bold leading-tight">AdPalette</div>
+            <div className="font-bold leading-tight">Revenuad</div>
             <div className="mono text-[10px] text-muted-foreground">north-studio.co</div>
           </div>
         </div>
