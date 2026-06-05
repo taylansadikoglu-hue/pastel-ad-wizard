@@ -786,7 +786,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
 
-          {activeTab === "integrations" && (
+          {activeTab === "integrations" && isAdmin && (
             <div className="max-w-3xl space-y-5">
               <div>
                 <div className="mono text-[10px] text-muted-foreground">WORKSPACE / DEVELOPER</div>
