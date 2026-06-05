@@ -77,7 +77,11 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [videoFilter, setVideoFilter] = useState<"all" | "short" | "long">("all");
   const [activeTab, setActiveTab] = useState<"gallery" | "sentiment" | "integrations">("gallery");
   const [apifyToken, setApifyToken] = useState("");
+  const [dfsLogin, setDfsLogin] = useState("");
+  const [dfsPassword, setDfsPassword] = useState("");
   const [resendKey, setResendKey] = useState("");
+  const [integSaving, setIntegSaving] = useState(false);
+  const [liveSentiment, setLiveSentiment] = useState<{ domain: string; good: string | null; friction: string | null; blueprint: string | null }[]>([]);
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
   ]);
