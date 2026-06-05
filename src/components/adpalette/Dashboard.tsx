@@ -73,6 +73,9 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [dateMenuOpen, setDateMenuOpen] = useState(false);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [videoFilter, setVideoFilter] = useState<"all" | "short" | "long">("all");
+  const [activeTab, setActiveTab] = useState<"gallery" | "sentiment" | "integrations">("gallery");
+  const [apifyToken, setApifyToken] = useState("");
+  const [resendKey, setResendKey] = useState("");
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
   ]);
