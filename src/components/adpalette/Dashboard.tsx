@@ -18,11 +18,29 @@ const DATE_RANGES = [
 ];
 
 const VIDEO_FEED = [
-  { brand: "Sephora", hook: "UGC unboxing — 'first impression' format", channel: "TikTok", days: 12, length: "0:18" },
-  { brand: "Lululemon", hook: "Slow-mo product hero · minimalist b-roll", channel: "Meta", days: 47, length: "0:30" },
-  { brand: "Glossier", hook: "Founder-led story · direct address", channel: "YouTube", days: 9, length: "0:45" },
-  { brand: "Mecca", hook: "Tutorial split-screen · before/after", channel: "TikTok", days: 21, length: "0:22" },
+  { brand: "Sephora", hook: "UGC unboxing — 'first impression' format", channel: "TikTok", days: 12, length: "0:18", aiTag: "Unboxing" },
+  { brand: "Lululemon", hook: "Slow-mo product hero · minimalist b-roll", channel: "Meta", days: 47, length: "0:30", aiTag: "Product Hero" },
+  { brand: "Glossier", hook: "Founder-led story · direct address", channel: "YouTube", days: 9, length: "0:45", aiTag: "Founder Story" },
+  { brand: "Mecca", hook: "Tutorial split-screen · before/after", channel: "TikTok", days: 21, length: "0:22", aiTag: "Tutorial" },
+  { brand: "Sephora", hook: "Founder backstory · brand origin moment", channel: "YouTube", days: 33, length: "0:52", aiTag: "Founder Story" },
+  { brand: "Lululemon", hook: "Day-in-the-life athlete UGC", channel: "TikTok", days: 6, length: "0:24", aiTag: "Unboxing" },
 ];
+
+const SENTIMENT_DATA = [
+  {
+    brand: "Sephora",
+    good: "Customers rave about loyalty rewards, the curated 'Sephora Edit' bundles, and frictionless in-app checkout — 'feels like a gift every time'.",
+    friction: "Repeat complaints about out-of-stock TikTok-viral SKUs and slow shipping in regional zones (>5 days). Sentiment dips on Sunday drops.",
+    blueprint: "Lead with scarcity + loyalty: 'Your Beauty Insider points unlock the drop everyone else is waiting for.' Pair with a fast-ship guarantee badge.",
+  },
+  {
+    brand: "Lululemon",
+    good: "Fit and longevity dominate praise — 'still my favorite leggings 4 years in'. Community runs and Mirror integrations earn high warmth scores.",
+    friction: "Price ceiling pushback and resentment around 'We Made Too Much' inventory limits. Returns process flagged as slow in EU markets.",
+    blueprint: "Anchor on lifetime cost-per-wear: 'One pair. Four years. Still your favorite.' Layer in the community ritual angle to soften price objections.",
+  },
+];
+
 
 type Competitor = {
   name: string;
