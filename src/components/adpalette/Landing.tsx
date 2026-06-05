@@ -245,7 +245,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               locked: ["AI Audience Sentiment Radar", "Barbs AI Assistant"],
             },
             {
-              name: "Agency 10-Pack",
+              name: "Agency 7-Pack",
               price: 799,
               sub: "Up to 7 tracked brands · Full AI Stack",
               badge: "BEST VALUE",
