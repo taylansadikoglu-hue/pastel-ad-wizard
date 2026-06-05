@@ -275,24 +275,25 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       {/* Sidebar */}
       <aside className="w-60 shrink-0 border-r-2 border-ink bg-paper flex flex-col">
         <div className="p-4 border-b-2 border-ink flex items-center gap-2">
-          <div className="w-8 h-8 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-            <span className="mono text-xs font-bold">RA</span>
+          <div className="px-1.5 h-8 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
+            <span className="mono text-[11px] font-bold">R-AD</span>
           </div>
           <div>
             <div className="font-bold leading-tight">RevenueAd</div>
-            <div className="mono text-[10px] text-muted-foreground">north-studio.co</div>
+            <div className="mono text-[10px] text-muted-foreground">{agencyDomain || "workspace"}</div>
           </div>
         </div>
 
         <div className="p-3 border-b-2 border-ink">
           <div className="card-flat-sm p-2 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-[3px] border-2 border-ink bg-secondary grid place-items-center mono text-xs font-bold">AC</div>
+            <div className="w-8 h-8 rounded-[3px] border-2 border-ink bg-secondary grid place-items-center mono text-xs font-bold">{userInitials}</div>
             <div className="leading-tight">
-              <div className="text-sm font-semibold">Ava Chen</div>
-              <div className="mono text-[10px] text-muted-foreground">Growth · 14 advertisers</div>
+              <div className="text-sm font-semibold">{userName || "Operator"}</div>
+              <div className="mono text-[10px] text-muted-foreground">Growth · {rows.length} advertiser{rows.length === 1 ? "" : "s"}</div>
             </div>
           </div>
         </div>
+
 
         <nav className="p-2 space-y-1 flex-1">
           {[
@@ -734,7 +735,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               ))}
             </div>
             <div className="p-4 border-t-2 border-ink flex gap-2">
-              <button onClick={() => { setRows(INITIAL); toast("Reset to baseline values"); }} className="btn-flat flex-1">Reset</button>
+              <button onClick={() => { setRows(baselineRows); toast("Reset to baseline values"); }} className="btn-flat flex-1">Reset</button>
               <button onClick={() => { setCalibOpen(false); toast.success("Spend model calibrated"); }} className="btn-flat btn-primary flex-1">Save model</button>
             </div>
           </div>
