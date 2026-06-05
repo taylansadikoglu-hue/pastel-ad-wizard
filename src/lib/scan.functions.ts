@@ -114,7 +114,7 @@ export const startScan = createServerFn({ method: "POST" })
       // Insert placements
       if (placements.length) {
         await supabaseAdmin.from("ad_placements").insert(
-          placements.map((p) => ({ user_id: userId, scan_id: scanId, domain, ...p }))
+          placements.map((p) => ({ user_id: userId, scan_id: scanId, domain, channel: p.channel, hook: p.hook, creative_url: p.creative_url, days_running: p.days_running, raw: p.raw as never }))
         );
       }
 
