@@ -14,7 +14,178 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ad_placements: {
+        Row: {
+          channel: string
+          created_at: string
+          creative_url: string | null
+          days_running: number | null
+          domain: string
+          hook: string | null
+          id: string
+          raw: Json | null
+          scan_id: string | null
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          creative_url?: string | null
+          days_running?: number | null
+          domain: string
+          hook?: string | null
+          id?: string
+          raw?: Json | null
+          scan_id?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          creative_url?: string | null
+          days_running?: number | null
+          domain?: string
+          hook?: string | null
+          id?: string
+          raw?: Json | null
+          scan_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_placements_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "domain_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      domain_scans: {
+        Row: {
+          created_at: string
+          domain: string
+          error: string | null
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          error?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          error?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      integrations: {
+        Row: {
+          apify_token: string | null
+          dataforseo_login: string | null
+          dataforseo_password: string | null
+          resend_api_key: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          apify_token?: string | null
+          dataforseo_login?: string | null
+          dataforseo_password?: string | null
+          resend_api_key?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          apify_token?: string | null
+          dataforseo_login?: string | null
+          dataforseo_password?: string | null
+          resend_api_key?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          agency_domain: string | null
+          agency_name: string | null
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          agency_domain?: string | null
+          agency_name?: string | null
+          created_at?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          agency_domain?: string | null
+          agency_name?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sentiment_insights: {
+        Row: {
+          blueprint: string | null
+          created_at: string
+          domain: string
+          friction: string | null
+          good: string | null
+          id: string
+          model: string | null
+          scan_id: string | null
+          user_id: string
+        }
+        Insert: {
+          blueprint?: string | null
+          created_at?: string
+          domain: string
+          friction?: string | null
+          good?: string | null
+          id?: string
+          model?: string | null
+          scan_id?: string | null
+          user_id: string
+        }
+        Update: {
+          blueprint?: string | null
+          created_at?: string
+          domain?: string
+          friction?: string | null
+          good?: string | null
+          id?: string
+          model?: string | null
+          scan_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sentiment_insights_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "domain_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
