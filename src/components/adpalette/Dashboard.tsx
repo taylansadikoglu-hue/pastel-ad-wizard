@@ -21,30 +21,7 @@ const DATE_RANGES = [
   { label: "Last 24 Months", locked: true },
 ];
 
-const VIDEO_FEED = [
-  { brand: "Sephora", hook: "UGC unboxing — 'first impression' format", channel: "TikTok", days: 12, length: "0:18", aiTag: "Unboxing" },
-  { brand: "Lululemon", hook: "Slow-mo product hero · minimalist b-roll", channel: "Meta", days: 47, length: "0:30", aiTag: "Product Hero" },
-  { brand: "Glossier", hook: "Founder-led story · direct address", channel: "YouTube", days: 9, length: "0:45", aiTag: "Founder Story" },
-  { brand: "Mecca", hook: "Tutorial split-screen · before/after", channel: "TikTok", days: 21, length: "0:22", aiTag: "Tutorial" },
-  { brand: "Sephora", hook: "Founder backstory · brand origin moment", channel: "YouTube", days: 33, length: "0:52", aiTag: "Founder Story" },
-  { brand: "Lululemon", hook: "Day-in-the-life athlete UGC", channel: "TikTok", days: 6, length: "0:24", aiTag: "Unboxing" },
-];
-
-const SENTIMENT_DATA = [
-  {
-    brand: "Sephora",
-    good: "Customers rave about loyalty rewards, the curated 'Sephora Edit' bundles, and frictionless in-app checkout — 'feels like a gift every time'.",
-    friction: "Repeat complaints about out-of-stock TikTok-viral SKUs and slow shipping in regional zones (>5 days). Sentiment dips on Sunday drops.",
-    blueprint: "Lead with scarcity + loyalty: 'Your Beauty Insider points unlock the drop everyone else is waiting for.' Pair with a fast-ship guarantee badge.",
-  },
-  {
-    brand: "Lululemon",
-    good: "Fit and longevity dominate praise — 'still my favorite leggings 4 years in'. Community runs and Mirror integrations earn high warmth scores.",
-    friction: "Price ceiling pushback and resentment around 'We Made Too Much' inventory limits. Returns process flagged as slow in EU markets.",
-    blueprint: "Anchor on lifetime cost-per-wear: 'One pair. Four years. Still your favorite.' Layer in the community ritual angle to soften price objections.",
-  },
-];
-
+const ADMIN_EMAIL = "taylan.sadikoglu@gmail.com";
 
 type Competitor = {
   name: string;
@@ -54,12 +31,7 @@ type Competitor = {
   programmatic: number;
 };
 
-const INITIAL: Competitor[] = [
-  { name: "Sephora",    spend: 4_820_000, meta: 48, google: 32, programmatic: 20 },
-  { name: "Mecca",      spend: 1_640_000, meta: 56, google: 28, programmatic: 16 },
-  { name: "Lululemon",  spend: 3_210_000, meta: 38, google: 24, programmatic: 38 },
-  { name: "Glossier",   spend:   910_000, meta: 64, google: 22, programmatic: 14 },
-];
+const INITIAL: Competitor[] = [];
 
 // Deterministic synthetic spend + channel mix derived from a domain string,
 // so tracked-advertiser cards stay populated until live spend ingestion lands.
@@ -110,6 +82,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [runningScans, setRunningScans] = useState<string[]>([]);
   const [userName, setUserName] = useState<string>("");
   const [userInitials, setUserInitials] = useState<string>("YOU");
+  const [userEmail, setUserEmail] = useState<string>("");
   const [agencyDomain, setAgencyDomain] = useState<string>("");
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Welcome — ask me anything about the tracked advertisers' creative." },
@@ -122,6 +95,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       const { data } = await supabase.auth.getUser();
       const u = data.user;
       if (!u || !active) return;
+      setUserEmail((u.email ?? "").toLowerCase());
       const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
       const fromMeta = (meta.full_name as string) || (meta.name as string) || "";
       const fallback = (u.email ?? "").split("@")[0] ?? "";
@@ -299,6 +273,34 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     setChatInput("");
   };
 
+  const isAdmin = userEmail === ADMIN_EMAIL;
+
+  // Force non-admins off the integrations tab
+  useEffect(() => {
+    if (!isAdmin && activeTab === "integrations") setActiveTab("gallery");
+  }, [isAdmin, activeTab]);
+
+  const exportCSV = () => {
+    const header = ["Advertiser", "Est monthly spend", "Meta %", "Google %", "Programmatic %"];
+    const lines = [header.join(",")].concat(
+      rows.map((r) => [r.name, r.spend, r.meta, r.google, r.programmatic].join(","))
+    );
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `revenuead-matrix-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exported");
+  };
+
+  const exportPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="min-h-screen bg-canvas text-ink flex">
       {/* Sidebar */}
@@ -445,10 +447,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               <p className="text-sm text-muted-foreground mt-1">Channel allocation pulled from {visible.length} of {rows.length} tracked advertisers. Recalibrate any total below.</p>
             </div>
             <div className="flex gap-2">
-              <button className="btn-flat" onClick={() => toast.success("Pitch PDF queued · check downloads in 12s")}>
+              <button className="btn-flat" onClick={exportPDF}>
                 <FileDown size={14} /> Export pitch PDF
               </button>
-              <button className="btn-flat" onClick={() => toast.success("CSV exported · 4 rows")}>
+              <button className="btn-flat" onClick={exportCSV}>
                 <TableIcon size={14} /> Export CSV
               </button>
               <button className="btn-flat" onClick={() => { navigator.clipboard?.writeText("chart").catch(() => {}); toast.success("Chart asset copied to clipboard"); }}>
@@ -460,18 +462,20 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           {/* Primary tabs */}
           <div className="border-2 border-ink rounded-[4px] bg-paper flex overflow-hidden">
             {([
-              { k: "gallery", label: "Cross-Channel Ad Gallery", icon: Grid3x3 },
-              { k: "sentiment", label: "AI Audience Sentiment Radar", icon: Radio },
-              { k: "integrations", label: "Developer Integrations", icon: Plug },
-            ] as const).map((t, i) => (
-              <button
-                key={t.k}
-                onClick={() => setActiveTab(t.k)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold ${i > 0 ? "border-l-2 border-ink" : ""} ${activeTab === t.k ? "bg-primary" : "hover:bg-secondary"}`}
-              >
-                <t.icon size={14} /> {t.label}
-              </button>
-            ))}
+              { k: "gallery", label: "Cross-Channel Ad Gallery", icon: Grid3x3, adminOnly: false },
+              { k: "sentiment", label: "AI Audience Sentiment Radar", icon: Radio, adminOnly: false },
+              { k: "integrations", label: "Developer Integrations", icon: Plug, adminOnly: true },
+            ] as const)
+              .filter((t) => !t.adminOnly || isAdmin)
+              .map((t, i) => (
+                <button
+                  key={t.k}
+                  onClick={() => setActiveTab(t.k)}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold ${i > 0 ? "border-l-2 border-ink" : ""} ${activeTab === t.k ? "bg-primary" : "hover:bg-secondary"}`}
+                >
+                  <t.icon size={14} /> {t.label}
+                </button>
+              ))}
           </div>
 
           {activeTab === "gallery" && <>
@@ -674,29 +678,35 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 </button>
               ))}
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-0">
-              {(livePlacements.length ? livePlacements : VIDEO_FEED)
-                .filter((v) =>
-                  videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14
-                )
-                .map((v, idx) => (
-                  <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
-                    <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative">
-                      <Play size={22} />
-                      <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.length}</span>
+            {livePlacements.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No live creative data found. Please add an active domain under the Advertisers tab.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-0">
+                {livePlacements
+                  .filter((v) =>
+                    videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14
+                  )
+                  .map((v, idx) => (
+                    <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
+                      <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative">
+                        <Play size={22} />
+                        <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-sm">{v.brand}</span>
+                        <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{v.channel}</span>
+                      </div>
+                      <p className="text-xs leading-snug">{v.hook}</p>
+                      <div className="flex items-center justify-between mono text-[10px] text-muted-foreground pt-1 border-t border-ink/30">
+                        <span>Flight: {v.days}d</span>
+                        <button onClick={() => toast(`${v.brand} · creative opened`)} className="underline font-semibold">Inspect →</button>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-sm">{v.brand}</span>
-                      <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{v.channel}</span>
-                    </div>
-                    <p className="text-xs leading-snug">{v.hook}</p>
-                    <div className="flex items-center justify-between mono text-[10px] text-muted-foreground pt-1 border-t border-ink/30">
-                      <span>Flight: {v.days}d</span>
-                      <button onClick={() => toast(`${v.brand} · creative opened`)} className="underline font-semibold">Inspect →</button>
-                    </div>
-                  </div>
-                ))}
-            </div>
+                  ))}
+              </div>
+            )}
           </div>
 
           {/* 3-Second Rule Insight Cards */}
@@ -735,11 +745,15 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 <h2 className="text-2xl font-bold mt-1">AI Audience Sentiment Radar</h2>
                 <p className="text-sm text-muted-foreground mt-1">Social listening compiled per tracked advertiser fingerprint — what consumers love, where they friction, and the ad copy angle to weaponize.</p>
               </div>
-              {SENTIMENT_DATA.map((s) => (
-                <div key={s.brand} className="card-flat overflow-hidden">
+              {liveSentiment.length === 0 ? (
+                <div className="card-flat p-8 text-center text-sm text-muted-foreground">
+                  No live creative data found. Please add an active domain under the Advertisers tab.
+                </div>
+              ) : liveSentiment.map((s, i) => (
+                <div key={`${s.domain}-${i}`} className="card-flat overflow-hidden">
                   <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between">
-                    <div className="font-bold">{s.brand}</div>
-                    <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">{s.brand.toLowerCase()}.com</span>
+                    <div className="font-bold">{brandFromDomain(s.domain)}</div>
+                    <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">{s.domain}</span>
                   </div>
                   <div className="grid md:grid-cols-3 gap-0">
                     <div className="p-4 border-r-2 border-ink last:border-r-0">
@@ -747,35 +761,32 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                         <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-primary"><ThumbsUp size={14} /></div>
                         <div className="mono text-[10px] uppercase font-bold">The Good</div>
                       </div>
-                      <p className="text-sm leading-relaxed">{s.good}</p>
+                      <p className="text-sm leading-relaxed">{s.good ?? "Awaiting signal…"}</p>
                     </div>
                     <div className="p-4 border-r-2 border-ink last:border-r-0 border-t-2 md:border-t-0">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-ink text-paper"><AlertTriangle size={14} /></div>
                         <div className="mono text-[10px] uppercase font-bold">The Friction</div>
                       </div>
-                      <p className="text-sm leading-relaxed">{s.friction}</p>
+                      <p className="text-sm leading-relaxed">{s.friction ?? "Awaiting signal…"}</p>
                     </div>
                     <div className="p-4 border-t-2 md:border-t-0 bg-canvas">
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-secondary"><PenTool size={14} /></div>
                         <div className="mono text-[10px] uppercase font-bold">The Ad Angle · Copy Blueprint</div>
                       </div>
-                      <p className="text-sm leading-relaxed font-medium">{s.blueprint}</p>
-                      <button onClick={() => toast.success(`${s.brand} blueprint copied`)} className="btn-flat text-[11px] px-2 py-1 mt-3">
+                      <p className="text-sm leading-relaxed font-medium">{s.blueprint ?? "Awaiting signal…"}</p>
+                      <button onClick={() => { navigator.clipboard?.writeText(s.blueprint ?? "").catch(() => {}); toast.success(`${brandFromDomain(s.domain)} blueprint copied`); }} className="btn-flat text-[11px] px-2 py-1 mt-3">
                         <Copy size={12} /> Copy blueprint
                       </button>
                     </div>
                   </div>
                 </div>
               ))}
-              <div className="mono text-[11px] text-muted-foreground border-2 border-dashed border-ink rounded-[4px] p-3">
-                ► Sentiment streams are prepared via the master brand fingerprint and stay safely decoupled until you connect a listening source in Developer Integrations.
-              </div>
             </div>
           )}
 
-          {activeTab === "integrations" && (
+          {activeTab === "integrations" && isAdmin && (
             <div className="max-w-3xl space-y-5">
               <div>
                 <div className="mono text-[10px] text-muted-foreground">WORKSPACE / DEVELOPER</div>
