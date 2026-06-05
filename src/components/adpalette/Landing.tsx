@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
+import { BarbsChat } from "./BarbsChat";
 import {
-  ArrowRight, Palette, Check, Sparkles, BarChart3, Film, FileDown, PlayCircle,
+  ArrowRight, Palette, Check, Sparkles, BarChart3, Film, FileDown, PlayCircle, X as XIcon, Lock,
 } from "lucide-react";
+
 
 type Brand = { name: string; visible: boolean; budget: number; mix: { search: number; social: number; video: number; programmatic: number } };
 
@@ -77,23 +79,25 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             <Sparkles size={12} /> CROSS-CHANNEL AD INTELLIGENCE
           </div>
           <h1 className="mt-5 text-4xl md:text-6xl font-bold leading-[1.05] tracking-tight">
-            See exactly where your clients' competitors are spending their ad budgets.
+            See exactly where competitors are spending — and exploit it.
           </h1>
           <p className="mt-5 text-lg text-muted-foreground max-w-xl">
-            RevenueAd tracks, compiles, and future-saves every advertising placement published across Search, YouTube, Meta, TikTok, and Programmatic networks. Beautifully simple competitor analysis built for digital agencies.
+            RevenueAd tracks every advertising placement across Search, YouTube, Meta, TikTok, and Programmatic — built for <span className="font-semibold text-ink">independent e-commerce brands scaling solo</span> and <span className="font-semibold text-ink">performance agencies running competitive audits, client retention, and multi-channel scaling</span> across rosters.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <a href="#demo" className="btn-flat">
+
               <PlayCircle size={14} /> Try interactive demo
             </a>
             <button onClick={onEnter} className="btn-flat btn-primary">
-              Start free — no card required <ArrowRight size={14} />
+              Start tracking — from $199/mo <ArrowRight size={14} />
             </button>
           </div>
           <div className="mt-6 flex items-center gap-4 mono text-[11px] text-muted-foreground">
             <span>► 14 channels indexed daily</span>
             <span>► SOC2 · GDPR</span>
-            <span>► No credit card to demo</span>
+            <span>► No contracts · Cancel anytime</span>
+
           </div>
         </div>
 
