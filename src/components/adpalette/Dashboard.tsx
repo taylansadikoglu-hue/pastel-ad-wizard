@@ -8,7 +8,7 @@ import {
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
   TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
   Grid3x3, Radio, Plug, ThumbsUp, AlertTriangle, PenTool, KeyRound, Save,
-  BarChart3, PieChart as PieIcon,
+  BarChart3, PieChart as PieIcon, Loader2,
 } from "lucide-react";
 
 const DATE_RANGES = [
