@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
@@ -308,7 +309,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
           <div>
             <div className="font-bold leading-tight">RevenueAd</div>
-            <div className="mono text-[10px] text-muted-foreground">{agencyDomain || "workspace"}</div>
+            <div className="mono text-[10px] text-muted-foreground">workspace</div>
           </div>
         </div>
 
@@ -323,21 +324,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
         </div>
 
 
-        <nav className="p-2 space-y-1 flex-1">
-          {[
-            { icon: Home, label: "Workspace", active: true },
-            { icon: Layers, label: "Creative library" },
-            { icon: Target, label: "Advertisers" },
-            { icon: TrendingUp, label: "Benchmarks" },
-            { icon: Settings, label: "Settings" },
-          ].map((it) => (
-            <button key={it.label}
-              onClick={() => !it.active && toast(`${it.label} module coming next sprint`)}
-              className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-[4px] text-sm font-medium border-2 ${it.active ? "border-ink bg-secondary shadow-flat-sm" : "border-transparent hover:border-ink"}`}>
-              <it.icon size={15} /> {it.label}
-            </button>
-          ))}
-        </nav>
+        <SidebarNav />
+
 
         <button onClick={onLogout} className="m-3 btn-flat justify-start">
           <LogOut size={14} /> Sign out
@@ -430,15 +418,15 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
         </header>
 
         <main className="flex-1 overflow-auto p-6 space-y-6">
-          {runningScans.length > 0 && (
+          {runningScans.length > 0 && (apifyToken || dfsLogin || dfsPassword) && (
             <div className="card-flat p-4 bg-secondary flex items-center gap-4">
               <div className="w-9 h-9 border-2 border-ink rounded-[4px] bg-primary grid place-items-center shrink-0">
                 <Loader2 size={16} className="animate-spin" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="mono text-[10px] uppercase font-bold">Crawl in progress · syncing real-time channel mix metrics</div>
+                <div className="mono text-[10px] uppercase font-bold">Workspace sync in progress</div>
                 <div className="text-sm font-semibold truncate">
-                  Live API fan-out across Apify · DataForSEO · Lovable AI distill for: {runningScans.join(", ")}
+                  Processing cross-channel datasets and executing audience sentiment mapping...
                 </div>
                 <div className="mt-2 grid grid-cols-3 gap-2">
                   <div className="h-2 bg-paper border-2 border-ink rounded-[3px] animate-pulse" />
@@ -801,7 +789,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">SCRAPING</span>
                 </div>
                 <p className="text-xs text-muted-foreground">Powers Facebook Ads Library + cross-channel creative scraping per tracked brand fingerprint.</p>
-                <input type="password" value={apifyToken} onChange={(e) => setApifyToken(e.target.value)} placeholder="apify_api_xxxxxxxxxxxxxxxxxxxx" className="input-flat mono" />
+                <input type="password" value={apifyToken} onChange={(e) => setApifyToken(e.target.value)} onBlur={() => apifyToken && saveAllIntegrations()} placeholder="apify_api_xxxxxxxxxxxxxxxxxxxx" className="input-flat mono" />
               </div>
 
               <div className="card-flat p-5 space-y-3">
@@ -810,8 +798,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">SEARCH + VIDEO</span>
                 </div>
                 <p className="text-xs text-muted-foreground">Powers Google Ads Transparency and YouTube ad placement indexing.</p>
-                <input type="text" value={dfsLogin} onChange={(e) => setDfsLogin(e.target.value)} placeholder="DataForSEO login (email)" className="input-flat mono" />
-                <input type="password" value={dfsPassword} onChange={(e) => setDfsPassword(e.target.value)} placeholder="DataForSEO password" className="input-flat mono" />
+                <input type="text" value={dfsLogin} onChange={(e) => setDfsLogin(e.target.value)} onBlur={() => dfsLogin && saveAllIntegrations()} placeholder="DataForSEO login (email)" className="input-flat mono" />
+                <input type="password" value={dfsPassword} onChange={(e) => setDfsPassword(e.target.value)} onBlur={() => dfsPassword && saveAllIntegrations()} placeholder="DataForSEO password" className="input-flat mono" />
               </div>
 
               <div className="card-flat p-5 space-y-3">
@@ -820,7 +808,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">EMAIL</span>
                 </div>
                 <p className="text-xs text-muted-foreground">Delivers creative diff alerts and pitch-ready briefs to your inbox or client distribution lists.</p>
-                <input type="password" value={resendKey} onChange={(e) => setResendKey(e.target.value)} placeholder="re_xxxxxxxxxxxxxxxxxxxx" className="input-flat mono" />
+                <input type="password" value={resendKey} onChange={(e) => setResendKey(e.target.value)} onBlur={() => resendKey && saveAllIntegrations()} placeholder="re_xxxxxxxxxxxxxxxxxxxx" className="input-flat mono" />
               </div>
 
               <button onClick={saveAllIntegrations} disabled={integSaving} className="btn-flat btn-primary">
