@@ -816,7 +816,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               </button>
 
               <div className="mono text-[11px] text-muted-foreground border-2 border-dashed border-ink rounded-[4px] p-3">
-                ► AI distillation runs through the Lovable AI Gateway (gpt-4o-mini) — no extra key required.
+                ► Keys are encrypted at rest and used only for your workspace scans.
               </div>
             </div>
           )}
