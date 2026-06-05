@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
-import { getIntegrations, saveIntegrations } from "@/lib/integrations.functions";
+import { getIntegrations, getProfile, saveIntegrations } from "@/lib/integrations.functions";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
   TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
   Grid3x3, Radio, Plug, ThumbsUp, AlertTriangle, PenTool, KeyRound, Save,
+  BarChart3, PieChart as PieIcon,
 } from "lucide-react";
 
 const DATE_RANGES = [
@@ -58,6 +59,26 @@ const INITIAL: Competitor[] = [
   { name: "Lululemon",  spend: 3_210_000, meta: 38, google: 24, programmatic: 38 },
   { name: "Glossier",   spend:   910_000, meta: 64, google: 22, programmatic: 14 },
 ];
+
+// Deterministic synthetic spend + channel mix derived from a domain string,
+// so tracked-advertiser cards stay populated until live spend ingestion lands.
+function hashStr(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function brandFromDomain(domain: string) {
+  const root = domain.replace(/^https?:\/\//, "").replace(/^www\./, "").split(/[./]/)[0] ?? domain;
+  return root.charAt(0).toUpperCase() + root.slice(1);
+}
+function synthRow(domain: string): Competitor {
+  const h = hashStr(domain);
+  const spend = 500_000 + (h % 48) * 100_000;
+  const meta = 25 + (h % 45);
+  const google = Math.max(10, Math.min(60, 20 + ((h >> 4) % 40)));
+  const programmatic = Math.max(5, 100 - meta - google);
+  return { name: brandFromDomain(domain), spend, meta, google, programmatic };
+}
 
 const CHANNEL_COLORS_STD = ["var(--primary)", "#23251D", "#A1A39A"];
 const CHANNEL_COLORS_PASTEL = ["var(--pastel-lilac)", "var(--pastel-sage)", "var(--pastel-peach)"];
