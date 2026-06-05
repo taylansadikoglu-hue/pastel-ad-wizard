@@ -562,7 +562,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               <div>
                 <div className="mono text-[10px] text-muted-foreground">WORKSPACE / DEVELOPER</div>
                 <h2 className="text-2xl font-bold mt-1">Developer Integrations</h2>
-                <p className="text-sm text-muted-foreground mt-1">Drop in your own API keys to power scraping and outbound notifications. Keys are stored locally in this session — no calls are made yet.</p>
+                <p className="text-sm text-muted-foreground mt-1">Your API keys live encrypted in your workspace and are used to run live ad-library scrapes and outbound notifications.</p>
               </div>
 
               <div className="card-flat p-5 space-y-3">
@@ -570,18 +570,18 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> Apify API Token</div>
                   <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">SCRAPING</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Powers cross-channel ad library + audience listening crawlers per tracked brand fingerprint.</p>
-                <input
-                  type="password"
-                  value={apifyToken}
-                  onChange={(e) => setApifyToken(e.target.value)}
-                  placeholder="apify_api_xxxxxxxxxxxxxxxxxxxx"
-                  className="input-flat mono"
-                />
-                <button
-                  onClick={() => { if (!apifyToken) return toast.error("Paste an Apify token first"); toast.success("Apify token saved · decoupled (no calls made)"); }}
-                  className="btn-flat btn-primary"
-                ><Save size={13} /> Save Apify token</button>
+                <p className="text-xs text-muted-foreground">Powers Facebook Ads Library + cross-channel creative scraping per tracked brand fingerprint.</p>
+                <input type="password" value={apifyToken} onChange={(e) => setApifyToken(e.target.value)} placeholder="apify_api_xxxxxxxxxxxxxxxxxxxx" className="input-flat mono" />
+              </div>
+
+              <div className="card-flat p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> DataForSEO Credentials</div>
+                  <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">SEARCH + VIDEO</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Powers Google Ads Transparency and YouTube ad placement indexing.</p>
+                <input type="text" value={dfsLogin} onChange={(e) => setDfsLogin(e.target.value)} placeholder="DataForSEO login (email)" className="input-flat mono" />
+                <input type="password" value={dfsPassword} onChange={(e) => setDfsPassword(e.target.value)} placeholder="DataForSEO password" className="input-flat mono" />
               </div>
 
               <div className="card-flat p-5 space-y-3">
@@ -590,21 +590,15 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">EMAIL</span>
                 </div>
                 <p className="text-xs text-muted-foreground">Delivers creative diff alerts and pitch-ready briefs to your inbox or client distribution lists.</p>
-                <input
-                  type="password"
-                  value={resendKey}
-                  onChange={(e) => setResendKey(e.target.value)}
-                  placeholder="re_xxxxxxxxxxxxxxxxxxxx"
-                  className="input-flat mono"
-                />
-                <button
-                  onClick={() => { if (!resendKey) return toast.error("Paste a Resend key first"); toast.success("Resend key saved · decoupled (no calls made)"); }}
-                  className="btn-flat btn-primary"
-                ><Save size={13} /> Save Resend key</button>
+                <input type="password" value={resendKey} onChange={(e) => setResendKey(e.target.value)} placeholder="re_xxxxxxxxxxxxxxxxxxxx" className="input-flat mono" />
               </div>
 
+              <button onClick={saveAllIntegrations} disabled={integSaving} className="btn-flat btn-primary">
+                <Save size={13} /> {integSaving ? "Saving…" : "Save all integrations"}
+              </button>
+
               <div className="mono text-[11px] text-muted-foreground border-2 border-dashed border-ink rounded-[4px] p-3">
-                ► All data connections are prepared but safely decoupled. Activate them per-workspace once your founding seat is provisioned.
+                ► AI distillation runs through the Lovable AI Gateway (gpt-4o-mini) — no extra key required.
               </div>
             </div>
           )}
