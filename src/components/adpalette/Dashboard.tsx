@@ -942,3 +942,31 @@ function aiReply(q: string, visible: Competitor[]): string {
   }
   return `Tracked advertisers account for ~$${(total/1_000_000).toFixed(2)}M in monthly spend. Ask about channel mix, hooks, or ad longevity.`;
 }
+
+const NAV_ITEMS = [
+  { icon: Home, label: "Workspace", to: "/app" as const },
+  { icon: Layers, label: "Creative library", to: "/app/creative" as const },
+  { icon: Target, label: "Advertisers", to: "/app/advertisers" as const },
+  { icon: TrendingUp, label: "Benchmarks", to: "/app/benchmarks" as const },
+  { icon: Settings, label: "Settings", to: "/app/settings" as const },
+];
+
+export function SidebarNav() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return (
+    <nav className="p-2 space-y-1 flex-1">
+      {NAV_ITEMS.map((it) => {
+        const active = pathname === it.to;
+        return (
+          <Link
+            key={it.label}
+            to={it.to}
+            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-[4px] text-sm font-medium border-2 ${active ? "border-ink bg-secondary shadow-flat-sm" : "border-transparent hover:border-ink"}`}
+          >
+            <it.icon size={15} /> {it.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
