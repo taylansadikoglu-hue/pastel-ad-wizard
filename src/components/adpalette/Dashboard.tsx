@@ -439,6 +439,106 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               />
             </div>
           </div>
+          </>}
+
+          {activeTab === "sentiment" && (
+            <div className="space-y-5">
+              <div>
+                <div className="mono text-[10px] text-muted-foreground">WORKSPACE / SENTIMENT</div>
+                <h2 className="text-2xl font-bold mt-1">AI Audience Sentiment Radar</h2>
+                <p className="text-sm text-muted-foreground mt-1">Social listening compiled per tracked advertiser fingerprint — what consumers love, where they friction, and the ad copy angle to weaponize.</p>
+              </div>
+              {SENTIMENT_DATA.map((s) => (
+                <div key={s.brand} className="card-flat overflow-hidden">
+                  <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between">
+                    <div className="font-bold">{s.brand}</div>
+                    <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">{s.brand.toLowerCase()}.com</span>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-0">
+                    <div className="p-4 border-r-2 border-ink last:border-r-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-primary"><ThumbsUp size={14} /></div>
+                        <div className="mono text-[10px] uppercase font-bold">The Good</div>
+                      </div>
+                      <p className="text-sm leading-relaxed">{s.good}</p>
+                    </div>
+                    <div className="p-4 border-r-2 border-ink last:border-r-0 border-t-2 md:border-t-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-ink text-paper"><AlertTriangle size={14} /></div>
+                        <div className="mono text-[10px] uppercase font-bold">The Friction</div>
+                      </div>
+                      <p className="text-sm leading-relaxed">{s.friction}</p>
+                    </div>
+                    <div className="p-4 border-t-2 md:border-t-0 bg-canvas">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-secondary"><PenTool size={14} /></div>
+                        <div className="mono text-[10px] uppercase font-bold">The Ad Angle · Copy Blueprint</div>
+                      </div>
+                      <p className="text-sm leading-relaxed font-medium">{s.blueprint}</p>
+                      <button onClick={() => toast.success(`${s.brand} blueprint copied`)} className="btn-flat text-[11px] px-2 py-1 mt-3">
+                        <Copy size={12} /> Copy blueprint
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="mono text-[11px] text-muted-foreground border-2 border-dashed border-ink rounded-[4px] p-3">
+                ► Sentiment streams are prepared via the master brand fingerprint and stay safely decoupled until you connect a listening source in Developer Integrations.
+              </div>
+            </div>
+          )}
+
+          {activeTab === "integrations" && (
+            <div className="max-w-3xl space-y-5">
+              <div>
+                <div className="mono text-[10px] text-muted-foreground">WORKSPACE / DEVELOPER</div>
+                <h2 className="text-2xl font-bold mt-1">Developer Integrations</h2>
+                <p className="text-sm text-muted-foreground mt-1">Drop in your own API keys to power scraping and outbound notifications. Keys are stored locally in this session — no calls are made yet.</p>
+              </div>
+
+              <div className="card-flat p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> Apify API Token</div>
+                  <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">SCRAPING</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Powers cross-channel ad library + audience listening crawlers per tracked brand fingerprint.</p>
+                <input
+                  type="password"
+                  value={apifyToken}
+                  onChange={(e) => setApifyToken(e.target.value)}
+                  placeholder="apify_api_xxxxxxxxxxxxxxxxxxxx"
+                  className="input-flat mono"
+                />
+                <button
+                  onClick={() => { if (!apifyToken) return toast.error("Paste an Apify token first"); toast.success("Apify token saved · decoupled (no calls made)"); }}
+                  className="btn-flat btn-primary"
+                ><Save size={13} /> Save Apify token</button>
+              </div>
+
+              <div className="card-flat p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> Resend API Key</div>
+                  <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">EMAIL</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Delivers creative diff alerts and pitch-ready briefs to your inbox or client distribution lists.</p>
+                <input
+                  type="password"
+                  value={resendKey}
+                  onChange={(e) => setResendKey(e.target.value)}
+                  placeholder="re_xxxxxxxxxxxxxxxxxxxx"
+                  className="input-flat mono"
+                />
+                <button
+                  onClick={() => { if (!resendKey) return toast.error("Paste a Resend key first"); toast.success("Resend key saved · decoupled (no calls made)"); }}
+                  className="btn-flat btn-primary"
+                ><Save size={13} /> Save Resend key</button>
+              </div>
+
+              <div className="mono text-[11px] text-muted-foreground border-2 border-dashed border-ink rounded-[4px] p-3">
+                ► All data connections are prepared but safely decoupled. Activate them per-workspace once your founding seat is provisioned.
+              </div>
+            </div>
+          )}
         </main>
       </div>
 
