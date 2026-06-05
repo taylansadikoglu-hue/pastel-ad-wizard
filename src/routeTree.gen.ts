@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiBarbsRouteImport } from './routes/api/barbs'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
+import { Route as AuthenticatedAppSentimentRouteImport } from './routes/_authenticated/app.sentiment'
 import { Route as AuthenticatedAppCreativeRouteImport } from './routes/_authenticated/app.creative'
 import { Route as AuthenticatedAppBenchmarksRouteImport } from './routes/_authenticated/app.benchmarks'
 import { Route as AuthenticatedAppAdvertisersRouteImport } from './routes/_authenticated/app.advertisers'
@@ -49,6 +50,12 @@ const AuthenticatedAppSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppSentimentRoute =
+  AuthenticatedAppSentimentRouteImport.update({
+    id: '/sentiment',
+    path: '/sentiment',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppCreativeRoute =
   AuthenticatedAppCreativeRouteImport.update({
     id: '/creative',
@@ -76,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/app/creative': typeof AuthenticatedAppCreativeRoute
+  '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
 }
 export interface FileRoutesByTo {
@@ -86,6 +94,7 @@ export interface FileRoutesByTo {
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/app/creative': typeof AuthenticatedAppCreativeRoute
+  '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
 }
 export interface FileRoutesById {
@@ -98,6 +107,7 @@ export interface FileRoutesById {
   '/_authenticated/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/_authenticated/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/_authenticated/app/creative': typeof AuthenticatedAppCreativeRoute
+  '/_authenticated/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/app/advertisers'
     | '/app/benchmarks'
     | '/app/creative'
+    | '/app/sentiment'
     | '/app/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/app/advertisers'
     | '/app/benchmarks'
     | '/app/creative'
+    | '/app/sentiment'
     | '/app/settings'
   id:
     | '__root__'
@@ -131,6 +143,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/advertisers'
     | '/_authenticated/app/benchmarks'
     | '/_authenticated/app/creative'
+    | '/_authenticated/app/sentiment'
     | '/_authenticated/app/settings'
   fileRoutesById: FileRoutesById
 }
@@ -185,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/sentiment': {
+      id: '/_authenticated/app/sentiment'
+      path: '/sentiment'
+      fullPath: '/app/sentiment'
+      preLoaderRoute: typeof AuthenticatedAppSentimentRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/creative': {
       id: '/_authenticated/app/creative'
       path: '/creative'
@@ -213,6 +233,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAdvertisersRoute: typeof AuthenticatedAppAdvertisersRoute
   AuthenticatedAppBenchmarksRoute: typeof AuthenticatedAppBenchmarksRoute
   AuthenticatedAppCreativeRoute: typeof AuthenticatedAppCreativeRoute
+  AuthenticatedAppSentimentRoute: typeof AuthenticatedAppSentimentRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
 }
 
@@ -220,6 +241,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAdvertisersRoute: AuthenticatedAppAdvertisersRoute,
   AuthenticatedAppBenchmarksRoute: AuthenticatedAppBenchmarksRoute,
   AuthenticatedAppCreativeRoute: AuthenticatedAppCreativeRoute,
+  AuthenticatedAppSentimentRoute: AuthenticatedAppSentimentRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
 }
 
