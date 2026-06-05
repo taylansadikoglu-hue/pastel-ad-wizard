@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
+import { supabase } from "@/integrations/supabase/client";
+import { getIntegrations, saveIntegrations } from "@/lib/integrations.functions";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
@@ -75,10 +77,77 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [videoFilter, setVideoFilter] = useState<"all" | "short" | "long">("all");
   const [activeTab, setActiveTab] = useState<"gallery" | "sentiment" | "integrations">("gallery");
   const [apifyToken, setApifyToken] = useState("");
+  const [dfsLogin, setDfsLogin] = useState("");
+  const [dfsPassword, setDfsPassword] = useState("");
   const [resendKey, setResendKey] = useState("");
+  const [integSaving, setIntegSaving] = useState(false);
+  const [liveSentiment, setLiveSentiment] = useState<{ domain: string; good: string | null; friction: string | null; blueprint: string | null }[]>([]);
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
   ]);
+
+  // Load saved integrations once
+  useEffect(() => {
+    getIntegrations()
+      .then((d) => {
+        if (!d) return;
+        if (d.apify_token) setApifyToken(d.apify_token);
+        if (d.dataforseo_login) setDfsLogin(d.dataforseo_login);
+        if (d.dataforseo_password) setDfsPassword(d.dataforseo_password);
+        if (d.resend_api_key) setResendKey(d.resend_api_key);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Subscribe to live sentiment_insights for this user
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const { data } = await supabase
+        .from("sentiment_insights")
+        .select("domain, good, friction, blueprint, created_at")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (active && data) setLiveSentiment(data);
+    };
+    load();
+    const channel = supabase
+      .channel("sentiment-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "sentiment_insights" },
+        (payload) => {
+          const r = payload.new as { domain: string; good: string | null; friction: string | null; blueprint: string | null };
+          setLiveSentiment((prev) => [r, ...prev].slice(0, 20));
+          toast.success(`New sentiment radar reading: ${r.domain}`);
+        }
+      )
+      .subscribe();
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const saveAllIntegrations = async () => {
+    setIntegSaving(true);
+    try {
+      await saveIntegrations({
+        data: {
+          apify_token: apifyToken || null,
+          dataforseo_login: dfsLogin || null,
+          dataforseo_password: dfsPassword || null,
+          resend_api_key: resendKey || null,
+        },
+      });
+      toast.success("Integrations saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setIntegSaving(false);
+    }
+  };
+
 
   const visible = rows.filter((r) => selected[r.name]);
   const colors = theme === "dark" ? CHANNEL_COLORS_PASTEL : CHANNEL_COLORS_STD;
@@ -493,7 +562,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               <div>
                 <div className="mono text-[10px] text-muted-foreground">WORKSPACE / DEVELOPER</div>
                 <h2 className="text-2xl font-bold mt-1">Developer Integrations</h2>
-                <p className="text-sm text-muted-foreground mt-1">Drop in your own API keys to power scraping and outbound notifications. Keys are stored locally in this session — no calls are made yet.</p>
+                <p className="text-sm text-muted-foreground mt-1">Your API keys live encrypted in your workspace and are used to run live ad-library scrapes and outbound notifications.</p>
               </div>
 
               <div className="card-flat p-5 space-y-3">
@@ -501,18 +570,18 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> Apify API Token</div>
                   <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">SCRAPING</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Powers cross-channel ad library + audience listening crawlers per tracked brand fingerprint.</p>
-                <input
-                  type="password"
-                  value={apifyToken}
-                  onChange={(e) => setApifyToken(e.target.value)}
-                  placeholder="apify_api_xxxxxxxxxxxxxxxxxxxx"
-                  className="input-flat mono"
-                />
-                <button
-                  onClick={() => { if (!apifyToken) return toast.error("Paste an Apify token first"); toast.success("Apify token saved · decoupled (no calls made)"); }}
-                  className="btn-flat btn-primary"
-                ><Save size={13} /> Save Apify token</button>
+                <p className="text-xs text-muted-foreground">Powers Facebook Ads Library + cross-channel creative scraping per tracked brand fingerprint.</p>
+                <input type="password" value={apifyToken} onChange={(e) => setApifyToken(e.target.value)} placeholder="apify_api_xxxxxxxxxxxxxxxxxxxx" className="input-flat mono" />
+              </div>
+
+              <div className="card-flat p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> DataForSEO Credentials</div>
+                  <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">SEARCH + VIDEO</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Powers Google Ads Transparency and YouTube ad placement indexing.</p>
+                <input type="text" value={dfsLogin} onChange={(e) => setDfsLogin(e.target.value)} placeholder="DataForSEO login (email)" className="input-flat mono" />
+                <input type="password" value={dfsPassword} onChange={(e) => setDfsPassword(e.target.value)} placeholder="DataForSEO password" className="input-flat mono" />
               </div>
 
               <div className="card-flat p-5 space-y-3">
@@ -521,21 +590,15 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">EMAIL</span>
                 </div>
                 <p className="text-xs text-muted-foreground">Delivers creative diff alerts and pitch-ready briefs to your inbox or client distribution lists.</p>
-                <input
-                  type="password"
-                  value={resendKey}
-                  onChange={(e) => setResendKey(e.target.value)}
-                  placeholder="re_xxxxxxxxxxxxxxxxxxxx"
-                  className="input-flat mono"
-                />
-                <button
-                  onClick={() => { if (!resendKey) return toast.error("Paste a Resend key first"); toast.success("Resend key saved · decoupled (no calls made)"); }}
-                  className="btn-flat btn-primary"
-                ><Save size={13} /> Save Resend key</button>
+                <input type="password" value={resendKey} onChange={(e) => setResendKey(e.target.value)} placeholder="re_xxxxxxxxxxxxxxxxxxxx" className="input-flat mono" />
               </div>
 
+              <button onClick={saveAllIntegrations} disabled={integSaving} className="btn-flat btn-primary">
+                <Save size={13} /> {integSaving ? "Saving…" : "Save all integrations"}
+              </button>
+
               <div className="mono text-[11px] text-muted-foreground border-2 border-dashed border-ink rounded-[4px] p-3">
-                ► All data connections are prepared but safely decoupled. Activate them per-workspace once your founding seat is provisioned.
+                ► AI distillation runs through the Lovable AI Gateway (gpt-4o-mini) — no extra key required.
               </div>
             </div>
           )}

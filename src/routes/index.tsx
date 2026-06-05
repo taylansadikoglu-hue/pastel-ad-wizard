@@ -1,15 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ThemeProvider } from "@/components/adpalette/theme";
 import { Landing } from "@/components/adpalette/Landing";
-import { OnboardingWizard } from "@/components/adpalette/Onboarding";
-import { Dashboard } from "@/components/adpalette/Dashboard";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "RevenueAd — See where your competitors spend their ad budgets" },
-      { name: "description", content: "RevenueAd tracks every advertising placement across Search, YouTube, Meta, TikTok, and Programmatic. Beautifully simple competitor analysis for agencies." },
+      { name: "description", content: "RevenueAd tracks every advertising placement across Search, YouTube, Meta, TikTok, and Programmatic. Beautifully simple competitor ad intelligence for agencies." },
       { property: "og:title", content: "RevenueAd — cross-channel ad intelligence for agencies" },
       { property: "og:description", content: "Track competitor ad spend, hooks, and creative velocity across every channel." },
     ],
@@ -17,15 +14,11 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Stage = "landing" | "onboard" | "app";
-
 function Index() {
-  const [stage, setStage] = useState<Stage>("landing");
+  const navigate = useNavigate();
   return (
     <ThemeProvider>
-      {stage === "landing" && <Landing onEnter={() => setStage("onboard")} />}
-      {stage === "onboard" && <OnboardingWizard onComplete={() => setStage("app")} />}
-      {stage === "app" && <Dashboard onLogout={() => setStage("landing")} />}
+      <Landing onEnter={() => navigate({ to: "/auth" })} />
     </ThemeProvider>
   );
 }
