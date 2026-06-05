@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
-import { getIntegrations, saveIntegrations } from "@/lib/integrations.functions";
+import { getIntegrations, getProfile, saveIntegrations } from "@/lib/integrations.functions";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
   TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
   Grid3x3, Radio, Plug, ThumbsUp, AlertTriangle, PenTool, KeyRound, Save,
+  BarChart3, PieChart as PieIcon,
 } from "lucide-react";
 
 const DATE_RANGES = [
@@ -59,12 +60,33 @@ const INITIAL: Competitor[] = [
   { name: "Glossier",   spend:   910_000, meta: 64, google: 22, programmatic: 14 },
 ];
 
+// Deterministic synthetic spend + channel mix derived from a domain string,
+// so tracked-advertiser cards stay populated until live spend ingestion lands.
+function hashStr(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function brandFromDomain(domain: string) {
+  const root = domain.replace(/^https?:\/\//, "").replace(/^www\./, "").split(/[./]/)[0] ?? domain;
+  return root.charAt(0).toUpperCase() + root.slice(1);
+}
+function synthRow(domain: string): Competitor {
+  const h = hashStr(domain);
+  const spend = 500_000 + (h % 48) * 100_000;
+  const meta = 25 + (h % 45);
+  const google = Math.max(10, Math.min(60, 20 + ((h >> 4) % 40)));
+  const programmatic = Math.max(5, 100 - meta - google);
+  return { name: brandFromDomain(domain), spend, meta, google, programmatic };
+}
+
 const CHANNEL_COLORS_STD = ["var(--primary)", "#23251D", "#A1A39A"];
 const CHANNEL_COLORS_PASTEL = ["var(--pastel-lilac)", "var(--pastel-sage)", "var(--pastel-peach)"];
 
 export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const { theme, toggle } = useTheme();
-  const [rows, setRows] = useState(INITIAL);
+  const [rows, setRows] = useState<Competitor[]>(INITIAL);
+  const [baselineRows, setBaselineRows] = useState<Competitor[]>(INITIAL);
   const [selected, setSelected] = useState<Record<string, boolean>>(
     Object.fromEntries(INITIAL.map((r) => [r.name, true]))
   );
@@ -76,15 +98,89 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [videoFilter, setVideoFilter] = useState<"all" | "short" | "long">("all");
   const [activeTab, setActiveTab] = useState<"gallery" | "sentiment" | "integrations">("gallery");
+  const [chartView, setChartView] = useState<"bar" | "pie" | "table">("bar");
   const [apifyToken, setApifyToken] = useState("");
   const [dfsLogin, setDfsLogin] = useState("");
   const [dfsPassword, setDfsPassword] = useState("");
   const [resendKey, setResendKey] = useState("");
   const [integSaving, setIntegSaving] = useState(false);
   const [liveSentiment, setLiveSentiment] = useState<{ domain: string; good: string | null; friction: string | null; blueprint: string | null }[]>([]);
+  const [livePlacements, setLivePlacements] = useState<{ brand: string; hook: string; channel: string; days: number; length: string; aiTag: string }[]>([]);
+  const [userName, setUserName] = useState<string>("");
+  const [userInitials, setUserInitials] = useState<string>("YOU");
+  const [agencyDomain, setAgencyDomain] = useState<string>("");
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
-    { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
+    { role: "ai", text: "Welcome — ask me anything about the tracked advertisers' creative." },
   ]);
+
+  // Auth user + profile → top-left user card binds to session metadata
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const u = data.user;
+      if (!u || !active) return;
+      const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+      const fromMeta = (meta.full_name as string) || (meta.name as string) || "";
+      const fallback = (u.email ?? "").split("@")[0] ?? "";
+      const display = fromMeta || (fallback ? fallback.charAt(0).toUpperCase() + fallback.slice(1) : "Operator");
+      setUserName(display);
+      const parts = display.split(/[\s._-]+/).filter(Boolean);
+      const initials = (parts[0]?.[0] ?? "Y") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "");
+      setUserInitials(initials.toUpperCase().slice(0, 2));
+      setChatLog([{ role: "ai", text: `Hi ${display.split(" ")[0]} — ask me anything about the tracked advertisers' creative.` }]);
+      try {
+        const p = await getProfile();
+        if (active && p?.agency_domain) setAgencyDomain(p.agency_domain);
+      } catch {}
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // Tracked advertisers (domain_scans) → bind matrix + chart to real DB rows
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("domain_scans")
+        .select("domain, created_at")
+        .order("created_at", { ascending: false });
+      if (!active || !data || data.length === 0) return;
+      const unique: string[] = [];
+      for (const r of data) {
+        if (r.domain && !unique.includes(r.domain)) unique.push(r.domain);
+        if (unique.length >= 7) break;
+      }
+      const next = unique.map(synthRow);
+      setRows(next);
+      setBaselineRows(next);
+      setSelected(Object.fromEntries(next.map((r) => [r.name, true])));
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // Continuous Inspiration Loop → ad_placements
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("ad_placements")
+        .select("domain, channel, hook, days_running, creative_url, created_at")
+        .order("created_at", { ascending: false })
+        .limit(12);
+      if (!active || !data || data.length === 0) return;
+      setLivePlacements(
+        data.map((p) => ({
+          brand: brandFromDomain(p.domain),
+          hook: p.hook ?? "Live creative — hook pending AI extraction.",
+          channel: p.channel ?? "Meta",
+          days: p.days_running ?? 1,
+          length: "0:--",
+          aiTag: "Live",
+        }))
+      );
+    })();
+  }, []);
 
   // Load saved integrations once
   useEffect(() => {
@@ -98,6 +194,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       })
       .catch(() => {});
   }, []);
+
 
   // Subscribe to live sentiment_insights for this user
   useEffect(() => {
@@ -178,24 +275,25 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       {/* Sidebar */}
       <aside className="w-60 shrink-0 border-r-2 border-ink bg-paper flex flex-col">
         <div className="p-4 border-b-2 border-ink flex items-center gap-2">
-          <div className="w-8 h-8 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-            <span className="mono text-xs font-bold">RA</span>
+          <div className="px-1.5 h-8 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
+            <span className="mono text-[11px] font-bold">R-AD</span>
           </div>
           <div>
             <div className="font-bold leading-tight">RevenueAd</div>
-            <div className="mono text-[10px] text-muted-foreground">north-studio.co</div>
+            <div className="mono text-[10px] text-muted-foreground">{agencyDomain || "workspace"}</div>
           </div>
         </div>
 
         <div className="p-3 border-b-2 border-ink">
           <div className="card-flat-sm p-2 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-[3px] border-2 border-ink bg-secondary grid place-items-center mono text-xs font-bold">AC</div>
+            <div className="w-8 h-8 rounded-[3px] border-2 border-ink bg-secondary grid place-items-center mono text-xs font-bold">{userInitials}</div>
             <div className="leading-tight">
-              <div className="text-sm font-semibold">Ava Chen</div>
-              <div className="mono text-[10px] text-muted-foreground">Growth · 14 advertisers</div>
+              <div className="text-sm font-semibold">{userName || "Operator"}</div>
+              <div className="mono text-[10px] text-muted-foreground">Growth · {rows.length} advertiser{rows.length === 1 ? "" : "s"}</div>
             </div>
           </div>
         </div>
+
 
         <nav className="p-2 space-y-1 flex-1">
           {[
@@ -395,21 +493,37 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
             {/* Chart */}
             <div className="card-flat p-4">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
                 <div className="font-bold text-sm">Channel mix by spend</div>
-                <div className="flex items-center gap-2 mono text-[10px]">
-                  {["Meta", "Google", "Prog."].map((l, i) => (
-                    <span key={l} className="flex items-center gap-1">
-                      <span className="w-3 h-3 border-2 border-ink" style={{ background: colors[i] }} />{l}
-                    </span>
+                <div className="flex items-center border-2 border-ink rounded-[3px] overflow-hidden">
+                  {([
+                    { k: "bar", label: "Bars", icon: BarChart3 },
+                    { k: "pie", label: "Pie", icon: PieIcon },
+                    { k: "table", label: "Table", icon: TableIcon },
+                  ] as const).map((v, i) => (
+                    <button
+                      key={v.k}
+                      onClick={() => setChartView(v.k)}
+                      className={`flex items-center gap-1 px-2 py-1 mono text-[10px] font-bold ${i > 0 ? "border-l-2 border-ink" : ""} ${chartView === v.k ? "bg-primary" : "bg-paper hover:bg-secondary"}`}
+                      aria-pressed={chartView === v.k}
+                    >
+                      <v.icon size={11} /> {v.label}
+                    </button>
                   ))}
                 </div>
+              </div>
+              <div className="flex items-center gap-2 mono text-[10px] mb-3 flex-wrap">
+                {["Meta", "Google", "Prog."].map((l, i) => (
+                  <span key={l} className="flex items-center gap-1">
+                    <span className="w-3 h-3 border-2 border-ink" style={{ background: colors[i] }} />{l}
+                  </span>
+                ))}
               </div>
               {visible.length === 0 ? (
                 <div className="h-64 grid place-items-center mono text-xs text-muted-foreground border-2 border-dashed border-ink rounded-[4px]">
                   Select at least one advertiser
                 </div>
-              ) : (
+              ) : chartView === "bar" ? (
                 <div className="space-y-3">
                   {visible.map((r) => (
                     <div key={r.name}>
@@ -425,9 +539,78 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
                   ))}
                 </div>
+              ) : chartView === "pie" ? (
+                (() => {
+                  const agg = visible.reduce(
+                    (a, r) => {
+                      a.meta += (r.meta * r.spend) / 100;
+                      a.google += (r.google * r.spend) / 100;
+                      a.prog += (r.programmatic * r.spend) / 100;
+                      return a;
+                    },
+                    { meta: 0, google: 0, prog: 0 }
+                  );
+                  const total = agg.meta + agg.google + agg.prog || 1;
+                  const segs = [
+                    { label: "Meta", value: agg.meta, color: colors[0] },
+                    { label: "Google", value: agg.google, color: colors[1] },
+                    { label: "Programmatic", value: agg.prog, color: colors[2] },
+                  ];
+                  const cx = 110, cy = 110, r = 95;
+                  let cum = 0;
+                  const arcs = segs.map((s) => {
+                    const start = (cum / total) * Math.PI * 2 - Math.PI / 2;
+                    cum += s.value;
+                    const end = (cum / total) * Math.PI * 2 - Math.PI / 2;
+                    const large = end - start > Math.PI ? 1 : 0;
+                    const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
+                    const x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
+                    const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+                    return { d, color: s.color, label: s.label, pct: Math.round((s.value / total) * 100) };
+                  });
+                  return (
+                    <div className="flex flex-col items-center gap-3">
+                      <svg viewBox="0 0 220 220" className="w-full max-w-[240px]">
+                        {arcs.map((a) => (
+                          <path key={a.label} d={a.d} fill={a.color} stroke="var(--ink)" strokeWidth={2} />
+                        ))}
+                      </svg>
+                      <div className="grid grid-cols-3 gap-2 w-full">
+                        {arcs.map((a) => (
+                          <div key={a.label} className="card-flat-sm p-2 text-center">
+                            <div className="mono text-[10px] uppercase">{a.label}</div>
+                            <div className="mono text-lg font-bold">{a.pct}%</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <table className="w-full text-xs">
+                  <thead className="border-b-2 border-ink bg-secondary">
+                    <tr className="text-left">
+                      {["Advertiser", "Meta $", "Google $", "Prog. $", "Total"].map((h) => (
+                        <th key={h} className="px-2 py-1.5 mono text-[10px] uppercase">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visible.map((r) => (
+                      <tr key={r.name} className="border-b border-ink/30 last:border-0">
+                        <td className="px-2 py-1.5 font-semibold">{r.name}</td>
+                        <td className="px-2 py-1.5 mono">{fmt((r.meta * r.spend) / 100)}</td>
+                        <td className="px-2 py-1.5 mono">{fmt((r.google * r.spend) / 100)}</td>
+                        <td className="px-2 py-1.5 mono">{fmt((r.programmatic * r.spend) / 100)}</td>
+                        <td className="px-2 py-1.5 mono font-bold">{fmt(r.spend)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>
+
 
 
           {/* Continuous Inspiration Loop — video creative feed */}
@@ -457,12 +640,12 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               ))}
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-0">
-              {VIDEO_FEED
+              {(livePlacements.length ? livePlacements : VIDEO_FEED)
                 .filter((v) =>
                   videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14
                 )
-                .map((v) => (
-                  <div key={v.brand} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
+                .map((v, idx) => (
+                  <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
                     <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative">
                       <Play size={22} />
                       <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.length}</span>
@@ -637,7 +820,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               ))}
             </div>
             <div className="p-4 border-t-2 border-ink flex gap-2">
-              <button onClick={() => { setRows(INITIAL); toast("Reset to baseline values"); }} className="btn-flat flex-1">Reset</button>
+              <button onClick={() => { setRows(baselineRows); toast("Reset to baseline values"); }} className="btn-flat flex-1">Reset</button>
               <button onClick={() => { setCalibOpen(false); toast.success("Spend model calibrated"); }} className="btn-flat btn-primary flex-1">Save model</button>
             </div>
           </div>

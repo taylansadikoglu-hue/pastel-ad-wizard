@@ -70,8 +70,8 @@ function AuthPage() {
       <div className="min-h-screen bg-canvas text-ink grid place-items-center px-6 py-10">
         <div className="w-full max-w-md card-flat p-6 space-y-5">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-              <span className="mono text-xs font-bold">RA</span>
+            <div className="px-1.5 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
+              <span className="mono text-[10px] font-bold">R-AD</span>
             </div>
             <span className="font-bold tracking-tight">RevenueAd</span>
           </Link>

@@ -50,8 +50,8 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
       <header className="border-b-2 border-ink bg-paper sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-              <span className="mono text-xs font-bold">RA</span>
+            <div className="px-1.5 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
+              <span className="mono text-[10px] font-bold">R-AD</span>
             </div>
             <span className="font-bold tracking-tight">RevenueAd</span>
             <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] ml-1">v2.6</span>
@@ -79,7 +79,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             <Sparkles size={12} /> CROSS-CHANNEL AD INTELLIGENCE
           </div>
           <h1 className="mt-5 text-4xl md:text-6xl font-bold leading-[1.05] tracking-tight">
-            See exactly where competitors are spending — and exploit it.
+            See exactly where competitors are spending — and outpace them.
           </h1>
           <p className="mt-5 text-lg text-muted-foreground max-w-xl">
             RevenueAd tracks every advertising placement across Search, YouTube, Meta, TikTok, and Programmatic — built for <span className="font-semibold text-ink">independent e-commerce brands scaling solo</span> and <span className="font-semibold text-ink">performance agencies running competitive audits, client retention, and multi-channel scaling</span> across rosters.
@@ -181,25 +181,9 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
         </div>
       </section>
 
-      {/* Zig-zag cloud separator */}
-      <div className="relative overflow-hidden bg-ink text-paper border-y-2 border-ink">
-        <svg
-          className="absolute top-0 left-0 w-full h-6 text-canvas"
-          viewBox="0 0 1200 24"
-          preserveAspectRatio="none"
-          aria-hidden
-        >
-          <path d="M0 0 L60 24 L120 0 L180 24 L240 0 L300 24 L360 0 L420 24 L480 0 L540 24 L600 0 L660 24 L720 0 L780 24 L840 0 L900 24 L960 0 L1020 24 L1080 0 L1140 24 L1200 0 L1200 0 L0 0 Z" fill="currentColor" />
-        </svg>
-        <svg
-          className="absolute bottom-0 left-0 w-full h-6 text-canvas rotate-180"
-          viewBox="0 0 1200 24"
-          preserveAspectRatio="none"
-          aria-hidden
-        >
-          <path d="M0 0 L60 24 L120 0 L180 24 L240 0 L300 24 L360 0 L420 24 L480 0 L540 24 L600 0 L660 24 L720 0 L780 24 L840 0 L900 24 L960 0 L1020 24 L1080 0 L1140 24 L1200 0 L1200 0 L0 0 Z" fill="currentColor" />
-        </svg>
-        <div className="max-w-7xl mx-auto px-6 py-20 md:py-28 text-center relative z-10">
+      {/* Flat-line minimalist divider */}
+      <div className="bg-ink text-paper border-y-2 border-ink">
+        <div className="max-w-7xl mx-auto px-6 py-20 md:py-28 text-center">
           <div className="inline-flex items-center gap-2 mono text-[11px] px-2 py-1 border-2 border-paper rounded-[3px] bg-ink mb-5">
             <Sparkles size={12} /> THE STACK BEHIND THE EDGE
           </div>
@@ -209,6 +193,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
           <p className="mt-5 max-w-2xl mx-auto text-base md:text-lg opacity-80">
             Real-time ad library ingestion. Sentiment radar across thousands of raw consumer comments. Auto-generated ad-angle blueprints. One operating system for solo e-commerce operators and full-roster agencies alike.
           </p>
+          <div className="mt-10 mx-auto h-[2px] w-40 bg-paper/60" aria-hidden />
         </div>
       </div>
 
@@ -260,7 +245,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               locked: ["AI Audience Sentiment Radar", "Barbs AI Assistant"],
             },
             {
-              name: "Agency 10-Pack",
+              name: "Agency 7-Pack",
               price: 799,
               sub: "Up to 7 tracked brands · Full AI Stack",
               badge: "BEST VALUE",
