@@ -81,9 +81,25 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             <button onClick={toggle} className="btn-flat">
               <Palette size={14} /> {theme === "dark" ? "Warm Canvas" : "Dark Workstation"}
             </button>
-            <button onClick={onEnter} className="btn-flat btn-primary">
-              Start tracking <ArrowRight size={14} />
-            </button>
+            {signedIn ? (
+              <>
+                <button onClick={onEnter} className="btn-flat">
+                  Open workspace <ArrowRight size={14} />
+                </button>
+                <button onClick={signOut} className="btn-flat">
+                  <LogOut size={14} /> Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={onEnter} className="btn-flat">
+                  <LogIn size={14} /> Log in
+                </button>
+                <button onClick={onEnter} className="btn-flat btn-primary">
+                  Start tracking <ArrowRight size={14} />
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
