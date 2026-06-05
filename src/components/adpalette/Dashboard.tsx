@@ -430,6 +430,25 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
         </header>
 
         <main className="flex-1 overflow-auto p-6 space-y-6">
+          {runningScans.length > 0 && (
+            <div className="card-flat p-4 bg-secondary flex items-center gap-4">
+              <div className="w-9 h-9 border-2 border-ink rounded-[4px] bg-primary grid place-items-center shrink-0">
+                <Loader2 size={16} className="animate-spin" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="mono text-[10px] uppercase font-bold">Crawl in progress · syncing real-time channel mix metrics</div>
+                <div className="text-sm font-semibold truncate">
+                  Live API fan-out across Apify · DataForSEO · Lovable AI distill for: {runningScans.join(", ")}
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <div className="h-2 bg-paper border-2 border-ink rounded-[3px] animate-pulse" />
+                  <div className="h-2 bg-paper border-2 border-ink rounded-[3px] animate-pulse w-3/4" />
+                  <div className="h-2 bg-paper border-2 border-ink rounded-[3px] animate-pulse w-1/2" />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action bar */}
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
