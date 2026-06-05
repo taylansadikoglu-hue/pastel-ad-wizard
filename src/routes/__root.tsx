@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "RevenueAd | Cross-Channel Creative Intelligence" },
+      { name: "description", content: "Monitor live competitor video ads across Meta, TikTok, and YouTube. Track media patterns and deploy AI social sentiment radars to win more client campaigns." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "RevenueAd | Cross-Channel Creative Intelligence" },
+      { property: "og:description", content: "Monitor live competitor video ads across Meta, TikTok, and YouTube. Track media patterns and deploy AI social sentiment radars to win more client campaigns." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "RevenueAd | Cross-Channel Creative Intelligence" },
+      { name: "twitter:description", content: "Monitor live competitor video ads across Meta, TikTok, and YouTube. Track media patterns and deploy AI social sentiment radars to win more client campaigns." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/v6jdTgFGvlbydJg9cLGcx5k5odu2/social-images/social-1780638513342-eff21ddc-8b88-4c6c-8627-f8799f46c2b5.webp" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/v6jdTgFGvlbydJg9cLGcx5k5odu2/social-images/social-1780638513342-eff21ddc-8b88-4c6c-8627-f8799f46c2b5.webp" },
     ],
     links: [
       {
