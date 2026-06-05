@@ -87,7 +87,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               <PlayCircle size={14} /> Try interactive demo
             </a>
             <button onClick={onEnter} className="btn-flat btn-primary">
-              Start tracking now — from $199 <ArrowRight size={14} />
+              Start free — no card required <ArrowRight size={14} />
             </button>
           </div>
           <div className="mt-6 flex items-center gap-4 mono text-[11px] text-muted-foreground">
