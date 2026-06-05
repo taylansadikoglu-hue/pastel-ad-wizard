@@ -462,18 +462,20 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           {/* Primary tabs */}
           <div className="border-2 border-ink rounded-[4px] bg-paper flex overflow-hidden">
             {([
-              { k: "gallery", label: "Cross-Channel Ad Gallery", icon: Grid3x3 },
-              { k: "sentiment", label: "AI Audience Sentiment Radar", icon: Radio },
-              { k: "integrations", label: "Developer Integrations", icon: Plug },
-            ] as const).map((t, i) => (
-              <button
-                key={t.k}
-                onClick={() => setActiveTab(t.k)}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold ${i > 0 ? "border-l-2 border-ink" : ""} ${activeTab === t.k ? "bg-primary" : "hover:bg-secondary"}`}
-              >
-                <t.icon size={14} /> {t.label}
-              </button>
-            ))}
+              { k: "gallery", label: "Cross-Channel Ad Gallery", icon: Grid3x3, adminOnly: false },
+              { k: "sentiment", label: "AI Audience Sentiment Radar", icon: Radio, adminOnly: false },
+              { k: "integrations", label: "Developer Integrations", icon: Plug, adminOnly: true },
+            ] as const)
+              .filter((t) => !t.adminOnly || isAdmin)
+              .map((t, i) => (
+                <button
+                  key={t.k}
+                  onClick={() => setActiveTab(t.k)}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold ${i > 0 ? "border-l-2 border-ink" : ""} ${activeTab === t.k ? "bg-primary" : "hover:bg-secondary"}`}
+                >
+                  <t.icon size={14} /> {t.label}
+                </button>
+              ))}
           </div>
 
           {activeTab === "gallery" && <>
