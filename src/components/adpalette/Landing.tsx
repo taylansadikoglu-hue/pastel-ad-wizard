@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { BarbsChat } from "./BarbsChat";
+import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowRight, Palette, Check, Sparkles, BarChart3, Film, FileDown, PlayCircle, X as XIcon, Lock,
+  LogIn, LogOut,
 } from "lucide-react";
 
 
