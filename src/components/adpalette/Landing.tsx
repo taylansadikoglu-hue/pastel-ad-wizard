@@ -87,7 +87,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               <PlayCircle size={14} /> Try interactive demo
             </a>
             <button onClick={onEnter} className="btn-flat btn-primary">
-              Start tracking now — from $199 <ArrowRight size={14} />
+              Start free — no card required <ArrowRight size={14} />
             </button>
           </div>
           <div className="mt-6 flex items-center gap-4 mono text-[11px] text-muted-foreground">
@@ -214,8 +214,9 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             <span className="font-semibold text-ink">No contracts. No minimum durations. Cancel anytime.</span> Stripe billed monthly.
           </p>
         </div>
-        <div className="grid md:grid-cols-2 gap-5 mt-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-5 mt-8 max-w-6xl mx-auto">
           {[
+            { name: "The Free Scout", price: 0, sub: "1 tracked advertiser brand", perks: ["1 live domain scan", "Weekly creative refresh", "CSV export"], freeBadge: "FREE FOREVER" },
             { name: "The Solo Sniper", price: 199, sub: "1 core tracked advertiser brand", perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports"] },
             { name: "The Agency 7-Pack", price: 799, sub: "Up to 7 tracked advertiser brands", badge: "BEST VALUE", perks: ["Everything in Solo Sniper", "Side-by-side advertiser benchmarks", "White-label pitch decks", "Hook & creative diff alerts"] },
           ].map((p) => (
@@ -226,19 +227,21 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
                 </div>
               )}
               <div className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
-                FOUNDING MEMBER · LIFETIME LOCKED
+                {p.freeBadge ?? "FOUNDING MEMBER · LIFETIME LOCKED"}
               </div>
               <div className="font-bold mt-3">{p.name}</div>
-              <div className="mt-2 mono text-3xl font-bold">${p.price.toLocaleString()}<span className="text-sm font-normal">/mo</span></div>
+              <div className="mt-2 mono text-3xl font-bold">
+                {p.price === 0 ? "Free" : <>${p.price.toLocaleString()}<span className="text-sm font-normal">/mo</span></>}
+              </div>
               <div className="text-xs font-semibold mt-1">{p.sub}</div>
               <ul className="mt-3 space-y-1.5 text-sm">
                 {p.perks.map((f) => <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>)}
               </ul>
               <div className="mt-3 mono text-[10px] leading-snug border-t-2 border-ink pt-2">
-                Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Agencies.
+                {p.price === 0 ? "No credit card required. Upgrade anytime for daily refresh and more brands." : "Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Agencies."}
               </div>
               <button onClick={onEnter} className="btn-flat w-full mt-3">
-                Claim founding seat <ArrowRight size={14} />
+                {p.price === 0 ? "Create free account" : "Claim founding seat"} <ArrowRight size={14} />
               </button>
             </div>
           ))}
