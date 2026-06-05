@@ -86,9 +86,9 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-              <span className="mono text-xs font-bold">AP</span>
+              <span className="mono text-xs font-bold">RV</span>
             </div>
-            <span className="font-bold tracking-tight">AdPalette</span>
+            <span className="font-bold tracking-tight">Revenuad</span>
             <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] ml-1">v2.6</span>
           </div>
           <button onClick={toggle} className="btn-flat">
@@ -152,7 +152,7 @@ function StepSignup({ data, setData }: any) {
       <div>
         <h1 className="text-3xl font-bold">Create your operator account</h1>
         <p className="text-sm text-muted-foreground mt-2">
-          AdPalette gives ad agencies x-ray vision into every advertiser creative running on Meta, Google, and programmatic networks.
+          Revenuad gives ad agencies x-ray vision into every advertiser creative running on Meta, Google, and programmatic networks.
         </p>
         <ul className="mt-6 space-y-2 text-sm">
           {["Daily creative indexing across 14 channels", "Continuous video hook inspiration loop", "Auto-generated pitch decks"].map((t) => (
@@ -213,8 +213,14 @@ function StepAdvertisers({ data, setData }: any) {
         <h1 className="text-2xl font-bold">Who are your client's top 3 advertisers?</h1>
         <p className="text-sm text-muted-foreground mt-1">Proprietary technology to backtrack, compile, and future-save your list of advertisers.</p>
       </div>
+      <div className="card-flat-sm p-3 bg-primary">
+        <div className="mono text-[10px] font-bold uppercase">★ Master Brand Fingerprint</div>
+        <p className="text-xs mt-1 leading-snug">
+          Each domain you enter below becomes the <span className="font-bold">master fingerprint</span> Revenuad uses to track every cross-channel ad placement and scrape audience listening sentiment around that brand. One root domain = one indexed advertiser.
+        </p>
+      </div>
       {[0, 1, 2].map((i) => (
-        <Field key={i} label={`Advertiser ${i + 1} domain`} hint="root only">
+        <Field key={i} label={`Advertiser ${i + 1} · root domain (master fingerprint)`} hint="root only">
           <div className="flex gap-2">
             <div className="px-3 py-2 border-2 border-ink rounded-[4px] mono text-xs bg-secondary">https://</div>
             <input className="input-flat" placeholder={["sephora.com", "lululemon.com", "glossier.com"][i]} value={data.rivals[i]} onChange={(e) => update(i, e.target.value)} />
@@ -222,7 +228,7 @@ function StepAdvertisers({ data, setData }: any) {
         </Field>
       ))}
       <div className="card-flat-sm p-3 bg-secondary mono text-[11px]">
-        ► Proprietary technology automatically fingerprinting and indexing: Meta Ad Library · Google Ads Transparency · TikTok Top Ads · DSP programmatic creative.
+        ► Each master fingerprint unlocks: Meta Ad Library · Google Ads Transparency · TikTok Top Ads · DSP programmatic creative · audience sentiment listening feeds.
       </div>
     </div>
   );
