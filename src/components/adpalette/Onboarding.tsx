@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
+import { saveProfile } from "@/lib/integrations.functions";
+import { startScan } from "@/lib/scan.functions";
 import {
   ArrowRight, ArrowLeft, Check, CreditCard, Lock, Loader2, Palette, Crosshair, Users,
 } from "lucide-react";
