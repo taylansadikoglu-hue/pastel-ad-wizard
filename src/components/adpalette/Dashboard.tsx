@@ -447,10 +447,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               <p className="text-sm text-muted-foreground mt-1">Channel allocation pulled from {visible.length} of {rows.length} tracked advertisers. Recalibrate any total below.</p>
             </div>
             <div className="flex gap-2">
-              <button className="btn-flat" onClick={() => toast.success("Pitch PDF queued · check downloads in 12s")}>
+              <button className="btn-flat" onClick={exportPDF}>
                 <FileDown size={14} /> Export pitch PDF
               </button>
-              <button className="btn-flat" onClick={() => toast.success("CSV exported · 4 rows")}>
+              <button className="btn-flat" onClick={exportCSV}>
                 <TableIcon size={14} /> Export CSV
               </button>
               <button className="btn-flat" onClick={() => { navigator.clipboard?.writeText("chart").catch(() => {}); toast.success("Chart asset copied to clipboard"); }}>
