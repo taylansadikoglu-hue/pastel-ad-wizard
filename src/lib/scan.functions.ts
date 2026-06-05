@@ -44,7 +44,8 @@ export const startScan = createServerFn({ method: "POST" })
     (async () => {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const commentBuffer: string[] = [];
-      const placements: Array<{ channel: string; hook: string; creative_url?: string; days_running?: number; raw: unknown }> = [];
+      type Placement = { channel: string; hook: string; creative_url?: string; days_running?: number; raw: unknown };
+      const placements: Placement[] = [];
 
       // ---------- Apify: Facebook Ads Library ----------
       if (apifyToken) {
