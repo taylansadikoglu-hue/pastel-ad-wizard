@@ -44,8 +44,22 @@ function AdvertisersPage() {
       .channel("advertisers-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "domain_scans" }, () => load())
       .subscribe();
+
+    // Live stream: Hetzner worker writes to advertiser_matrix → append to UI without refresh
+    const matrixChannel = supabase
+      .channel("advertiser-matrix-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "advertiser_matrix" },
+        (payload) => {
+          setMatrix((prev) => [payload.new as MatrixRow, ...prev].slice(0, 50));
+        },
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(matrixChannel);
     };
   }, []);
 
