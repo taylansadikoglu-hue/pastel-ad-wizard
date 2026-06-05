@@ -13,6 +13,7 @@ type MatrixRow = { id?: string | number; domain?: string; brand?: string; channe
 
 function AdvertisersPage() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [matrix, setMatrix] = useState<MatrixRow[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
