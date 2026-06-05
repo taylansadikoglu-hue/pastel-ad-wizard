@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import {
-  ArrowRight, ArrowLeft, Check, CreditCard, Lock, Loader2, Palette, Building2, Crosshair, Users, Network,
+  ArrowRight, ArrowLeft, Check, CreditCard, Lock, Loader2, Palette, Crosshair, Users,
 } from "lucide-react";
 
 const STEPS = ["Sign up", "Agency", "Advertisers", "Plan", "Sync"];
@@ -13,36 +13,27 @@ const FOCUS_OPTIONS = [
   "Omnichannel Brand Mix",
 ];
 
-type PlanKey = "solo" | "agency" | "network";
+type PlanKey = "solo" | "agency";
 
 const PLANS: { key: PlanKey; name: string; price: number; tag: string; advertisers: string; icon: any; badge?: string; perks: string[] }[] = [
   {
     key: "solo",
     name: "The Solo Sniper",
     price: 199,
-    tag: "FOCUSED",
-    advertisers: "Track 1 single advertiser",
+    tag: "FOUNDING",
+    advertisers: "1 core tracked advertiser brand",
     icon: Crosshair,
     perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports", "Strategy AI assistant"],
   },
   {
     key: "agency",
-    name: "The Agency 10-Pack",
+    name: "The Agency 7-Pack",
     price: 799,
-    tag: "TEAM",
-    advertisers: "Track up to 10 advertisers",
+    tag: "FOUNDING",
+    advertisers: "Up to 7 tracked advertiser brands",
     icon: Users,
-    badge: "BEST VALUE — Save $1,190/mo",
+    badge: "BEST VALUE",
     perks: ["Everything in Solo Sniper", "Side-by-side advertiser benchmarks", "White-label pitch decks", "Hook & creative diff alerts"],
-  },
-  {
-    key: "network",
-    name: "The Network Hub",
-    price: 1499,
-    tag: "ENTERPRISE",
-    advertisers: "Track up to 25 advertisers",
-    icon: Network,
-    perks: ["Everything in Agency 10-Pack", "Full multi-channel mix matrix panels", "Hourly refresh cadence", "API + SSO + multi-seat"],
   },
 ];
 
