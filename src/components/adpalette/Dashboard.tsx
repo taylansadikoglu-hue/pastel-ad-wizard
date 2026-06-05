@@ -160,6 +160,32 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     return () => { active = false; };
   }, []);
 
+  // Track in-flight domain scans → drives skeleton banner
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const { data } = await supabase
+        .from("domain_scans")
+        .select("domain, status")
+        .in("status", ["queued", "running"]);
+      if (active) setRunningScans((data ?? []).map((r) => r.domain));
+    };
+    load();
+    const channel = supabase
+      .channel("scan-status")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "domain_scans" },
+        () => load()
+      )
+      .subscribe();
+    const iv = setInterval(load, 8000);
+    return () => {
+      active = false;
+      clearInterval(iv);
+      supabase.removeChannel(channel);
+    };
+
   // Continuous Inspiration Loop → ad_placements
   useEffect(() => {
     let active = true;
