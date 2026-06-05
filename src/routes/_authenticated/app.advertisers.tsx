@@ -9,6 +9,7 @@ import { startScan } from "@/lib/scan.functions";
 const MAX_BRANDS = 7;
 
 type Row = { id: string; domain: string; status: string; created_at: string };
+type MatrixRow = { id?: string | number; domain?: string; brand?: string; channel?: string; spend?: number; created_at?: string; [k: string]: unknown };
 
 function AdvertisersPage() {
   const [rows, setRows] = useState<Row[]>([]);
