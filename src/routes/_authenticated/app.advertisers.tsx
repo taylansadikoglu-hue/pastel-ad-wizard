@@ -9,9 +9,11 @@ import { startScan } from "@/lib/scan.functions";
 const MAX_BRANDS = 7;
 
 type Row = { id: string; domain: string; status: string; created_at: string };
+type MatrixRow = { id?: string | number; domain?: string; brand?: string; channel?: string; spend?: number; created_at?: string; [k: string]: unknown };
 
 function AdvertisersPage() {
   const [rows, setRows] = useState<Row[]>([]);
+  const [matrix, setMatrix] = useState<MatrixRow[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,8 +44,22 @@ function AdvertisersPage() {
       .channel("advertisers-list")
       .on("postgres_changes", { event: "*", schema: "public", table: "domain_scans" }, () => load())
       .subscribe();
+
+    // Live stream: Hetzner worker writes to advertiser_matrix → append to UI without refresh
+    const matrixChannel = supabase
+      .channel("advertiser-matrix-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "advertiser_matrix" },
+        (payload) => {
+          setMatrix((prev) => [payload.new as MatrixRow, ...prev].slice(0, 50));
+        },
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(matrixChannel);
     };
   }, []);
 
@@ -161,6 +177,44 @@ function AdvertisersPage() {
                       >
                         <Trash2 size={12} /> Remove
                       </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="card-flat overflow-hidden">
+          <div className="px-4 py-3 border-b-2 border-ink bg-secondary mono text-[10px] uppercase font-bold flex items-center justify-between">
+            <span>Live advertiser matrix (worker stream)</span>
+            <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">
+              {matrix.length} live rows
+            </span>
+          </div>
+          {matrix.length === 0 ? (
+            <div className="p-6 text-center text-xs text-muted-foreground">
+              Awaiting live INSERT events from advertiser_matrix…
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="border-b-2 border-ink bg-secondary">
+                <tr className="text-left">
+                  {["Brand / Domain", "Channel", "Spend", "Arrived"].map((h) => (
+                    <th key={h} className="px-3 py-2 mono text-[10px] uppercase">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.map((m, i) => (
+                  <tr key={`${m.id ?? i}-${i}`} className="border-b border-ink/30 last:border-0">
+                    <td className="px-3 py-2 font-semibold">{m.brand ?? m.domain ?? "—"}</td>
+                    <td className="px-3 py-2 mono text-[11px]">{m.channel ?? "—"}</td>
+                    <td className="px-3 py-2 mono text-[11px]">{m.spend ?? "—"}</td>
+                    <td className="px-3 py-2 mono text-[11px] text-muted-foreground">
+                      {m.created_at ? new Date(m.created_at).toLocaleTimeString() : "live"}
                     </td>
                   </tr>
                 ))}

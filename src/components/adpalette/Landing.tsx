@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { BarbsChat } from "./BarbsChat";
+import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowRight, Palette, Check, Sparkles, BarChart3, Film, FileDown, PlayCircle, X as XIcon, Lock,
+  LogIn, LogOut,
 } from "lucide-react";
 
 
@@ -24,6 +26,20 @@ const CHANNEL_COLORS: Record<string, string> = {
 export function Landing({ onEnter }: { onEnter: () => void }) {
   const { theme, toggle } = useTheme();
   const [brands, setBrands] = useState<Brand[]>(SEED);
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setSignedIn(!!session);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    toast("Signed out");
+  };
 
   const totals = useMemo(() => {
     const visible = brands.filter((b) => b.visible);
@@ -65,9 +81,25 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             <button onClick={toggle} className="btn-flat">
               <Palette size={14} /> {theme === "dark" ? "Warm Canvas" : "Dark Workstation"}
             </button>
-            <button onClick={onEnter} className="btn-flat btn-primary">
-              Start tracking <ArrowRight size={14} />
-            </button>
+            {signedIn ? (
+              <>
+                <button onClick={onEnter} className="btn-flat">
+                  Open workspace <ArrowRight size={14} />
+                </button>
+                <button onClick={signOut} className="btn-flat">
+                  <LogOut size={14} /> Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={onEnter} className="btn-flat">
+                  <LogIn size={14} /> Log in
+                </button>
+                <button onClick={onEnter} className="btn-flat btn-primary">
+                  Start tracking <ArrowRight size={14} />
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>

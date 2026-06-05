@@ -1,7 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Layers, Radio, Target, TrendingUp, Settings, Home, ArrowRight } from "lucide-react";
 import { ThemeProvider } from "@/components/adpalette/theme";
 import { OnboardingWizard } from "@/components/adpalette/Onboarding";
 import { Dashboard } from "@/components/adpalette/Dashboard";
@@ -18,7 +18,67 @@ export const Route = createFileRoute("/_authenticated/app")({
   component: AppPage,
 });
 
-type Stage = "loading" | "paywall" | "onboard" | "app";
+const ADMIN_EMAIL = "taylan.sadikoglu@gmail.com";
+const ADMIN_CHOICE_KEY = "revenuead_admin_choice";
+
+type Stage = "loading" | "paywall" | "admin_picker" | "onboard" | "app";
+
+function AdminPicker({ email, onPick, onSignOut }: { email: string; onPick: () => void; onSignOut: () => void }) {
+  const tiles = [
+    { to: "/app", label: "Workspace dashboard", desc: "Default intelligence cockpit.", icon: Home, choice: "dashboard" },
+    { to: "/app/advertisers", label: "Advertisers", desc: "Tracked competitor domains + live matrix.", icon: Target, choice: "advertisers" },
+    { to: "/app/sentiment", label: "Social Listening", desc: "Per-brand audience signal panels.", icon: Radio, choice: "sentiment" },
+    { to: "/app/creative", label: "Creative library", desc: "Captured ad creatives.", icon: Layers, choice: "creative" },
+    { to: "/app/benchmarks", label: "Benchmarks", desc: "Channel + vertical benchmarks.", icon: TrendingUp, choice: "benchmarks" },
+    { to: "/app/settings", label: "Settings", desc: "Workspace and integrations.", icon: Settings, choice: "settings" },
+  ] as const;
+
+  return (
+    <div className="min-h-screen bg-canvas text-ink px-6 py-10 grid place-items-center">
+      <div className="w-full max-w-4xl">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="mono text-[10px] uppercase text-muted-foreground">Admin console</div>
+            <h1 className="text-2xl font-bold mt-1">Pick a dashboard, {email}</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Admin auto-redirect is disabled. Choose any surface to enter manually.
+            </p>
+          </div>
+          <button onClick={onSignOut} className="btn-flat">Sign out</button>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {tiles.map((t) => (
+            <Link
+              key={t.choice}
+              to={t.to}
+              onClick={() => {
+                localStorage.setItem(ADMIN_CHOICE_KEY, t.choice);
+                if (t.choice === "dashboard") onPick();
+              }}
+              className="card-flat p-4 hover:shadow-flat-md transition-shadow group"
+            >
+              <div className="flex items-center justify-between">
+                <t.icon size={18} />
+                <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <div className="font-bold mt-3">{t.label}</div>
+              <div className="text-xs text-muted-foreground mt-1">{t.desc}</div>
+            </Link>
+          ))}
+        </div>
+        <button
+          onClick={() => {
+            localStorage.removeItem(ADMIN_CHOICE_KEY);
+            toast("Picker reset");
+          }}
+          className="mono text-[10px] underline mt-4 block mx-auto"
+        >
+          Reset choice
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function AppPage() {
   const navigate = useNavigate();
@@ -31,22 +91,37 @@ function AppPage() {
       navigate({ to: "/auth", replace: true });
       return;
     }
-    setEmail(u.user.email ?? "");
+    const userEmail = u.user.email ?? "";
+    setEmail(userEmail);
+    const isAdmin = userEmail.toLowerCase() === ADMIN_EMAIL;
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("stripe_status, agency_domain")
       .eq("id", u.user.id)
       .maybeSingle();
+
     if (profile?.stripe_status !== "active") {
       setStage("paywall");
       return;
     }
+
+    // Admin: no auto-redirect — explicit picker, unless a choice is already stored
+    if (isAdmin) {
+      const choice = typeof window !== "undefined" ? localStorage.getItem(ADMIN_CHOICE_KEY) : null;
+      if (!choice) {
+        setStage("admin_picker");
+        return;
+      }
+      setStage("app");
+      return;
+    }
+
     setStage(profile?.agency_domain ? "app" : "onboard");
   };
 
   useEffect(() => {
     refresh();
-    // Re-check on tab focus so a successful Stripe redirect updates the gate
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -54,6 +129,7 @@ function AppPage() {
   }, []);
 
   const logout = async () => {
+    localStorage.removeItem(ADMIN_CHOICE_KEY);
     await supabase.auth.signOut();
     toast("Signed out");
     navigate({ to: "/", replace: true });
@@ -67,6 +143,9 @@ function AppPage() {
         </div>
       )}
       {stage === "paywall" && <Paywall email={email} onSignOut={logout} />}
+      {stage === "admin_picker" && (
+        <AdminPicker email={email} onPick={() => setStage("app")} onSignOut={logout} />
+      )}
       {stage === "onboard" && <OnboardingWizard onComplete={() => setStage("app")} />}
       {stage === "app" && <Dashboard onLogout={logout} />}
     </ThemeProvider>
