@@ -184,6 +184,44 @@ function AdvertisersPage() {
             </table>
           )}
         </div>
+
+        <div className="card-flat overflow-hidden">
+          <div className="px-4 py-3 border-b-2 border-ink bg-secondary mono text-[10px] uppercase font-bold flex items-center justify-between">
+            <span>Live advertiser matrix (worker stream)</span>
+            <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">
+              {matrix.length} live rows
+            </span>
+          </div>
+          {matrix.length === 0 ? (
+            <div className="p-6 text-center text-xs text-muted-foreground">
+              Awaiting live INSERT events from advertiser_matrix…
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="border-b-2 border-ink bg-secondary">
+                <tr className="text-left">
+                  {["Brand / Domain", "Channel", "Spend", "Arrived"].map((h) => (
+                    <th key={h} className="px-3 py-2 mono text-[10px] uppercase">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.map((m, i) => (
+                  <tr key={`${m.id ?? i}-${i}`} className="border-b border-ink/30 last:border-0">
+                    <td className="px-3 py-2 font-semibold">{m.brand ?? m.domain ?? "—"}</td>
+                    <td className="px-3 py-2 mono text-[11px]">{m.channel ?? "—"}</td>
+                    <td className="px-3 py-2 mono text-[11px]">{m.spend ?? "—"}</td>
+                    <td className="px-3 py-2 mono text-[11px] text-muted-foreground">
+                      {m.created_at ? new Date(m.created_at).toLocaleTimeString() : "live"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </WorkspaceShell>
   );
