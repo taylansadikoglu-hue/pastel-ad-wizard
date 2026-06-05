@@ -227,19 +227,21 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
                 </div>
               )}
               <div className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
-                FOUNDING MEMBER · LIFETIME LOCKED
+                {p.freeBadge ?? "FOUNDING MEMBER · LIFETIME LOCKED"}
               </div>
               <div className="font-bold mt-3">{p.name}</div>
-              <div className="mt-2 mono text-3xl font-bold">${p.price.toLocaleString()}<span className="text-sm font-normal">/mo</span></div>
+              <div className="mt-2 mono text-3xl font-bold">
+                {p.price === 0 ? "Free" : <>${p.price.toLocaleString()}<span className="text-sm font-normal">/mo</span></>}
+              </div>
               <div className="text-xs font-semibold mt-1">{p.sub}</div>
               <ul className="mt-3 space-y-1.5 text-sm">
                 {p.perks.map((f) => <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>)}
               </ul>
               <div className="mt-3 mono text-[10px] leading-snug border-t-2 border-ink pt-2">
-                Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Agencies.
+                {p.price === 0 ? "No credit card required. Upgrade anytime for daily refresh and more brands." : "Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Agencies."}
               </div>
               <button onClick={onEnter} className="btn-flat w-full mt-3">
-                Claim founding seat <ArrowRight size={14} />
+                {p.price === 0 ? "Create free account" : "Claim founding seat"} <ArrowRight size={14} />
               </button>
             </div>
           ))}
