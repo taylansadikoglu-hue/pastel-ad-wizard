@@ -26,6 +26,20 @@ const CHANNEL_COLORS: Record<string, string> = {
 export function Landing({ onEnter }: { onEnter: () => void }) {
   const { theme, toggle } = useTheme();
   const [brands, setBrands] = useState<Brand[]>(SEED);
+  const [signedIn, setSignedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setSignedIn(!!session);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    toast("Signed out");
+  };
 
   const totals = useMemo(() => {
     const visible = brands.filter((b) => b.visible);
