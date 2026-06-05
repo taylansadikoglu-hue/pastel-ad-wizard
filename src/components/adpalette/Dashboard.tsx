@@ -8,7 +8,7 @@ import {
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
   TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
   Grid3x3, Radio, Plug, ThumbsUp, AlertTriangle, PenTool, KeyRound, Save,
-  BarChart3, PieChart as PieIcon,
+  BarChart3, PieChart as PieIcon, Loader2,
 } from "lucide-react";
 
 const DATE_RANGES = [
@@ -106,6 +106,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [integSaving, setIntegSaving] = useState(false);
   const [liveSentiment, setLiveSentiment] = useState<{ domain: string; good: string | null; friction: string | null; blueprint: string | null }[]>([]);
   const [livePlacements, setLivePlacements] = useState<{ brand: string; hook: string; channel: string; days: number; length: string; aiTag: string }[]>([]);
+  const [runningScans, setRunningScans] = useState<string[]>([]);
   const [userName, setUserName] = useState<string>("");
   const [userInitials, setUserInitials] = useState<string>("YOU");
   const [agencyDomain, setAgencyDomain] = useState<string>("");
@@ -157,6 +158,33 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       setSelected(Object.fromEntries(next.map((r) => [r.name, true])));
     })();
     return () => { active = false; };
+  }, []);
+
+  // Track in-flight domain scans → drives skeleton banner
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const { data } = await supabase
+        .from("domain_scans")
+        .select("domain, status")
+        .in("status", ["queued", "running"]);
+      if (active) setRunningScans((data ?? []).map((r) => r.domain));
+    };
+    load();
+    const channel = supabase
+      .channel("scan-status")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "domain_scans" },
+        () => load()
+      )
+      .subscribe();
+    const iv = setInterval(load, 8000);
+    return () => {
+      active = false;
+      clearInterval(iv);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Continuous Inspiration Loop → ad_placements
@@ -402,6 +430,25 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
         </header>
 
         <main className="flex-1 overflow-auto p-6 space-y-6">
+          {runningScans.length > 0 && (
+            <div className="card-flat p-4 bg-secondary flex items-center gap-4">
+              <div className="w-9 h-9 border-2 border-ink rounded-[4px] bg-primary grid place-items-center shrink-0">
+                <Loader2 size={16} className="animate-spin" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="mono text-[10px] uppercase font-bold">Crawl in progress · syncing real-time channel mix metrics</div>
+                <div className="text-sm font-semibold truncate">
+                  Live API fan-out across Apify · DataForSEO · Lovable AI distill for: {runningScans.join(", ")}
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <div className="h-2 bg-paper border-2 border-ink rounded-[3px] animate-pulse" />
+                  <div className="h-2 bg-paper border-2 border-ink rounded-[3px] animate-pulse w-3/4" />
+                  <div className="h-2 bg-paper border-2 border-ink rounded-[3px] animate-pulse w-1/2" />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action bar */}
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
