@@ -95,6 +95,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       const { data } = await supabase.auth.getUser();
       const u = data.user;
       if (!u || !active) return;
+      setUserEmail((u.email ?? "").toLowerCase());
       const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
       const fromMeta = (meta.full_name as string) || (meta.name as string) || "";
       const fallback = (u.email ?? "").split("@")[0] ?? "";
