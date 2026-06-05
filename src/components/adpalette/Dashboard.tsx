@@ -21,30 +21,7 @@ const DATE_RANGES = [
   { label: "Last 24 Months", locked: true },
 ];
 
-const VIDEO_FEED = [
-  { brand: "Sephora", hook: "UGC unboxing — 'first impression' format", channel: "TikTok", days: 12, length: "0:18", aiTag: "Unboxing" },
-  { brand: "Lululemon", hook: "Slow-mo product hero · minimalist b-roll", channel: "Meta", days: 47, length: "0:30", aiTag: "Product Hero" },
-  { brand: "Glossier", hook: "Founder-led story · direct address", channel: "YouTube", days: 9, length: "0:45", aiTag: "Founder Story" },
-  { brand: "Mecca", hook: "Tutorial split-screen · before/after", channel: "TikTok", days: 21, length: "0:22", aiTag: "Tutorial" },
-  { brand: "Sephora", hook: "Founder backstory · brand origin moment", channel: "YouTube", days: 33, length: "0:52", aiTag: "Founder Story" },
-  { brand: "Lululemon", hook: "Day-in-the-life athlete UGC", channel: "TikTok", days: 6, length: "0:24", aiTag: "Unboxing" },
-];
-
-const SENTIMENT_DATA = [
-  {
-    brand: "Sephora",
-    good: "Customers rave about loyalty rewards, the curated 'Sephora Edit' bundles, and frictionless in-app checkout — 'feels like a gift every time'.",
-    friction: "Repeat complaints about out-of-stock TikTok-viral SKUs and slow shipping in regional zones (>5 days). Sentiment dips on Sunday drops.",
-    blueprint: "Lead with scarcity + loyalty: 'Your Beauty Insider points unlock the drop everyone else is waiting for.' Pair with a fast-ship guarantee badge.",
-  },
-  {
-    brand: "Lululemon",
-    good: "Fit and longevity dominate praise — 'still my favorite leggings 4 years in'. Community runs and Mirror integrations earn high warmth scores.",
-    friction: "Price ceiling pushback and resentment around 'We Made Too Much' inventory limits. Returns process flagged as slow in EU markets.",
-    blueprint: "Anchor on lifetime cost-per-wear: 'One pair. Four years. Still your favorite.' Layer in the community ritual angle to soften price objections.",
-  },
-];
-
+const ADMIN_EMAIL = "taylan.sadikoglu@gmail.com";
 
 type Competitor = {
   name: string;
@@ -54,12 +31,7 @@ type Competitor = {
   programmatic: number;
 };
 
-const INITIAL: Competitor[] = [
-  { name: "Sephora",    spend: 4_820_000, meta: 48, google: 32, programmatic: 20 },
-  { name: "Mecca",      spend: 1_640_000, meta: 56, google: 28, programmatic: 16 },
-  { name: "Lululemon",  spend: 3_210_000, meta: 38, google: 24, programmatic: 38 },
-  { name: "Glossier",   spend:   910_000, meta: 64, google: 22, programmatic: 14 },
-];
+const INITIAL: Competitor[] = [];
 
 // Deterministic synthetic spend + channel mix derived from a domain string,
 // so tracked-advertiser cards stay populated until live spend ingestion lands.
