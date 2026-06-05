@@ -463,7 +463,6 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="border-2 border-ink rounded-[4px] bg-paper flex overflow-hidden">
             {([
               { k: "gallery", label: "Cross-Channel Ad Gallery", icon: Grid3x3, adminOnly: false },
-              { k: "sentiment", label: "AI Audience Sentiment Radar", icon: Radio, adminOnly: false },
               { k: "integrations", label: "Developer Integrations", icon: Plug, adminOnly: true },
             ] as const)
               .filter((t) => !t.adminOnly || isAdmin)
