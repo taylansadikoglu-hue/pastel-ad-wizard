@@ -86,6 +86,69 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
   ]);
 
+  // Load saved integrations once
+  useEffect(() => {
+    getIntegrations()
+      .then((d) => {
+        if (!d) return;
+        if (d.apify_token) setApifyToken(d.apify_token);
+        if (d.dataforseo_login) setDfsLogin(d.dataforseo_login);
+        if (d.dataforseo_password) setDfsPassword(d.dataforseo_password);
+        if (d.resend_api_key) setResendKey(d.resend_api_key);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Subscribe to live sentiment_insights for this user
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const { data } = await supabase
+        .from("sentiment_insights")
+        .select("domain, good, friction, blueprint, created_at")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (active && data) setLiveSentiment(data);
+    };
+    load();
+    const channel = supabase
+      .channel("sentiment-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "sentiment_insights" },
+        (payload) => {
+          const r = payload.new as { domain: string; good: string | null; friction: string | null; blueprint: string | null };
+          setLiveSentiment((prev) => [r, ...prev].slice(0, 20));
+          toast.success(`New sentiment radar reading: ${r.domain}`);
+        }
+      )
+      .subscribe();
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const saveAllIntegrations = async () => {
+    setIntegSaving(true);
+    try {
+      await saveIntegrations({
+        data: {
+          apify_token: apifyToken || null,
+          dataforseo_login: dfsLogin || null,
+          dataforseo_password: dfsPassword || null,
+          resend_api_key: resendKey || null,
+        },
+      });
+      toast.success("Integrations saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setIntegSaving(false);
+    }
+  };
+
+
   const visible = rows.filter((r) => selected[r.name]);
   const colors = theme === "dark" ? CHANNEL_COLORS_PASTEL : CHANNEL_COLORS_STD;
   const totalSpend = useMemo(() => visible.reduce((a, b) => a + b.spend, 0), [visible]);
