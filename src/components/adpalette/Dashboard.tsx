@@ -185,6 +185,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       clearInterval(iv);
       supabase.removeChannel(channel);
     };
+  }, []);
 
   // Continuous Inspiration Loop → ad_placements
   useEffect(() => {
