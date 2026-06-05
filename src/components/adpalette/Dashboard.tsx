@@ -646,29 +646,35 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 </button>
               ))}
             </div>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-0">
-              {(livePlacements.length ? livePlacements : VIDEO_FEED)
-                .filter((v) =>
-                  videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14
-                )
-                .map((v, idx) => (
-                  <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
-                    <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative">
-                      <Play size={22} />
-                      <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.length}</span>
+            {livePlacements.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                No live creative data found. Please add an active domain under the Advertisers tab.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-0">
+                {livePlacements
+                  .filter((v) =>
+                    videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14
+                  )
+                  .map((v, idx) => (
+                    <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
+                      <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative">
+                        <Play size={22} />
+                        <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-sm">{v.brand}</span>
+                        <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{v.channel}</span>
+                      </div>
+                      <p className="text-xs leading-snug">{v.hook}</p>
+                      <div className="flex items-center justify-between mono text-[10px] text-muted-foreground pt-1 border-t border-ink/30">
+                        <span>Flight: {v.days}d</span>
+                        <button onClick={() => toast(`${v.brand} · creative opened`)} className="underline font-semibold">Inspect →</button>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-sm">{v.brand}</span>
-                      <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{v.channel}</span>
-                    </div>
-                    <p className="text-xs leading-snug">{v.hook}</p>
-                    <div className="flex items-center justify-between mono text-[10px] text-muted-foreground pt-1 border-t border-ink/30">
-                      <span>Flight: {v.days}d</span>
-                      <button onClick={() => toast(`${v.brand} · creative opened`)} className="underline font-semibold">Inspect →</button>
-                    </div>
-                  </div>
-                ))}
-            </div>
+                  ))}
+              </div>
+            )}
           </div>
 
           {/* 3-Second Rule Insight Cards */}
