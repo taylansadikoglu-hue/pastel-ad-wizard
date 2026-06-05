@@ -85,7 +85,8 @@ const CHANNEL_COLORS_PASTEL = ["var(--pastel-lilac)", "var(--pastel-sage)", "var
 
 export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const { theme, toggle } = useTheme();
-  const [rows, setRows] = useState(INITIAL);
+  const [rows, setRows] = useState<Competitor[]>(INITIAL);
+  const [baselineRows, setBaselineRows] = useState<Competitor[]>(INITIAL);
   const [selected, setSelected] = useState<Record<string, boolean>>(
     Object.fromEntries(INITIAL.map((r) => [r.name, true]))
   );
@@ -97,15 +98,89 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [videoFilter, setVideoFilter] = useState<"all" | "short" | "long">("all");
   const [activeTab, setActiveTab] = useState<"gallery" | "sentiment" | "integrations">("gallery");
+  const [chartView, setChartView] = useState<"bar" | "pie" | "table">("bar");
   const [apifyToken, setApifyToken] = useState("");
   const [dfsLogin, setDfsLogin] = useState("");
   const [dfsPassword, setDfsPassword] = useState("");
   const [resendKey, setResendKey] = useState("");
   const [integSaving, setIntegSaving] = useState(false);
   const [liveSentiment, setLiveSentiment] = useState<{ domain: string; good: string | null; friction: string | null; blueprint: string | null }[]>([]);
+  const [livePlacements, setLivePlacements] = useState<{ brand: string; hook: string; channel: string; days: number; length: string; aiTag: string }[]>([]);
+  const [userName, setUserName] = useState<string>("");
+  const [userInitials, setUserInitials] = useState<string>("YOU");
+  const [agencyDomain, setAgencyDomain] = useState<string>("");
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
-    { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
+    { role: "ai", text: "Welcome — ask me anything about the tracked advertisers' creative." },
   ]);
+
+  // Auth user + profile → top-left user card binds to session metadata
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const u = data.user;
+      if (!u || !active) return;
+      const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+      const fromMeta = (meta.full_name as string) || (meta.name as string) || "";
+      const fallback = (u.email ?? "").split("@")[0] ?? "";
+      const display = fromMeta || (fallback ? fallback.charAt(0).toUpperCase() + fallback.slice(1) : "Operator");
+      setUserName(display);
+      const parts = display.split(/[\s._-]+/).filter(Boolean);
+      const initials = (parts[0]?.[0] ?? "Y") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "");
+      setUserInitials(initials.toUpperCase().slice(0, 2));
+      setChatLog([{ role: "ai", text: `Hi ${display.split(" ")[0]} — ask me anything about the tracked advertisers' creative.` }]);
+      try {
+        const p = await getProfile();
+        if (active && p?.agency_domain) setAgencyDomain(p.agency_domain);
+      } catch {}
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // Tracked advertisers (domain_scans) → bind matrix + chart to real DB rows
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("domain_scans")
+        .select("domain, created_at")
+        .order("created_at", { ascending: false });
+      if (!active || !data || data.length === 0) return;
+      const unique: string[] = [];
+      for (const r of data) {
+        if (r.domain && !unique.includes(r.domain)) unique.push(r.domain);
+        if (unique.length >= 7) break;
+      }
+      const next = unique.map(synthRow);
+      setRows(next);
+      setBaselineRows(next);
+      setSelected(Object.fromEntries(next.map((r) => [r.name, true])));
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // Continuous Inspiration Loop → ad_placements
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("ad_placements")
+        .select("domain, channel, hook, days_running, creative_url, created_at")
+        .order("created_at", { ascending: false })
+        .limit(12);
+      if (!active || !data || data.length === 0) return;
+      setLivePlacements(
+        data.map((p) => ({
+          brand: brandFromDomain(p.domain),
+          hook: p.hook ?? "Live creative — hook pending AI extraction.",
+          channel: p.channel ?? "Meta",
+          days: p.days_running ?? 1,
+          length: "0:--",
+          aiTag: "Live",
+        }))
+      );
+    })();
+  }, []);
 
   // Load saved integrations once
   useEffect(() => {
@@ -119,6 +194,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       })
       .catch(() => {});
   }, []);
+
 
   // Subscribe to live sentiment_insights for this user
   useEffect(() => {
