@@ -493,21 +493,37 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
             {/* Chart */}
             <div className="card-flat p-4">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
                 <div className="font-bold text-sm">Channel mix by spend</div>
-                <div className="flex items-center gap-2 mono text-[10px]">
-                  {["Meta", "Google", "Prog."].map((l, i) => (
-                    <span key={l} className="flex items-center gap-1">
-                      <span className="w-3 h-3 border-2 border-ink" style={{ background: colors[i] }} />{l}
-                    </span>
+                <div className="flex items-center border-2 border-ink rounded-[3px] overflow-hidden">
+                  {([
+                    { k: "bar", label: "Bars", icon: BarChart3 },
+                    { k: "pie", label: "Pie", icon: PieIcon },
+                    { k: "table", label: "Table", icon: TableIcon },
+                  ] as const).map((v, i) => (
+                    <button
+                      key={v.k}
+                      onClick={() => setChartView(v.k)}
+                      className={`flex items-center gap-1 px-2 py-1 mono text-[10px] font-bold ${i > 0 ? "border-l-2 border-ink" : ""} ${chartView === v.k ? "bg-primary" : "bg-paper hover:bg-secondary"}`}
+                      aria-pressed={chartView === v.k}
+                    >
+                      <v.icon size={11} /> {v.label}
+                    </button>
                   ))}
                 </div>
+              </div>
+              <div className="flex items-center gap-2 mono text-[10px] mb-3 flex-wrap">
+                {["Meta", "Google", "Prog."].map((l, i) => (
+                  <span key={l} className="flex items-center gap-1">
+                    <span className="w-3 h-3 border-2 border-ink" style={{ background: colors[i] }} />{l}
+                  </span>
+                ))}
               </div>
               {visible.length === 0 ? (
                 <div className="h-64 grid place-items-center mono text-xs text-muted-foreground border-2 border-dashed border-ink rounded-[4px]">
                   Select at least one advertiser
                 </div>
-              ) : (
+              ) : chartView === "bar" ? (
                 <div className="space-y-3">
                   {visible.map((r) => (
                     <div key={r.name}>
@@ -523,9 +539,78 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
                   ))}
                 </div>
+              ) : chartView === "pie" ? (
+                (() => {
+                  const agg = visible.reduce(
+                    (a, r) => {
+                      a.meta += (r.meta * r.spend) / 100;
+                      a.google += (r.google * r.spend) / 100;
+                      a.prog += (r.programmatic * r.spend) / 100;
+                      return a;
+                    },
+                    { meta: 0, google: 0, prog: 0 }
+                  );
+                  const total = agg.meta + agg.google + agg.prog || 1;
+                  const segs = [
+                    { label: "Meta", value: agg.meta, color: colors[0] },
+                    { label: "Google", value: agg.google, color: colors[1] },
+                    { label: "Programmatic", value: agg.prog, color: colors[2] },
+                  ];
+                  const cx = 110, cy = 110, r = 95;
+                  let cum = 0;
+                  const arcs = segs.map((s) => {
+                    const start = (cum / total) * Math.PI * 2 - Math.PI / 2;
+                    cum += s.value;
+                    const end = (cum / total) * Math.PI * 2 - Math.PI / 2;
+                    const large = end - start > Math.PI ? 1 : 0;
+                    const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
+                    const x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
+                    const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+                    return { d, color: s.color, label: s.label, pct: Math.round((s.value / total) * 100) };
+                  });
+                  return (
+                    <div className="flex flex-col items-center gap-3">
+                      <svg viewBox="0 0 220 220" className="w-full max-w-[240px]">
+                        {arcs.map((a) => (
+                          <path key={a.label} d={a.d} fill={a.color} stroke="var(--ink)" strokeWidth={2} />
+                        ))}
+                      </svg>
+                      <div className="grid grid-cols-3 gap-2 w-full">
+                        {arcs.map((a) => (
+                          <div key={a.label} className="card-flat-sm p-2 text-center">
+                            <div className="mono text-[10px] uppercase">{a.label}</div>
+                            <div className="mono text-lg font-bold">{a.pct}%</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <table className="w-full text-xs">
+                  <thead className="border-b-2 border-ink bg-secondary">
+                    <tr className="text-left">
+                      {["Advertiser", "Meta $", "Google $", "Prog. $", "Total"].map((h) => (
+                        <th key={h} className="px-2 py-1.5 mono text-[10px] uppercase">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visible.map((r) => (
+                      <tr key={r.name} className="border-b border-ink/30 last:border-0">
+                        <td className="px-2 py-1.5 font-semibold">{r.name}</td>
+                        <td className="px-2 py-1.5 mono">{fmt((r.meta * r.spend) / 100)}</td>
+                        <td className="px-2 py-1.5 mono">{fmt((r.google * r.spend) / 100)}</td>
+                        <td className="px-2 py-1.5 mono">{fmt((r.programmatic * r.spend) / 100)}</td>
+                        <td className="px-2 py-1.5 mono font-bold">{fmt(r.spend)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>
+
 
 
           {/* Continuous Inspiration Loop — video creative feed */}
@@ -555,12 +640,12 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               ))}
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-0">
-              {VIDEO_FEED
+              {(livePlacements.length ? livePlacements : VIDEO_FEED)
                 .filter((v) =>
                   videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14
                 )
-                .map((v) => (
-                  <div key={v.brand} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
+                .map((v, idx) => (
+                  <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
                     <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative">
                       <Play size={22} />
                       <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.length}</span>
