@@ -110,10 +110,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       <aside className="w-60 shrink-0 border-r-2 border-ink bg-paper flex flex-col">
         <div className="p-4 border-b-2 border-ink flex items-center gap-2">
           <div className="w-8 h-8 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-            <span className="mono text-xs font-bold">RV</span>
+            <span className="mono text-xs font-bold">RA</span>
           </div>
           <div>
-            <div className="font-bold leading-tight">Revenuad</div>
+            <div className="font-bold leading-tight">RevenueAd</div>
             <div className="mono text-[10px] text-muted-foreground">north-studio.co</div>
           </div>
         </div>
@@ -600,7 +600,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               </div>
               <h2 className="text-2xl font-bold leading-tight">Unlock 24-Month Historical Playbook</h2>
               <p className="text-sm leading-relaxed">
-                Activate the AdPalette Backtrack Engine. Our system will query cross-channel ad network archives to pull, compile, and future-save every advertising placement this brand has published past and present across Search, Video, and Programmatic networks.
+                Activate the RevenueAd Backtrack Engine. Our system will query cross-channel ad network archives to pull, compile, and future-save every advertising placement this brand has published past and present across Search, Video, and Programmatic networks.
               </p>
               <div className="card-flat-sm p-3 grid grid-cols-3 gap-2 mono text-[10px] uppercase font-bold text-center bg-paper">
                 <div>Search archives</div>

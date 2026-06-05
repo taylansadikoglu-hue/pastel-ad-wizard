@@ -49,14 +49,14 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-              <span className="mono text-xs font-bold">RV</span>
+              <span className="mono text-xs font-bold">RA</span>
             </div>
-            <span className="font-bold tracking-tight">Revenuad</span>
+            <span className="font-bold tracking-tight">RevenueAd</span>
             <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] ml-1">v2.6</span>
           </div>
           <nav className="hidden md:flex items-center gap-5 text-sm font-semibold">
             <a href="#demo" className="hover:underline">Live demo</a>
-            <a href="#benefits" className="hover:underline">Why AdPalette</a>
+            <a href="#benefits" className="hover:underline">Why RevenueAd</a>
             <a href="#pricing" className="hover:underline">Pricing</a>
           </nav>
           <div className="flex items-center gap-2">
@@ -80,7 +80,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             See exactly where your clients' competitors are spending their ad budgets.
           </h1>
           <p className="mt-5 text-lg text-muted-foreground max-w-xl">
-            Revenuad tracks, compiles, and future-saves every advertising placement published across Search, YouTube, Meta, TikTok, and Programmatic networks. Beautifully simple competitor analysis built for digital agencies.
+            RevenueAd tracks, compiles, and future-saves every advertising placement published across Search, YouTube, Meta, TikTok, and Programmatic networks. Beautifully simple competitor analysis built for digital agencies.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <a href="#demo" className="btn-flat">
@@ -180,7 +180,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
       {/* Benefits */}
       <section id="benefits" className="max-w-7xl mx-auto px-6 py-14">
         <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-          <h2 className="text-3xl md:text-4xl font-bold">Three reasons agencies switch to Revenuad</h2>
+          <h2 className="text-3xl md:text-4xl font-bold">Three reasons agencies switch to RevenueAd</h2>
           <span className="mono text-[11px] text-muted-foreground">NO JARGON · JUST RESULTS</span>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
@@ -263,7 +263,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
 
       <footer className="border-t-2 border-ink bg-paper">
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-3 mono text-[11px]">
-          <span>© Revenuad · Cross-channel ad intelligence</span>
+          <span>© RevenueAd · Cross-channel ad intelligence</span>
           <span>SOC2 type II · GDPR · PCI DSS via Stripe</span>
         </div>
       </footer>
