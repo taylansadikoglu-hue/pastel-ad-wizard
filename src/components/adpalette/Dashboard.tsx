@@ -273,6 +273,34 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     setChatInput("");
   };
 
+  const isAdmin = userEmail === ADMIN_EMAIL;
+
+  // Force non-admins off the integrations tab
+  useEffect(() => {
+    if (!isAdmin && activeTab === "integrations") setActiveTab("gallery");
+  }, [isAdmin, activeTab]);
+
+  const exportCSV = () => {
+    const header = ["Advertiser", "Est monthly spend", "Meta %", "Google %", "Programmatic %"];
+    const lines = [header.join(",")].concat(
+      rows.map((r) => [r.name, r.spend, r.meta, r.google, r.programmatic].join(","))
+    );
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `revenuead-matrix-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast.success("CSV exported");
+  };
+
+  const exportPDF = () => {
+    window.print();
+  };
+
   return (
     <div className="min-h-screen bg-canvas text-ink flex">
       {/* Sidebar */}
