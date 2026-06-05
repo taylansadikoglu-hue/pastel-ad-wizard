@@ -1,6 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
+import { supabase } from "@/integrations/supabase/client";
+import { getIntegrations, saveIntegrations } from "@/lib/integrations.functions";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
