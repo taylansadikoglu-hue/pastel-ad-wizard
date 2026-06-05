@@ -82,6 +82,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [runningScans, setRunningScans] = useState<string[]>([]);
   const [userName, setUserName] = useState<string>("");
   const [userInitials, setUserInitials] = useState<string>("YOU");
+  const [userEmail, setUserEmail] = useState<string>("");
   const [agencyDomain, setAgencyDomain] = useState<string>("");
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Welcome — ask me anything about the tracked advertisers' creative." },
