@@ -214,8 +214,9 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             <span className="font-semibold text-ink">No contracts. No minimum durations. Cancel anytime.</span> Stripe billed monthly.
           </p>
         </div>
-        <div className="grid md:grid-cols-2 gap-5 mt-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-5 mt-8 max-w-6xl mx-auto">
           {[
+            { name: "The Free Scout", price: 0, sub: "1 tracked advertiser brand", perks: ["1 live domain scan", "Weekly creative refresh", "CSV export"], freeBadge: "FREE FOREVER" },
             { name: "The Solo Sniper", price: 199, sub: "1 core tracked advertiser brand", perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports"] },
             { name: "The Agency 7-Pack", price: 799, sub: "Up to 7 tracked advertiser brands", badge: "BEST VALUE", perks: ["Everything in Solo Sniper", "Side-by-side advertiser benchmarks", "White-label pitch decks", "Hook & creative diff alerts"] },
           ].map((p) => (
