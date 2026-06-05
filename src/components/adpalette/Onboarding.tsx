@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import {
-  ArrowRight, ArrowLeft, Check, CreditCard, Lock, Loader2, Palette, Building2, Crosshair, Users, Network,
+  ArrowRight, ArrowLeft, Check, CreditCard, Lock, Loader2, Palette, Crosshair, Users,
 } from "lucide-react";
 
 const STEPS = ["Sign up", "Agency", "Advertisers", "Plan", "Sync"];
@@ -13,36 +13,27 @@ const FOCUS_OPTIONS = [
   "Omnichannel Brand Mix",
 ];
 
-type PlanKey = "solo" | "agency" | "network";
+type PlanKey = "solo" | "agency";
 
 const PLANS: { key: PlanKey; name: string; price: number; tag: string; advertisers: string; icon: any; badge?: string; perks: string[] }[] = [
   {
     key: "solo",
     name: "The Solo Sniper",
     price: 199,
-    tag: "FOCUSED",
-    advertisers: "Track 1 single advertiser",
+    tag: "FOUNDING",
+    advertisers: "1 core tracked advertiser brand",
     icon: Crosshair,
     perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports", "Strategy AI assistant"],
   },
   {
     key: "agency",
-    name: "The Agency 10-Pack",
+    name: "The Agency 7-Pack",
     price: 799,
-    tag: "TEAM",
-    advertisers: "Track up to 10 advertisers",
+    tag: "FOUNDING",
+    advertisers: "Up to 7 tracked advertiser brands",
     icon: Users,
-    badge: "BEST VALUE — Save $1,190/mo",
+    badge: "BEST VALUE",
     perks: ["Everything in Solo Sniper", "Side-by-side advertiser benchmarks", "White-label pitch decks", "Hook & creative diff alerts"],
-  },
-  {
-    key: "network",
-    name: "The Network Hub",
-    price: 1499,
-    tag: "ENTERPRISE",
-    advertisers: "Track up to 25 advertisers",
-    icon: Network,
-    perks: ["Everything in Agency 10-Pack", "Full multi-channel mix matrix panels", "Hourly refresh cadence", "API + SSO + multi-seat"],
   },
 ];
 
@@ -95,9 +86,9 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-              <span className="mono text-xs font-bold">AP</span>
+              <span className="mono text-xs font-bold">RV</span>
             </div>
-            <span className="font-bold tracking-tight">AdPalette</span>
+            <span className="font-bold tracking-tight">Revenuad</span>
             <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] ml-1">v2.6</span>
           </div>
           <button onClick={toggle} className="btn-flat">
@@ -161,7 +152,7 @@ function StepSignup({ data, setData }: any) {
       <div>
         <h1 className="text-3xl font-bold">Create your operator account</h1>
         <p className="text-sm text-muted-foreground mt-2">
-          AdPalette gives ad agencies x-ray vision into every advertiser creative running on Meta, Google, and programmatic networks.
+          Revenuad gives ad agencies x-ray vision into every advertiser creative running on Meta, Google, and programmatic networks.
         </p>
         <ul className="mt-6 space-y-2 text-sm">
           {["Daily creative indexing across 14 channels", "Continuous video hook inspiration loop", "Auto-generated pitch decks"].map((t) => (
@@ -222,8 +213,14 @@ function StepAdvertisers({ data, setData }: any) {
         <h1 className="text-2xl font-bold">Who are your client's top 3 advertisers?</h1>
         <p className="text-sm text-muted-foreground mt-1">Proprietary technology to backtrack, compile, and future-save your list of advertisers.</p>
       </div>
+      <div className="card-flat-sm p-3 bg-primary">
+        <div className="mono text-[10px] font-bold uppercase">★ Master Brand Fingerprint</div>
+        <p className="text-xs mt-1 leading-snug">
+          Each domain you enter below becomes the <span className="font-bold">master fingerprint</span> Revenuad uses to track every cross-channel ad placement and scrape audience listening sentiment around that brand. One root domain = one indexed advertiser.
+        </p>
+      </div>
       {[0, 1, 2].map((i) => (
-        <Field key={i} label={`Advertiser ${i + 1} domain`} hint="root only">
+        <Field key={i} label={`Advertiser ${i + 1} · root domain (master fingerprint)`} hint="root only">
           <div className="flex gap-2">
             <div className="px-3 py-2 border-2 border-ink rounded-[4px] mono text-xs bg-secondary">https://</div>
             <input className="input-flat" placeholder={["sephora.com", "lululemon.com", "glossier.com"][i]} value={data.rivals[i]} onChange={(e) => update(i, e.target.value)} />
@@ -231,7 +228,7 @@ function StepAdvertisers({ data, setData }: any) {
         </Field>
       ))}
       <div className="card-flat-sm p-3 bg-secondary mono text-[11px]">
-        ► Proprietary technology automatically fingerprinting and indexing: Meta Ad Library · Google Ads Transparency · TikTok Top Ads · DSP programmatic creative.
+        ► Each master fingerprint unlocks: Meta Ad Library · Google Ads Transparency · TikTok Top Ads · DSP programmatic creative · audience sentiment listening feeds.
       </div>
     </div>
   );
@@ -242,10 +239,15 @@ function StepPaywall({ data, setData }: any) {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Choose a plan, secure your seat</h1>
-        <p className="text-sm text-muted-foreground mt-1">Cancel anytime. Billed monthly via Stripe.</p>
+        <div className="inline-block mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-primary mb-2">
+          ★ FOUNDING MEMBER LAUNCH · FIRST 100 AGENCIES
+        </div>
+        <h1 className="text-2xl font-bold">Lock in lifetime grandfathered pricing</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          <span className="font-semibold text-ink">No contracts. No minimum durations. Cancel anytime.</span> Billed monthly via Stripe.
+        </p>
       </div>
-      <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+      <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
         {PLANS.map((p) => {
           const Icon = p.icon;
           const active = data.plan === p.key;
@@ -261,7 +263,10 @@ function StepPaywall({ data, setData }: any) {
                   {p.badge}
                 </div>
               )}
-              <div className="flex items-center justify-between">
+              <div className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
+                FOUNDING · LIFETIME LOCKED
+              </div>
+              <div className="flex items-center justify-between mt-3">
                 <div className="font-bold flex items-center gap-1.5"><Icon size={14} /> {p.name}</div>
                 <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{p.tag}</span>
               </div>
@@ -272,9 +277,15 @@ function StepPaywall({ data, setData }: any) {
                   <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>
                 ))}
               </ul>
+              <div className="mt-3 pt-2 border-t-2 border-ink mono text-[10px] leading-snug">
+                Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Agencies.
+              </div>
             </button>
           );
         })}
+      </div>
+      <div className="max-w-3xl mx-auto card-flat-sm p-3 text-center mono text-[11px] font-bold uppercase tracking-wide bg-paper">
+        ✓ No Contracts · ✓ No Minimum Durations · ✓ Cancel Anytime
       </div>
 
       <div className="max-w-xl mx-auto card-flat p-5 space-y-4">

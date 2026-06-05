@@ -5,6 +5,7 @@ import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
   TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
+  Grid3x3, Radio, Plug, ThumbsUp, AlertTriangle, PenTool, KeyRound, Save,
 } from "lucide-react";
 
 const DATE_RANGES = [
@@ -17,11 +18,29 @@ const DATE_RANGES = [
 ];
 
 const VIDEO_FEED = [
-  { brand: "Sephora", hook: "UGC unboxing — 'first impression' format", channel: "TikTok", days: 12, length: "0:18" },
-  { brand: "Lululemon", hook: "Slow-mo product hero · minimalist b-roll", channel: "Meta", days: 47, length: "0:30" },
-  { brand: "Glossier", hook: "Founder-led story · direct address", channel: "YouTube", days: 9, length: "0:45" },
-  { brand: "Mecca", hook: "Tutorial split-screen · before/after", channel: "TikTok", days: 21, length: "0:22" },
+  { brand: "Sephora", hook: "UGC unboxing — 'first impression' format", channel: "TikTok", days: 12, length: "0:18", aiTag: "Unboxing" },
+  { brand: "Lululemon", hook: "Slow-mo product hero · minimalist b-roll", channel: "Meta", days: 47, length: "0:30", aiTag: "Product Hero" },
+  { brand: "Glossier", hook: "Founder-led story · direct address", channel: "YouTube", days: 9, length: "0:45", aiTag: "Founder Story" },
+  { brand: "Mecca", hook: "Tutorial split-screen · before/after", channel: "TikTok", days: 21, length: "0:22", aiTag: "Tutorial" },
+  { brand: "Sephora", hook: "Founder backstory · brand origin moment", channel: "YouTube", days: 33, length: "0:52", aiTag: "Founder Story" },
+  { brand: "Lululemon", hook: "Day-in-the-life athlete UGC", channel: "TikTok", days: 6, length: "0:24", aiTag: "Unboxing" },
 ];
+
+const SENTIMENT_DATA = [
+  {
+    brand: "Sephora",
+    good: "Customers rave about loyalty rewards, the curated 'Sephora Edit' bundles, and frictionless in-app checkout — 'feels like a gift every time'.",
+    friction: "Repeat complaints about out-of-stock TikTok-viral SKUs and slow shipping in regional zones (>5 days). Sentiment dips on Sunday drops.",
+    blueprint: "Lead with scarcity + loyalty: 'Your Beauty Insider points unlock the drop everyone else is waiting for.' Pair with a fast-ship guarantee badge.",
+  },
+  {
+    brand: "Lululemon",
+    good: "Fit and longevity dominate praise — 'still my favorite leggings 4 years in'. Community runs and Mirror integrations earn high warmth scores.",
+    friction: "Price ceiling pushback and resentment around 'We Made Too Much' inventory limits. Returns process flagged as slow in EU markets.",
+    blueprint: "Anchor on lifetime cost-per-wear: 'One pair. Four years. Still your favorite.' Layer in the community ritual angle to soften price objections.",
+  },
+];
+
 
 type Competitor = {
   name: string;
@@ -54,6 +73,9 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [dateMenuOpen, setDateMenuOpen] = useState(false);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [videoFilter, setVideoFilter] = useState<"all" | "short" | "long">("all");
+  const [activeTab, setActiveTab] = useState<"gallery" | "sentiment" | "integrations">("gallery");
+  const [apifyToken, setApifyToken] = useState("");
+  const [resendKey, setResendKey] = useState("");
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Hi Ava — ask me anything about the tracked advertisers' creative." },
   ]);
@@ -88,10 +110,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       <aside className="w-60 shrink-0 border-r-2 border-ink bg-paper flex flex-col">
         <div className="p-4 border-b-2 border-ink flex items-center gap-2">
           <div className="w-8 h-8 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-            <span className="mono text-xs font-bold">AP</span>
+            <span className="mono text-xs font-bold">RV</span>
           </div>
           <div>
-            <div className="font-bold leading-tight">AdPalette</div>
+            <div className="font-bold leading-tight">Revenuad</div>
             <div className="mono text-[10px] text-muted-foreground">north-studio.co</div>
           </div>
         </div>
@@ -233,6 +255,24 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
 
+          {/* Primary tabs */}
+          <div className="border-2 border-ink rounded-[4px] bg-paper flex overflow-hidden">
+            {([
+              { k: "gallery", label: "Cross-Channel Ad Gallery", icon: Grid3x3 },
+              { k: "sentiment", label: "AI Audience Sentiment Radar", icon: Radio },
+              { k: "integrations", label: "Developer Integrations", icon: Plug },
+            ] as const).map((t, i) => (
+              <button
+                key={t.k}
+                onClick={() => setActiveTab(t.k)}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold ${i > 0 ? "border-l-2 border-ink" : ""} ${activeTab === t.k ? "bg-primary" : "hover:bg-secondary"}`}
+              >
+                <t.icon size={14} /> {t.label}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === "gallery" && <>
           {/* Matrix + Chart */}
           <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
             <div className="card-flat overflow-hidden">
@@ -399,6 +439,106 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               />
             </div>
           </div>
+          </>}
+
+          {activeTab === "sentiment" && (
+            <div className="space-y-5">
+              <div>
+                <div className="mono text-[10px] text-muted-foreground">WORKSPACE / SENTIMENT</div>
+                <h2 className="text-2xl font-bold mt-1">AI Audience Sentiment Radar</h2>
+                <p className="text-sm text-muted-foreground mt-1">Social listening compiled per tracked advertiser fingerprint — what consumers love, where they friction, and the ad copy angle to weaponize.</p>
+              </div>
+              {SENTIMENT_DATA.map((s) => (
+                <div key={s.brand} className="card-flat overflow-hidden">
+                  <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between">
+                    <div className="font-bold">{s.brand}</div>
+                    <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">{s.brand.toLowerCase()}.com</span>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-0">
+                    <div className="p-4 border-r-2 border-ink last:border-r-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-primary"><ThumbsUp size={14} /></div>
+                        <div className="mono text-[10px] uppercase font-bold">The Good</div>
+                      </div>
+                      <p className="text-sm leading-relaxed">{s.good}</p>
+                    </div>
+                    <div className="p-4 border-r-2 border-ink last:border-r-0 border-t-2 md:border-t-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-ink text-paper"><AlertTriangle size={14} /></div>
+                        <div className="mono text-[10px] uppercase font-bold">The Friction</div>
+                      </div>
+                      <p className="text-sm leading-relaxed">{s.friction}</p>
+                    </div>
+                    <div className="p-4 border-t-2 md:border-t-0 bg-canvas">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 border-2 border-ink rounded-[4px] grid place-items-center bg-secondary"><PenTool size={14} /></div>
+                        <div className="mono text-[10px] uppercase font-bold">The Ad Angle · Copy Blueprint</div>
+                      </div>
+                      <p className="text-sm leading-relaxed font-medium">{s.blueprint}</p>
+                      <button onClick={() => toast.success(`${s.brand} blueprint copied`)} className="btn-flat text-[11px] px-2 py-1 mt-3">
+                        <Copy size={12} /> Copy blueprint
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="mono text-[11px] text-muted-foreground border-2 border-dashed border-ink rounded-[4px] p-3">
+                ► Sentiment streams are prepared via the master brand fingerprint and stay safely decoupled until you connect a listening source in Developer Integrations.
+              </div>
+            </div>
+          )}
+
+          {activeTab === "integrations" && (
+            <div className="max-w-3xl space-y-5">
+              <div>
+                <div className="mono text-[10px] text-muted-foreground">WORKSPACE / DEVELOPER</div>
+                <h2 className="text-2xl font-bold mt-1">Developer Integrations</h2>
+                <p className="text-sm text-muted-foreground mt-1">Drop in your own API keys to power scraping and outbound notifications. Keys are stored locally in this session — no calls are made yet.</p>
+              </div>
+
+              <div className="card-flat p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> Apify API Token</div>
+                  <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">SCRAPING</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Powers cross-channel ad library + audience listening crawlers per tracked brand fingerprint.</p>
+                <input
+                  type="password"
+                  value={apifyToken}
+                  onChange={(e) => setApifyToken(e.target.value)}
+                  placeholder="apify_api_xxxxxxxxxxxxxxxxxxxx"
+                  className="input-flat mono"
+                />
+                <button
+                  onClick={() => { if (!apifyToken) return toast.error("Paste an Apify token first"); toast.success("Apify token saved · decoupled (no calls made)"); }}
+                  className="btn-flat btn-primary"
+                ><Save size={13} /> Save Apify token</button>
+              </div>
+
+              <div className="card-flat p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> Resend API Key</div>
+                  <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">EMAIL</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Delivers creative diff alerts and pitch-ready briefs to your inbox or client distribution lists.</p>
+                <input
+                  type="password"
+                  value={resendKey}
+                  onChange={(e) => setResendKey(e.target.value)}
+                  placeholder="re_xxxxxxxxxxxxxxxxxxxx"
+                  className="input-flat mono"
+                />
+                <button
+                  onClick={() => { if (!resendKey) return toast.error("Paste a Resend key first"); toast.success("Resend key saved · decoupled (no calls made)"); }}
+                  className="btn-flat btn-primary"
+                ><Save size={13} /> Save Resend key</button>
+              </div>
+
+              <div className="mono text-[11px] text-muted-foreground border-2 border-dashed border-ink rounded-[4px] p-3">
+                ► All data connections are prepared but safely decoupled. Activate them per-workspace once your founding seat is provisioned.
+              </div>
+            </div>
+          )}
         </main>
       </div>
 

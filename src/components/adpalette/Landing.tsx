@@ -49,9 +49,9 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-              <span className="mono text-xs font-bold">AP</span>
+              <span className="mono text-xs font-bold">RV</span>
             </div>
-            <span className="font-bold tracking-tight">AdPalette</span>
+            <span className="font-bold tracking-tight">Revenuad</span>
             <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] ml-1">v2.6</span>
           </div>
           <nav className="hidden md:flex items-center gap-5 text-sm font-semibold">
@@ -80,7 +80,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             See exactly where your clients' competitors are spending their ad budgets.
           </h1>
           <p className="mt-5 text-lg text-muted-foreground max-w-xl">
-            AdPalette tracks, compiles, and future-saves every advertising placement published across Search, YouTube, Meta, TikTok, and Programmatic networks. Beautifully simple competitor analysis built for digital agencies.
+            Revenuad tracks, compiles, and future-saves every advertising placement published across Search, YouTube, Meta, TikTok, and Programmatic networks. Beautifully simple competitor analysis built for digital agencies.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <a href="#demo" className="btn-flat">
@@ -180,7 +180,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
       {/* Benefits */}
       <section id="benefits" className="max-w-7xl mx-auto px-6 py-14">
         <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-          <h2 className="text-3xl md:text-4xl font-bold">Three reasons agencies switch to AdPalette</h2>
+          <h2 className="text-3xl md:text-4xl font-bold">Three reasons agencies switch to Revenuad</h2>
           <span className="mono text-[11px] text-muted-foreground">NO JARGON · JUST RESULTS</span>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
@@ -206,14 +206,18 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
       {/* Pricing teaser */}
       <section id="pricing" className="max-w-7xl mx-auto px-6 py-14">
         <div className="text-center max-w-2xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold">Tactical pricing. Pick your range.</h2>
-          <p className="text-sm text-muted-foreground mt-2">Three flat plans. Cancel anytime. Stripe billed monthly.</p>
+          <div className="inline-block mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-primary mb-3">
+            ★ FOUNDING MEMBER LAUNCH · FIRST 100 AGENCIES ONLY
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold">Lifetime grandfathered pricing. Locked in forever.</h2>
+          <p className="text-sm text-muted-foreground mt-2">
+            <span className="font-semibold text-ink">No contracts. No minimum durations. Cancel anytime.</span> Stripe billed monthly.
+          </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-5 mt-8">
+        <div className="grid md:grid-cols-2 gap-5 mt-8 max-w-4xl mx-auto">
           {[
-            { name: "The Solo Sniper", price: 199, sub: "Monitor 1 single advertiser", perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports"] },
-            { name: "The Agency 10-Pack", price: 799, sub: "Monitor up to 10 advertisers", badge: "BEST VALUE — Save $1,190/mo", perks: ["Everything in Solo", "Side-by-side benchmarks", "White-label decks"] },
-            { name: "The Network Hub", price: 1499, sub: "Monitor up to 25 advertisers", perks: ["Everything in 10-Pack", "Matrix panels", "API + SSO + seats"] },
+            { name: "The Solo Sniper", price: 199, sub: "1 core tracked advertiser brand", perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports"] },
+            { name: "The Agency 7-Pack", price: 799, sub: "Up to 7 tracked advertiser brands", badge: "BEST VALUE", perks: ["Everything in Solo Sniper", "Side-by-side advertiser benchmarks", "White-label pitch decks", "Hook & creative diff alerts"] },
           ].map((p) => (
             <div key={p.name} className={`relative card-flat p-5 ${p.badge ? "bg-primary" : ""}`}>
               {p.badge && (
@@ -221,17 +225,26 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
                   {p.badge}
                 </div>
               )}
-              <div className="font-bold">{p.name}</div>
+              <div className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
+                FOUNDING MEMBER · LIFETIME LOCKED
+              </div>
+              <div className="font-bold mt-3">{p.name}</div>
               <div className="mt-2 mono text-3xl font-bold">${p.price.toLocaleString()}<span className="text-sm font-normal">/mo</span></div>
               <div className="text-xs font-semibold mt-1">{p.sub}</div>
               <ul className="mt-3 space-y-1.5 text-sm">
                 {p.perks.map((f) => <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>)}
               </ul>
-              <button onClick={onEnter} className="btn-flat w-full mt-4">
-                Choose plan <ArrowRight size={14} />
+              <div className="mt-3 mono text-[10px] leading-snug border-t-2 border-ink pt-2">
+                Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Agencies.
+              </div>
+              <button onClick={onEnter} className="btn-flat w-full mt-3">
+                Claim founding seat <ArrowRight size={14} />
               </button>
             </div>
           ))}
+        </div>
+        <div className="mt-6 max-w-4xl mx-auto card-flat-sm p-3 text-center mono text-[11px] font-bold uppercase tracking-wide bg-paper">
+          ✓ No Contracts · ✓ No Minimum Durations · ✓ Cancel Anytime
         </div>
       </section>
 
@@ -250,7 +263,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
 
       <footer className="border-t-2 border-ink bg-paper">
         <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-3 mono text-[11px]">
-          <span>© AdPalette · Cross-channel ad intelligence</span>
+          <span>© Revenuad · Cross-channel ad intelligence</span>
           <span>SOC2 type II · GDPR · PCI DSS via Stripe</span>
         </div>
       </footer>
