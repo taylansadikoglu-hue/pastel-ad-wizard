@@ -25,6 +25,12 @@ export function BarbsChat() {
     if (open) inputRef.current?.focus();
   }, [open]);
 
+  // Auto-open exactly 3s after first mount
+  useEffect(() => {
+    const t = setTimeout(() => setOpen(true), 3000);
+    return () => clearTimeout(t);
+  }, []);
+
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;

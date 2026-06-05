@@ -99,8 +99,8 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
       <header className="border-b-2 border-ink bg-paper">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-              <span className="mono text-xs font-bold">RA</span>
+            <div className="px-1.5 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
+              <span className="mono text-[10px] font-bold">R-AD</span>
             </div>
             <span className="font-bold tracking-tight">RevenueAd</span>
             <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] ml-1">v2.6</span>
