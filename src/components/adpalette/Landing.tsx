@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
+import { BarbsChat } from "./BarbsChat";
 import {
-  ArrowRight, Palette, Check, Sparkles, BarChart3, Film, FileDown, PlayCircle,
+  ArrowRight, Palette, Check, Sparkles, BarChart3, Film, FileDown, PlayCircle, X as XIcon, Lock,
 } from "lucide-react";
+
 
 type Brand = { name: string; visible: boolean; budget: number; mix: { search: number; social: number; video: number; programmatic: number } };
 
@@ -77,23 +79,25 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             <Sparkles size={12} /> CROSS-CHANNEL AD INTELLIGENCE
           </div>
           <h1 className="mt-5 text-4xl md:text-6xl font-bold leading-[1.05] tracking-tight">
-            See exactly where your clients' competitors are spending their ad budgets.
+            See exactly where competitors are spending — and exploit it.
           </h1>
           <p className="mt-5 text-lg text-muted-foreground max-w-xl">
-            RevenueAd tracks, compiles, and future-saves every advertising placement published across Search, YouTube, Meta, TikTok, and Programmatic networks. Beautifully simple competitor analysis built for digital agencies.
+            RevenueAd tracks every advertising placement across Search, YouTube, Meta, TikTok, and Programmatic — built for <span className="font-semibold text-ink">independent e-commerce brands scaling solo</span> and <span className="font-semibold text-ink">performance agencies running competitive audits, client retention, and multi-channel scaling</span> across rosters.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <a href="#demo" className="btn-flat">
+
               <PlayCircle size={14} /> Try interactive demo
             </a>
             <button onClick={onEnter} className="btn-flat btn-primary">
-              Start free — no card required <ArrowRight size={14} />
+              Start tracking — from $199/mo <ArrowRight size={14} />
             </button>
           </div>
           <div className="mt-6 flex items-center gap-4 mono text-[11px] text-muted-foreground">
             <span>► 14 channels indexed daily</span>
             <span>► SOC2 · GDPR</span>
-            <span>► No credit card to demo</span>
+            <span>► No contracts · Cancel anytime</span>
+
           </div>
         </div>
 
@@ -177,10 +181,41 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
         </div>
       </section>
 
+      {/* Zig-zag cloud separator */}
+      <div className="relative overflow-hidden bg-ink text-paper border-y-2 border-ink">
+        <svg
+          className="absolute top-0 left-0 w-full h-6 text-canvas"
+          viewBox="0 0 1200 24"
+          preserveAspectRatio="none"
+          aria-hidden
+        >
+          <path d="M0 0 L60 24 L120 0 L180 24 L240 0 L300 24 L360 0 L420 24 L480 0 L540 24 L600 0 L660 24 L720 0 L780 24 L840 0 L900 24 L960 0 L1020 24 L1080 0 L1140 24 L1200 0 L1200 0 L0 0 Z" fill="currentColor" />
+        </svg>
+        <svg
+          className="absolute bottom-0 left-0 w-full h-6 text-canvas rotate-180"
+          viewBox="0 0 1200 24"
+          preserveAspectRatio="none"
+          aria-hidden
+        >
+          <path d="M0 0 L60 24 L120 0 L180 24 L240 0 L300 24 L360 0 L420 24 L480 0 L540 24 L600 0 L660 24 L720 0 L780 24 L840 0 L900 24 L960 0 L1020 24 L1080 0 L1140 24 L1200 0 L1200 0 L0 0 Z" fill="currentColor" />
+        </svg>
+        <div className="max-w-7xl mx-auto px-6 py-20 md:py-28 text-center relative z-10">
+          <div className="inline-flex items-center gap-2 mono text-[11px] px-2 py-1 border-2 border-paper rounded-[3px] bg-ink mb-5">
+            <Sparkles size={12} /> THE STACK BEHIND THE EDGE
+          </div>
+          <h2 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.05]">
+            AI-Powered Cross-Channel<br />Intelligence Engine
+          </h2>
+          <p className="mt-5 max-w-2xl mx-auto text-base md:text-lg opacity-80">
+            Real-time ad library ingestion. Sentiment radar across thousands of raw consumer comments. Auto-generated ad-angle blueprints. One operating system for solo e-commerce operators and full-roster agencies alike.
+          </p>
+        </div>
+      </div>
+
       {/* Benefits */}
       <section id="benefits" className="max-w-7xl mx-auto px-6 py-14">
         <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-          <h2 className="text-3xl md:text-4xl font-bold">Three reasons agencies switch to RevenueAd</h2>
+          <h2 className="text-3xl md:text-4xl font-bold">Three reasons operators switch to RevenueAd</h2>
           <span className="mono text-[11px] text-muted-foreground">NO JARGON · JUST RESULTS</span>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
@@ -203,22 +238,42 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
         </div>
       </section>
 
+
       {/* Pricing teaser */}
       <section id="pricing" className="max-w-7xl mx-auto px-6 py-14">
         <div className="text-center max-w-2xl mx-auto">
           <div className="inline-block mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-primary mb-3">
-            ★ FOUNDING MEMBER LAUNCH · FIRST 100 AGENCIES ONLY
+            ★ FOUNDING MEMBER LAUNCH · FIRST 100 OPERATORS ONLY
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold">Lifetime grandfathered pricing. Locked in forever.</h2>
+          <h2 className="text-3xl md:text-4xl font-bold">Two tiers. No contracts. Locked in forever.</h2>
           <p className="text-sm text-muted-foreground mt-2">
             <span className="font-semibold text-ink">No contracts. No minimum durations. Cancel anytime.</span> Stripe billed monthly.
           </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-5 mt-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-5 mt-8 max-w-4xl mx-auto">
           {[
-            { name: "The Free Scout", price: 0, sub: "1 tracked advertiser brand", perks: ["1 live domain scan", "Weekly creative refresh", "CSV export"], freeBadge: "FREE FOREVER" },
-            { name: "The Solo Sniper", price: 199, sub: "1 core tracked advertiser brand", perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports"] },
-            { name: "The Agency 7-Pack", price: 799, sub: "Up to 7 tracked advertiser brands", badge: "BEST VALUE", perks: ["Everything in Solo Sniper", "Side-by-side advertiser benchmarks", "White-label pitch decks", "Hook & creative diff alerts"] },
+            {
+              name: "Solo Sniper",
+              price: 199,
+              sub: "1 tracked brand · Raw Data Tracking Only",
+              perks: ["Daily creative refresh", "Full ad library indexing (Meta, TikTok, YouTube, Search)", "CSV + PDF exports"],
+              locked: ["AI Audience Sentiment Radar", "Barbs AI Assistant"],
+            },
+            {
+              name: "Agency 10-Pack",
+              price: 799,
+              sub: "Up to 7 tracked brands · Full AI Stack",
+              badge: "BEST VALUE",
+              perks: [
+                "Everything in Solo Sniper",
+                "AI Audience Sentiment Radar (live)",
+                "Autonomous Ad-Angle Copy Blueprints",
+                "Barbs AI Assistant (priority access)",
+                "High-priority processing layer",
+                "Side-by-side advertiser benchmarks",
+                "White-label pitch decks",
+              ],
+            },
           ].map((p) => (
             <div key={p.name} className={`relative card-flat p-5 ${p.badge ? "bg-primary" : ""}`}>
               {p.badge && (
@@ -226,30 +281,41 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
                   {p.badge}
                 </div>
               )}
-              <div className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
-                {p.freeBadge ?? "FOUNDING MEMBER · LIFETIME LOCKED"}
+              <div className="flex flex-wrap gap-1.5">
+                <span className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
+                  LIFETIME GRANDFATHERED
+                </span>
+                <span className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
+                  NO CONTRACTS
+                </span>
               </div>
-              <div className="font-bold mt-3">{p.name}</div>
+              <div className="font-bold mt-3 text-lg">{p.name}</div>
               <div className="mt-2 mono text-3xl font-bold">
-                {p.price === 0 ? "Free" : <>${p.price.toLocaleString()}<span className="text-sm font-normal">/mo</span></>}
+                ${p.price.toLocaleString()}<span className="text-sm font-normal">/mo</span>
               </div>
               <div className="text-xs font-semibold mt-1">{p.sub}</div>
               <ul className="mt-3 space-y-1.5 text-sm">
                 {p.perks.map((f) => <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>)}
+                {p.locked?.map((f) => (
+                  <li key={f} className="flex items-start gap-1.5 text-muted-foreground line-through decoration-2">
+                    <XIcon size={14} className="mt-0.5 shrink-0 no-underline" /> <span>{f} <Lock size={10} className="inline ml-0.5" /></span>
+                  </li>
+                ))}
               </ul>
               <div className="mt-3 mono text-[10px] leading-snug border-t-2 border-ink pt-2">
-                {p.price === 0 ? "No credit card required. Upgrade anytime for daily refresh and more brands." : "Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Agencies."}
+                Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Operators.
               </div>
               <button onClick={onEnter} className="btn-flat w-full mt-3">
-                {p.price === 0 ? "Create free account" : "Claim founding seat"} <ArrowRight size={14} />
+                Claim founding seat <ArrowRight size={14} />
               </button>
             </div>
           ))}
         </div>
         <div className="mt-6 max-w-4xl mx-auto card-flat-sm p-3 text-center mono text-[11px] font-bold uppercase tracking-wide bg-paper">
-          ✓ No Contracts · ✓ No Minimum Durations · ✓ Cancel Anytime
+          ✓ Lifetime Grandfathered Founding Member Pricing · ✓ No Contracts · ✓ Cancel Anytime
         </div>
       </section>
+
 
       {/* Final CTA */}
       <section className="max-w-7xl mx-auto px-6 pb-20">
@@ -270,6 +336,9 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
           <span>SOC2 type II · GDPR · PCI DSS via Stripe</span>
         </div>
       </footer>
+
+      <BarbsChat />
     </div>
+
   );
 }

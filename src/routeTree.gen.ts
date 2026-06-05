@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiBarbsRouteImport } from './routes/api/barbs'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 
 const AuthRoute = AuthRouteImport.update({
@@ -28,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBarbsRoute = ApiBarbsRouteImport.update({
+  id: '/api/barbs',
+  path: '/api/barbs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -38,11 +44,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRoute
+  '/api/barbs': typeof ApiBarbsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRoute
+  '/api/barbs': typeof ApiBarbsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -50,19 +58,27 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/app': typeof AuthenticatedAppRoute
+  '/api/barbs': typeof ApiBarbsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/app'
+  fullPaths: '/' | '/auth' | '/app' | '/api/barbs'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/app'
-  id: '__root__' | '/' | '/_authenticated' | '/auth' | '/_authenticated/app'
+  to: '/' | '/auth' | '/app' | '/api/barbs'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/app'
+    | '/api/barbs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiBarbsRoute: typeof ApiBarbsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -86,6 +102,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/barbs': {
+      id: '/api/barbs'
+      path: '/api/barbs'
+      fullPath: '/api/barbs'
+      preLoaderRoute: typeof ApiBarbsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app': {
@@ -113,6 +136,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiBarbsRoute: ApiBarbsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
