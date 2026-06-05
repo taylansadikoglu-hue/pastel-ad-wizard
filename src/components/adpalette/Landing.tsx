@@ -336,6 +336,9 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
           <span>SOC2 type II · GDPR · PCI DSS via Stripe</span>
         </div>
       </footer>
+
+      <BarbsChat />
     </div>
+
   );
 }
