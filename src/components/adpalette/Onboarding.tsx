@@ -239,10 +239,15 @@ function StepPaywall({ data, setData }: any) {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Choose a plan, secure your seat</h1>
-        <p className="text-sm text-muted-foreground mt-1">Cancel anytime. Billed monthly via Stripe.</p>
+        <div className="inline-block mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-primary mb-2">
+          ★ FOUNDING MEMBER LAUNCH · FIRST 100 AGENCIES
+        </div>
+        <h1 className="text-2xl font-bold">Lock in lifetime grandfathered pricing</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          <span className="font-semibold text-ink">No contracts. No minimum durations. Cancel anytime.</span> Billed monthly via Stripe.
+        </p>
       </div>
-      <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+      <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
         {PLANS.map((p) => {
           const Icon = p.icon;
           const active = data.plan === p.key;
@@ -258,7 +263,10 @@ function StepPaywall({ data, setData }: any) {
                   {p.badge}
                 </div>
               )}
-              <div className="flex items-center justify-between">
+              <div className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
+                FOUNDING · LIFETIME LOCKED
+              </div>
+              <div className="flex items-center justify-between mt-3">
                 <div className="font-bold flex items-center gap-1.5"><Icon size={14} /> {p.name}</div>
                 <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{p.tag}</span>
               </div>
@@ -269,9 +277,15 @@ function StepPaywall({ data, setData }: any) {
                   <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>
                 ))}
               </ul>
+              <div className="mt-3 pt-2 border-t-2 border-ink mono text-[10px] leading-snug">
+                Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Agencies.
+              </div>
             </button>
           );
         })}
+      </div>
+      <div className="max-w-3xl mx-auto card-flat-sm p-3 text-center mono text-[11px] font-bold uppercase tracking-wide bg-paper">
+        ✓ No Contracts · ✓ No Minimum Durations · ✓ Cancel Anytime
       </div>
 
       <div className="max-w-xl mx-auto card-flat p-5 space-y-4">
