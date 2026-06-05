@@ -106,6 +106,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [integSaving, setIntegSaving] = useState(false);
   const [liveSentiment, setLiveSentiment] = useState<{ domain: string; good: string | null; friction: string | null; blueprint: string | null }[]>([]);
   const [livePlacements, setLivePlacements] = useState<{ brand: string; hook: string; channel: string; days: number; length: string; aiTag: string }[]>([]);
+  const [runningScans, setRunningScans] = useState<string[]>([]);
   const [userName, setUserName] = useState<string>("");
   const [userInitials, setUserInitials] = useState<string>("YOU");
   const [agencyDomain, setAgencyDomain] = useState<string>("");
