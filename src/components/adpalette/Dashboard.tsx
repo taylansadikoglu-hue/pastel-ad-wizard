@@ -911,7 +911,7 @@ function aiReply(q: string, visible: Competitor[]): string {
 const NAV_ITEMS = [
   { icon: Home, label: "Workspace", to: "/app" as const },
   { icon: Layers, label: "Creative library", to: "/app/creative" as const },
-  { icon: Radio, label: "Sentiment Radar", to: "/app/sentiment" as const },
+  { icon: Radio, label: "Social Listening", to: "/app/sentiment" as const },
   { icon: Target, label: "Advertisers", to: "/app/advertisers" as const },
   { icon: TrendingUp, label: "Benchmarks", to: "/app/benchmarks" as const },
   { icon: Settings, label: "Settings", to: "/app/settings" as const },
