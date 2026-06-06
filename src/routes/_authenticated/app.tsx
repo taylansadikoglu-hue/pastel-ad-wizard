@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, Outlet } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Layers, Radio, Target, TrendingUp, Settings, Home, ArrowRight } from "lucide-react";
@@ -84,6 +84,8 @@ function AppPage() {
   const navigate = useNavigate();
   const [stage, setStage] = useState<Stage>("loading");
   const [email, setEmail] = useState("");
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "/app";
+  const isChildWorkspaceRoute = pathname !== "/app";
 
   const refresh = async () => {
     const { data: u } = await supabase.auth.getUser();
@@ -147,7 +149,7 @@ function AppPage() {
         <AdminPicker email={email} onPick={() => setStage("app")} onSignOut={logout} />
       )}
       {stage === "onboard" && <OnboardingWizard onComplete={() => setStage("app")} />}
-      {stage === "app" && <Dashboard onLogout={logout} />}
+      {stage === "app" && (isChildWorkspaceRoute ? <Outlet /> : <Dashboard onLogout={logout} />)}
     </ThemeProvider>
   );
 }
