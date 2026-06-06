@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiBarbsRouteImport } from './routes/api/barbs'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
+import { Route as AuthenticatedAppPcrRouteImport } from './routes/_authenticated/app.pcr'
 import { Route as AuthenticatedAppSentimentRouteImport } from './routes/_authenticated/app.sentiment'
 import { Route as AuthenticatedAppPcrRouteImport } from './routes/_authenticated/app.pcr'
 import { Route as AuthenticatedAppCreativeRouteImport } from './routes/_authenticated/app.creative'
@@ -289,13 +290,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
