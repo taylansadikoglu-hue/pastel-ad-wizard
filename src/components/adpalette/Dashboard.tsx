@@ -345,11 +345,19 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   }, [isAdmin]);
 
   const exportCSV = () => {
-    const header = ["Advertiser", "Est monthly spend", "Meta %", "Google %", "Programmatic %"];
-    const lines = [header.join(",")].concat(
-      rows.map((r) => [r.name, r.spend, r.meta, r.google, r.programmatic].join(","))
-    );
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const esc = (v: unknown) => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const sections: string[] = [];
+    sections.push("ADVERTISER MATRIX");
+    sections.push(["Advertiser", "Est monthly spend", "Meta %", "Google %", "Programmatic %"].join(","));
+    for (const r of rows) sections.push([r.name, r.spend, r.meta, r.google, r.programmatic].map(esc).join(","));
+    sections.push("");
+    sections.push("CONTINUOUS INSPIRATION LOOP");
+    sections.push(["Brand", "Channel", "Hook", "Flight days", "Media URL"].join(","));
+    for (const p of livePlacements) sections.push([p.brand, p.channel, p.hook, p.days, p.mediaUrl ?? ""].map(esc).join(","));
+    const blob = new Blob([sections.join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -362,7 +370,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   };
 
   const exportPDF = () => {
-    window.print();
+    toast("Opening print dialog — choose 'Save as PDF'");
+    setTimeout(() => window.print(), 150);
   };
 
   return (
