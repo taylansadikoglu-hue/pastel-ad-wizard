@@ -766,9 +766,13 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                         ) : v.mediaType === "image" && v.mediaUrl ? (
                           <img src={v.mediaUrl} alt={`${v.brand} creative`} className="w-full h-full object-cover" loading="lazy" />
                         ) : v.mediaUrl ? (
-                          <a href={v.mediaUrl} target="_blank" rel="noreferrer" className="text-xs underline font-semibold">
-                            Open creative ↗
-                          </a>
+                          <iframe
+                            src={v.mediaUrl}
+                            title={`${v.brand} creative`}
+                            className="w-full h-full border-0 bg-paper"
+                            loading="lazy"
+                            sandbox="allow-scripts allow-same-origin allow-popups"
+                          />
                         ) : (
                           <Play size={22} />
                         )}
