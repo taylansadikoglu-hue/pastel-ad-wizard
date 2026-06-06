@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
@@ -22,6 +22,9 @@ import {
 import { Button } from "@/components/ui/button";
 
 const MAX_BRANDS = 7;
+const COUNTRY_OPTIONS = ["United States", "Australia", "United Kingdom", "Canada"] as const;
+
+type Country = (typeof COUNTRY_OPTIONS)[number];
 
 type Row = { id: string; domain: string; status: string; created_at: string };
 
@@ -173,7 +176,8 @@ function AdvertisersPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [input, setInput] = useState("");
-  const [country, setCountry] = useState<"United States" | "Australia" | "United Kingdom" | "Canada">("United States");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [country, setCountry] = useState<Country>("United States");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -239,10 +243,20 @@ function AdvertisersPage() {
       .replace(/^www\./, "")
       .replace(/\/.*$/, "");
 
+  const captureDomainInput = (value: string) => {
+    setInput(value);
+  };
+
+  const captureCountry = (value: string) => {
+    if (COUNTRY_OPTIONS.includes(value as Country)) {
+      setCountry(value as Country);
+    }
+  };
+
   const addDomain = async () => {
-    const domain = normalize(input);
+    const domain = normalize(inputRef.current?.value ?? input);
     if (!domain || !/\.[a-z]{2,}$/.test(domain)) {
-      toast.error("Enter a valid domain (e.g. target.com)");
+      toast.error("Enter a valid domain");
       return;
     }
     if (rows.length >= MAX_BRANDS) {
@@ -336,27 +350,29 @@ function AdvertisersPage() {
         {/* Add brand */}
         <div className="card-flat p-4">
           <label className="mono text-[10px] uppercase font-bold block mb-2">
-            Add Competitor Domain (e.g., target.com)
+            Add Competitor Domain
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <Input
+              ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => captureDomainInput(e.currentTarget.value)}
+              onInput={(e) => captureDomainInput(e.currentTarget.value)}
               onKeyDown={(e) => e.key === "Enter" && addDomain()}
-              placeholder="competitor.com"
+              placeholder="Enter domain"
               className="flex-1 h-10 text-sm font-mono"
               disabled={busy || rows.length >= MAX_BRANDS}
             />
             <Select
               value={country}
-              onValueChange={(v) => setCountry(v as typeof country)}
+              onValueChange={captureCountry}
               disabled={busy || rows.length >= MAX_BRANDS}
             >
               <SelectTrigger className="w-full sm:w-56 h-10 text-sm">
                 <SelectValue placeholder="Target country" />
               </SelectTrigger>
               <SelectContent className="z-50">
-                {["United States", "Australia", "United Kingdom", "Canada"].map((n) => (
+                {COUNTRY_OPTIONS.map((n) => (
                   <SelectItem key={n} value={n}>{n}</SelectItem>
                 ))}
               </SelectContent>
