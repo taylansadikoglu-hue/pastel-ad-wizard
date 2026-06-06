@@ -243,8 +243,18 @@ function AdvertisersPage() {
       .replace(/^www\./, "")
       .replace(/\/.*$/, "");
 
+  const captureDomainInput = (value: string) => {
+    setInput(value);
+  };
+
+  const captureCountry = (value: string) => {
+    if (COUNTRY_OPTIONS.includes(value as Country)) {
+      setCountry(value as Country);
+    }
+  };
+
   const addDomain = async () => {
-    const domain = normalize(input);
+    const domain = normalize(inputRef.current?.value ?? input);
     if (!domain || !/\.[a-z]{2,}$/.test(domain)) {
       toast.error("Enter a valid domain (e.g. target.com)");
       return;
