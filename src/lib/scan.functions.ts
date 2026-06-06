@@ -39,296 +39,37 @@ export const startScan = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     console.log("startScan handler received data:", data);
+
+    // Preserve the FULL domain (e.g. "commbank.com.au"). The background worker
+    // reads this row and passes `domain` straight into DataForSEO as the target.
+    // Do NOT strip the TLD or reduce to a brand token here.
     const rawDomain = (data?.domain ?? "").toString();
-    const domain = rawDomain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-    if (!domain) {
-      console.error("startScan aborted: empty domain after normalization", { data });
-      throw new Error("Domain is required");
+    const domain = rawDomain
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .replace(/\/.*$/, "");
+    if (!domain || !domain.includes(".")) {
+      console.error("startScan aborted: invalid domain", { rawDomain, normalized: domain });
+      throw new Error("A valid full domain is required (e.g. commbank.com.au)");
     }
-    const countryVariable: string = data.country ?? "United States";
 
-    const { data: integ } = await supabase
-      .from("integrations")
-      .select("apify_token, dataforseo_login, dataforseo_password")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    const apifyToken = integ?.apify_token?.trim() || process.env.APIFY_API_TOKEN || null;
-    const dfsLogin = integ?.dataforseo_login?.trim() || process.env.DATAFORSEO_LOGIN || null;
-    const dfsPass = integ?.dataforseo_password?.trim() || process.env.DATAFORSEO_PASSWORD || null;
-
+    console.log("Creating scan:", domain);
     const { data: scan, error: scanErr } = await supabase
       .from("domain_scans")
-      .insert({ user_id: userId, domain, status: "running" })
-      .select("id")
+      .insert({ user_id: userId, domain, status: "pending" })
+      .select("id, domain, status")
       .single();
-    if (scanErr || !scan) throw new Error(scanErr?.message ?? "Failed to create scan");
-    const scanId = scan.id;
 
-    const pipeline = (async () => {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const adCopyBuffer: string[] = [];
-      const commentBuffer: string[] = [];
-      type Placement = { channel: string; hook: string; creative_url?: string; days_running?: number; raw: unknown };
-      const placements: Placement[] = [];
-
-      // ---------- Apify: Facebook Ads Library (ad copy + creatives) ----------
-      if (apifyToken) {
-        try {
-          const advertiserName = domain.replace(/^www\./, "").split(".")[0]?.trim();
-          if (!advertiserName) throw new Error("Empty advertiser/page name for Apify ads scrape");
-          const url = `https://api.apify.com/v2/acts/curious_coder~facebook-ads-library-scraper/run-sync-get-dataset-items?token=${apifyToken}&timeout=120`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              urls: [{ url: `https://www.facebook.com/${encodeURIComponent(advertiserName)}` }],
-              max_results: 15,
-              limitPerSource: 15,
-              count: 15,
-              "scrapePageAds.activeStatus": "all",
-              "scrapePageAds.countryCode": "US",
-            }),
-          });
-          if (res.ok) {
-            const items = (await res.json()) as Array<Record<string, unknown>>;
-            for (const it of items.slice(0, 50)) {
-              const text = String((it as Record<string, string>).ad_creative_body ?? (it as Record<string, string>).snapshot ?? "").trim();
-              if (text) adCopyBuffer.push(text);
-              placements.push({
-                channel: "Meta",
-                hook: text.slice(0, 200) || "(no copy)",
-                creative_url: (it as Record<string, string>).ad_snapshot_url ?? undefined,
-                days_running: typeof it.days_running === "number" ? (it.days_running as number) : undefined,
-                raw: it,
-              });
-            }
-          } else {
-            console.warn(`Apify ads ${res.status}`, await res.text().catch(() => ""));
-          }
-        } catch (e) {
-          console.error("Apify ads scraper failed", e);
-        }
-
-        // ---------- Apify: Social comment scraper (Instagram + Facebook posts/comments) ----------
-        try {
-          const handle = domain.split(".")[0];
-          const url = `https://api.apify.com/v2/acts/apify~instagram-comment-scraper/run-sync-get-dataset-items?token=${apifyToken}&timeout=120`;
-          const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              directUrls: [`https://www.instagram.com/${handle}/`],
-              resultsLimit: 100,
-              isNewestComments: true,
-            }),
-          });
-          if (res.ok) {
-            const items = (await res.json()) as Array<Record<string, unknown>>;
-            for (const it of items.slice(0, 200)) {
-              const text = String(it.text ?? it.comment ?? "").trim();
-              if (text) commentBuffer.push(text);
-            }
-            console.log(`Social listening: pulled ${commentBuffer.length} comments for ${handle}`);
-          } else {
-            console.error("Apify comment scraper HTTP error", res.status, await res.text().catch(() => ""));
-          }
-        } catch (e) {
-          console.error("Apify comment scraper failed", e);
-        }
-      } else {
-        console.error("Apify scrapers skipped: missing apify_token credential");
-      }
-
-      // ---------- DataForSEO: Google Ads search ----------
-      if (dfsLogin && dfsPass) {
-        try {
-          const basic = Buffer.from(`${dfsLogin}:${dfsPass}`, "utf-8").toString("base64");
-          // Trace + clean the competitor domain variable before sending to DataForSEO.
-          // The endpoint rejects raw URLs / TLDs in the `keyword` field, so strip
-          // protocol, path, www., and TLD chunks down to the bare brand token.
-          let domainVariable = (domain ?? "").toString().trim().toLowerCase();
-          domainVariable = domainVariable.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
-          const brandToken = domainVariable.split(".")[0]?.trim() ?? "";
-          domainVariable = brandToken;
-          if (!domainVariable) {
-            console.error("DataForSEO request skipped: empty keyword/domain", { rawDomain: domain });
-            throw new Error("Empty keyword for DataForSEO");
-          }
-          console.log("DataForSEO Payload:", { keyword: domainVariable, location: countryVariable });
-          const bodyStr = JSON.stringify([{ target: domainVariable }]);
-          console.log("DataForSEO request prepared", {
-            loginPrefix: dfsLogin.slice(0, 3),
-            basicLen: basic.length,
-            keyword: domainVariable,
-            bodyPreview: bodyStr.slice(0, 200),
-          });
-          const res = await fetch("https://api.dataforseo.com/v3/serp/google/ads_search/live/advanced", {
-            method: "POST",
-            headers: {
-              Authorization: `Basic ${basic}`,
-              "Content-Type": "application/json",
-            },
-            body: bodyStr,
-          });
-          if (res.ok) {
-            const json = (await res.json()) as {
-              status_code?: number;
-              status_message?: string;
-              tasks?: Array<{
-                status_code?: number;
-                status_message?: string;
-                result?: Array<{ items?: Array<Record<string, unknown>>; items_count?: number }>;
-              }>;
-            };
-            const task = json.tasks?.[0];
-            if ((json.status_code && json.status_code >= 40000) || (task?.status_code && task.status_code >= 40000)) {
-              console.error("DataForSEO API error", {
-                statusCode: json.status_code,
-                statusMessage: json.status_message,
-                taskStatusCode: task?.status_code,
-                taskStatusMessage: task?.status_message,
-              });
-            }
-            // DataForSEO ads_search returns nested result[].items[]. Each item is typically
-            // type "ads_search" with shape: { type, rank_group, rank_absolute, title,
-            // description, url, breadcrumb, highlighted[], extensions, advertiser, ... }.
-            // Some accounts also return container items whose ads live under `items` again.
-            const rawItems: Array<Record<string, unknown>> = [];
-            for (const r of task?.result ?? []) {
-              for (const it of r?.items ?? []) {
-                rawItems.push(it);
-                const nested = (it as { items?: Array<Record<string, unknown>> }).items;
-                if (Array.isArray(nested)) rawItems.push(...nested);
-              }
-            }
-            console.log(`DataForSEO parsed ${rawItems.length} raw items for ${domainVariable}`);
-            if (rawItems[0]) console.log("DataForSEO sample item keys:", Object.keys(rawItems[0]));
-
-            // Flatten DataForSEO description_rows which may be string | string[] |
-            // { text: string } | nested arrays. Returns a clean joined string.
-            const flattenDescription = (val: unknown): string => {
-              if (!val) return "";
-              if (typeof val === "string") return val;
-              if (Array.isArray(val)) return val.map(flattenDescription).filter(Boolean).join(" ");
-              if (typeof val === "object") {
-                const o = val as Record<string, unknown>;
-                if (typeof o.text === "string") return o.text;
-                if (Array.isArray(o.items)) return flattenDescription(o.items);
-              }
-              return "";
-            };
-
-            let pushedGoogle = 0;
-            for (const it of rawItems.slice(0, 50)) {
-              const title = typeof it.title === "string" ? it.title : "";
-              const description = typeof it.description === "string"
-                ? it.description
-                : flattenDescription((it as { description_rows?: unknown }).description_rows);
-              const text = [title, description].filter(Boolean).join(" — ").trim();
-              if (!text) continue;
-              const url = typeof it.url === "string"
-                ? it.url
-                : typeof (it as { breadcrumb?: string }).breadcrumb === "string"
-                  ? (it as { breadcrumb: string }).breadcrumb
-                  : undefined;
-              adCopyBuffer.push(text);
-              placements.push({
-                channel: "Google",
-                hook: text.slice(0, 200),
-                creative_url: url,
-                raw: it,
-              });
-              pushedGoogle++;
-            }
-            console.log(`DataForSEO mapped ${pushedGoogle} Google placements for ${domainVariable}`);
-          } else {
-            const body = await res.text().catch(() => "");
-            console.error("DataForSEO HTTP request failed", { status: res.status, body: body.slice(0, 500) });
-          }
-        } catch (e) {
-          console.error("DataForSEO request failed", e);
-        }
-      } else {
-        console.error("DataForSEO request skipped: missing login or password credential");
-      }
-
-      if (placements.length) {
-        await supabaseAdmin.from("ad_placements").insert(
-          placements.map((p) => ({ user_id: userId, scan_id: scanId, domain, channel: p.channel, hook: p.hook, creative_url: p.creative_url, days_running: p.days_running, raw: p.raw as never }))
-        );
-      }
-
-      // ---------- Lovable AI Gateway: gpt-4o-mini distillation ----------
-      let good = "No consumer comments captured yet.";
-      let friction = "No consumer comments captured yet.";
-      let blueprint = `No ad copy captured yet for ${domain}.`;
-      const model = "openai/gpt-4o-mini";
-
-      if (adCopyBuffer.length || commentBuffer.length) {
-        try {
-          const apiKey = process.env.LOVABLE_API_KEY;
-          if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
-          const adSample = adCopyBuffer.slice(0, 60).join("\n---\n").slice(0, 6000);
-          const commentSample = commentBuffer.slice(0, 120).join("\n---\n").slice(0, 6000);
-          const userMsg = `Brand domain: ${domain}\n\n=== AD COPY ===\n${adSample || "(none)"}\n\n=== CONSUMER COMMENTS ===\n${commentSample || "(none)"}\n\nReturn JSON only.`;
-          const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              "Lovable-API-Key": apiKey,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model,
-              messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: userMsg },
-              ],
-              response_format: { type: "json_object" },
-            }),
-          });
-          if (aiRes.ok) {
-            const j = (await aiRes.json()) as { choices?: Array<{ message?: { content?: string } }> };
-            const content = j.choices?.[0]?.message?.content ?? "{}";
-            const parsed = JSON.parse(content) as { good?: string; friction?: string; blueprint?: string };
-            if (parsed.good) good = parsed.good;
-            if (parsed.friction) friction = parsed.friction;
-            if (parsed.blueprint) blueprint = parsed.blueprint;
-          } else {
-            console.warn(`Lovable AI ${aiRes.status}`, await aiRes.text().catch(() => ""));
-          }
-        } catch (e) {
-          console.error("AI distill failed", e);
-        }
-      }
-
-      await supabaseAdmin.from("sentiment_insights").insert({
-        user_id: userId,
-        scan_id: scanId,
-        domain,
-        good,
-        friction,
-        blueprint,
-        model,
-      });
-
-      await supabaseAdmin
-        .from("domain_scans")
-        .update({ status: "done" })
-        .eq("id", scanId);
-    })();
-
-    try {
-      await pipeline;
-    } catch (err) {
-      console.error("Scan pipeline failed", err);
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      await supabaseAdmin
-        .from("domain_scans")
-        .update({ status: "error", error: String(err).slice(0, 500) })
-        .eq("id", scanId);
-      return { scan_id: scanId, domain, status: "error" as const };
+    if (scanErr || !scan) {
+      console.error("Failed to insert pending domain_scans row", { domain, error: scanErr });
+      throw new Error(scanErr?.message ?? "Failed to create scan");
     }
 
-    return { scan_id: scanId, domain, status: "done" as const };
+    console.log("Pending scan created in domain_scans:", scan);
+    // The background worker polls domain_scans for status = 'pending' and
+    // owns the lifecycle from here (running → done/error). Do not run the
+    // Apify / DataForSEO / AI pipeline inline.
+    return { scan_id: scan.id, domain: scan.domain, status: "pending" as const };
   });
