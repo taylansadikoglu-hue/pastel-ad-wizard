@@ -341,7 +341,7 @@ function AdvertisersPage() {
             <select
               value={country}
               onChange={(e) => setCountry(e.target.value as typeof country)}
-              className="input-flat mono text-xs"
+              className="input-flat mono text-xs w-44 shrink-0"
               disabled={busy || rows.length >= MAX_BRANDS}
               title="Target country"
             >
