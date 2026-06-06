@@ -120,16 +120,23 @@ export const startScan = createServerFn({ method: "POST" })
       if (dfsLogin && dfsPass) {
         try {
           const basic = Buffer.from(`${dfsLogin}:${dfsPass}`, "utf-8").toString("base64");
-          const keyword = (domain ?? "").toString().trim();
-          if (!keyword) {
-            console.error("DataForSEO request skipped: empty keyword/domain");
+          // Trace + clean the competitor domain variable before sending to DataForSEO.
+          // The endpoint rejects raw URLs / TLDs in the `keyword` field, so strip
+          // protocol, path, www., and TLD chunks down to the bare brand token.
+          let domainVariable = (domain ?? "").toString().trim().toLowerCase();
+          domainVariable = domainVariable.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+          const brandToken = domainVariable.split(".")[0]?.trim() ?? "";
+          domainVariable = brandToken;
+          if (!domainVariable) {
+            console.error("DataForSEO request skipped: empty keyword/domain", { rawDomain: domain });
             throw new Error("Empty keyword for DataForSEO");
           }
-          const bodyStr = JSON.stringify([{ keyword, location_name: "United States", language_name: "English" }]);
+          console.log("DataForSEO Payload Keyword:", domainVariable);
+          const bodyStr = JSON.stringify([{ keyword: domainVariable, location_name: "United States", language_name: "English" }]);
           console.log("DataForSEO request prepared", {
             loginPrefix: dfsLogin.slice(0, 3),
             basicLen: basic.length,
-            keyword,
+            keyword: domainVariable,
             bodyPreview: bodyStr.slice(0, 200),
           });
           const res = await fetch("https://api.dataforseo.com/v3/serp/google/ads_search/live/advanced", {
