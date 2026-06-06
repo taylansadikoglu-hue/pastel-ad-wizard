@@ -475,7 +475,12 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <div className="flex items-center gap-2 input-flat">
               <Search size={14} />
-              <input className="flex-1 bg-transparent outline-none text-sm" placeholder="Search creative, hooks, advertisers..." />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent outline-none text-sm"
+                placeholder="Search creative, hooks, advertisers..."
+              />
               <span className="mono text-[10px] px-1 border border-ink rounded-[2px]">⌘K</span>
             </div>
           </div>
