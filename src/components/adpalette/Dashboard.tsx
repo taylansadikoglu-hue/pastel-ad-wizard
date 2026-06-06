@@ -101,6 +101,9 @@ function extractMediaUrl(
     else if (flat.includes("image")) type = "image";
   }
   return { url, type };
+}
+
+
 
 const CHANNEL_COLORS_STD = ["var(--primary)", "#23251D", "#A1A39A"];
 const CHANNEL_COLORS_PASTEL = ["var(--pastel-lilac)", "var(--pastel-sage)", "var(--pastel-peach)"];
