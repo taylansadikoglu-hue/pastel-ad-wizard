@@ -16,6 +16,7 @@ import { Route as ApiBarbsRouteImport } from './routes/api/barbs'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSentimentRouteImport } from './routes/_authenticated/app.sentiment'
+import { Route as AuthenticatedAppPcrRouteImport } from './routes/_authenticated/app.pcr'
 import { Route as AuthenticatedAppCreativeRouteImport } from './routes/_authenticated/app.creative'
 import { Route as AuthenticatedAppBenchmarksRouteImport } from './routes/_authenticated/app.benchmarks'
 import { Route as AuthenticatedAppAdvertisersRouteImport } from './routes/_authenticated/app.advertisers'
@@ -56,6 +57,11 @@ const AuthenticatedAppSentimentRoute =
     path: '/sentiment',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppPcrRoute = AuthenticatedAppPcrRouteImport.update({
+  id: '/pcr',
+  path: '/pcr',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppCreativeRoute =
   AuthenticatedAppCreativeRouteImport.update({
     id: '/creative',
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/app/creative': typeof AuthenticatedAppCreativeRoute
+  '/app/pcr': typeof AuthenticatedAppPcrRoute
   '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
 }
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/app/creative': typeof AuthenticatedAppCreativeRoute
+  '/app/pcr': typeof AuthenticatedAppPcrRoute
   '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
 }
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/_authenticated/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/_authenticated/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/_authenticated/app/creative': typeof AuthenticatedAppCreativeRoute
+  '/_authenticated/app/pcr': typeof AuthenticatedAppPcrRoute
   '/_authenticated/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
 }
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/app/advertisers'
     | '/app/benchmarks'
     | '/app/creative'
+    | '/app/pcr'
     | '/app/sentiment'
     | '/app/settings'
   fileRoutesByTo: FileRoutesByTo
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/app/advertisers'
     | '/app/benchmarks'
     | '/app/creative'
+    | '/app/pcr'
     | '/app/sentiment'
     | '/app/settings'
   id:
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/advertisers'
     | '/_authenticated/app/benchmarks'
     | '/_authenticated/app/creative'
+    | '/_authenticated/app/pcr'
     | '/_authenticated/app/sentiment'
     | '/_authenticated/app/settings'
   fileRoutesById: FileRoutesById
@@ -205,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSentimentRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/pcr': {
+      id: '/_authenticated/app/pcr'
+      path: '/pcr'
+      fullPath: '/app/pcr'
+      preLoaderRoute: typeof AuthenticatedAppPcrRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/creative': {
       id: '/_authenticated/app/creative'
       path: '/creative'
@@ -233,6 +252,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAdvertisersRoute: typeof AuthenticatedAppAdvertisersRoute
   AuthenticatedAppBenchmarksRoute: typeof AuthenticatedAppBenchmarksRoute
   AuthenticatedAppCreativeRoute: typeof AuthenticatedAppCreativeRoute
+  AuthenticatedAppPcrRoute: typeof AuthenticatedAppPcrRoute
   AuthenticatedAppSentimentRoute: typeof AuthenticatedAppSentimentRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
 }
@@ -241,6 +261,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAdvertisersRoute: AuthenticatedAppAdvertisersRoute,
   AuthenticatedAppBenchmarksRoute: AuthenticatedAppBenchmarksRoute,
   AuthenticatedAppCreativeRoute: AuthenticatedAppCreativeRoute,
+  AuthenticatedAppPcrRoute: AuthenticatedAppPcrRoute,
   AuthenticatedAppSentimentRoute: AuthenticatedAppSentimentRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
 }
@@ -268,3 +289,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
