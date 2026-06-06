@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
@@ -909,29 +908,27 @@ function aiReply(q: string, visible: Competitor[]): string {
 }
 
 const NAV_ITEMS = [
-  { icon: Home, label: "Workspace", to: "/app" as const },
-  { icon: Layers, label: "Creative library", to: "/app/creative" as const },
-  { icon: Radio, label: "Social Listening", to: "/app/sentiment" as const },
-  { icon: Target, label: "Advertisers", to: "/app/advertisers" as const },
-  { icon: TrendingUp, label: "Benchmarks", to: "/app/benchmarks" as const },
-  { icon: BarChart3, label: "PCR Reporting", to: "/app/pcr" as const },
-  { icon: Settings, label: "Settings", to: "/app/settings" as const },
+  { icon: Home, label: "Dashboard / Home", href: "/app/dashboard" },
+  { icon: Radio, label: "Social Listening", href: "/app/sentiment" },
+  { icon: Target, label: "Advertiser Hub", href: "/app/advertisers" },
+  { icon: BarChart3, label: "PCR Reporting", href: "/app/pcr" },
 ];
 
 export function SidebarNav() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   return (
     <nav className="p-2 space-y-1 flex-1">
       {NAV_ITEMS.map((it) => {
-        const active = pathname === it.to;
+        const active = pathname === it.href || (it.href === "/app/dashboard" && pathname === "/app");
         return (
-          <Link
+          <button
             key={it.label}
-            to={it.to}
+            type="button"
+            onClick={() => window.location.href = it.href}
             className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-[4px] text-sm font-medium border-2 ${active ? "border-ink bg-secondary shadow-flat-sm" : "border-transparent hover:border-ink"}`}
           >
             <it.icon size={15} /> {it.label}
-          </Link>
+          </button>
         );
       })}
     </nav>
