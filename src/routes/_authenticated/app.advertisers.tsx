@@ -246,7 +246,7 @@ function AdvertisersPage() {
     }
     setBusy(true);
     try {
-      await startScan({ data: { domain } });
+      await startScan({ data: { domain, country } });
       setInput("");
       toast.success(`Tracking ${domain}`);
       load();
