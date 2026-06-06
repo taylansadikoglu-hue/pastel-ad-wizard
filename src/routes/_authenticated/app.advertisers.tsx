@@ -20,6 +20,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const MAX_BRANDS = 7;
 const COUNTRY_OPTIONS = ["United States", "Australia", "United Kingdom", "Canada"] as const;
