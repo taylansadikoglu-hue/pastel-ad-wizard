@@ -243,7 +243,7 @@ function AdvertisersPage() {
   const load = async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    const [{ data: scans }, { data: pls }] = await Promise.all([
+    const [{ data: scans }, { data: pls }, { data: sents }] = await Promise.all([
       supabase
         .from("domain_scans")
         .select("id, domain, status, created_at")
@@ -253,6 +253,10 @@ function AdvertisersPage() {
         .select("id, domain, channel, hook, days_running, creative_url, raw, created_at")
         .order("created_at", { ascending: false })
         .limit(500),
+      supabase
+        .from("sentiment_insights")
+        .select("domain, good, friction, blueprint, created_at")
+        .order("created_at", { ascending: false }),
     ]);
     const seen = new Set<string>();
     const unique: Row[] = [];
@@ -262,6 +266,11 @@ function AdvertisersPage() {
         unique.push(r as Row);
       }
     }
+    const sentimentMap: Record<string, Sentiment> = {};
+    for (const s of (sents ?? []) as Array<Sentiment & { created_at: string }>) {
+      if (!sentimentMap[s.domain]) sentimentMap[s.domain] = { domain: s.domain, good: s.good, friction: s.friction, blueprint: s.blueprint };
+    }
+    setSentimentByDomain(sentimentMap);
     setRows(unique);
     setPlacements((pls ?? []) as Placement[]);
     setLoading(false);
