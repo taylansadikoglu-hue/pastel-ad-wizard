@@ -279,6 +279,13 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     if (!isAdmin && activeTab === "integrations") setActiveTab("gallery");
   }, [isAdmin, activeTab]);
 
+  // Honor ?tab=integrations from sidebar nav link
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "integrations" && isAdmin) setActiveTab("integrations");
+  }, [isAdmin]);
+
   const exportCSV = () => {
     const header = ["Advertiser", "Est monthly spend", "Meta %", "Google %", "Programmatic %"];
     const lines = [header.join(",")].concat(
