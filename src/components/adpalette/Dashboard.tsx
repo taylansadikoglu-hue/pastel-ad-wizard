@@ -914,6 +914,7 @@ const NAV_ITEMS = [
   { icon: Radio, label: "Social Listening", to: "/app/sentiment" as const },
   { icon: Target, label: "Advertisers", to: "/app/advertisers" as const },
   { icon: TrendingUp, label: "Benchmarks", to: "/app/benchmarks" as const },
+  { icon: BarChart3, label: "PCR Reporting", to: "/app/pcr" as const },
   { icon: Settings, label: "Settings", to: "/app/settings" as const },
 ];
 
