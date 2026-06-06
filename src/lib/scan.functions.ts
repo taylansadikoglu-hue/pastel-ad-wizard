@@ -84,10 +84,15 @@ export const startScan = createServerFn({ method: "POST" })
       // ---------- DataForSEO: Google Ads search ----------
       if (dfsLogin && dfsPass) {
         try {
-          const basic = Buffer.from(`${dfsLogin}:${dfsPass}`).toString("base64");
+          // Basic Auth: base64(login:password). Prefer btoa (Worker-native); fallback to Buffer.
+          const raw = `${dfsLogin}:${dfsPass}`;
+          const basic = typeof btoa === "function" ? btoa(raw) : Buffer.from(raw).toString("base64");
           const res = await fetch("https://api.dataforseo.com/v3/serp/google/ads_search/live/advanced", {
             method: "POST",
-            headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/json" },
+            headers: {
+              Authorization: `Basic ${basic}`,
+              "Content-Type": "application/json",
+            },
             body: JSON.stringify([{ keyword: domain, location_code: 2840, language_code: "en", depth: 20 }]),
           });
           if (res.ok) {
@@ -104,10 +109,11 @@ export const startScan = createServerFn({ method: "POST" })
               });
             }
           } else {
-            console.warn(`DataForSEO ${res.status}`, await res.text().catch(() => ""));
+            const body = await res.text().catch(() => "");
+            console.error(`DataForSEO HTTP ${res.status}`, body.slice(0, 500));
           }
         } catch (e) {
-          console.error("DataForSEO failed", e);
+          console.error("DataForSEO request failed", e);
         }
       }
 
