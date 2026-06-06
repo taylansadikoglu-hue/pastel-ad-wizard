@@ -547,8 +547,12 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="mono text-[10px] text-muted-foreground">WORKSPACE / MEDIA MIX</div>
-              <h1 className="text-2xl font-bold mt-1">Media mix & share of voice matrix — beauty & activewear niche</h1>
-              <p className="text-sm text-muted-foreground mt-1">Channel allocation pulled from {visible.length} of {rows.length} tracked advertisers. Recalibrate any total below.</p>
+              <h1 className="text-2xl font-bold mt-1">Media mix & share of voice matrix</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {liveSentiment.length > 0
+                  ? <>Tracking {new Set(liveSentiment.map((s) => s.domain)).size} live advertiser{new Set(liveSentiment.map((s) => s.domain)).size === 1 ? "" : "s"} · {visible.length} of {rows.length} selected for the matrix below.</>
+                  : <>Channel allocation pulled from {visible.length} of {rows.length} tracked advertisers. Recalibrate any total below.</>}
+              </p>
             </div>
             <div className="flex gap-2">
               <button className="btn-flat" onClick={exportPDF}>
