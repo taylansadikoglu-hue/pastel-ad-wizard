@@ -229,11 +229,12 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       setLivePlacements(
         data.map((p) => {
           const extracted = extractMediaUrl(p.creative_url, p.raw);
+          const hookText = safeText(p.hook, "").trim() || "Live creative — hook pending AI extraction.";
           return {
-            brand: brandFromDomain(p.domain),
-            hook: p.hook ?? "Live creative — hook pending AI extraction.",
-            channel: p.channel ?? "Meta",
-            days: p.days_running ?? 1,
+            brand: brandFromDomain(safeText(p.domain)),
+            hook: hookText,
+            channel: safeText(p.channel, "Meta"),
+            days: typeof p.days_running === "number" ? p.days_running : 1,
             length: "0:--",
             aiTag: "Live",
             mediaUrl: extracted.url,
