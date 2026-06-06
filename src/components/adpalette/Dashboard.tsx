@@ -139,6 +139,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Welcome — ask me anything about the tracked advertisers' creative." },
   ]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const exportRef = useRef<HTMLDivElement>(null);
 
   // Auth user + profile → top-left user card binds to session metadata
   useEffect(() => {
