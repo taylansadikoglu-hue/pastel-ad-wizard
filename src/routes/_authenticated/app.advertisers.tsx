@@ -164,6 +164,7 @@ function AdvertisersPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [input, setInput] = useState("");
+  const [country, setCountry] = useState<"United States" | "Australia" | "United Kingdom" | "Canada">("United States");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
