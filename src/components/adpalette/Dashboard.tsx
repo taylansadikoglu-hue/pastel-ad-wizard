@@ -372,9 +372,32 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     toast.success("CSV exported");
   };
 
-  const exportPDF = () => {
-    toast("Opening print dialog — choose 'Save as PDF'");
-    setTimeout(() => window.print(), 150);
+  const exportPDF = async () => {
+    const node = exportRef.current;
+    if (!node) {
+      toast.error("Nothing to export yet");
+      return;
+    }
+    try {
+      toast("Generating pitch PDF…");
+      const mod = await import("html2pdf.js");
+      const html2pdf = (mod as { default: (...args: unknown[]) => unknown }).default ?? (mod as unknown as (...args: unknown[]) => unknown);
+      await (html2pdf as (...args: unknown[]) => { set: (opts: unknown) => { from: (el: HTMLElement) => { save: () => Promise<void> } } })()
+        .set({
+          margin: 10,
+          filename: `revenuead-pitch-${new Date().toISOString().slice(0, 10)}.pdf`,
+          image: { type: "jpeg", quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+          jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+        })
+        .from(node)
+        .save();
+      toast.success("Pitch PDF downloaded");
+    } catch (e) {
+      console.error("PDF export failed", e);
+      toast.error("PDF export failed — falling back to print dialog");
+      window.print();
+    }
   };
 
   return (
