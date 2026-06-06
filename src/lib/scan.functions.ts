@@ -205,14 +205,26 @@ export const startScan = createServerFn({ method: "POST" })
             console.log(`DataForSEO parsed ${rawItems.length} raw items for ${domainVariable}`);
             if (rawItems[0]) console.log("DataForSEO sample item keys:", Object.keys(rawItems[0]));
 
+            // Flatten DataForSEO description_rows which may be string | string[] |
+            // { text: string } | nested arrays. Returns a clean joined string.
+            const flattenDescription = (val: unknown): string => {
+              if (!val) return "";
+              if (typeof val === "string") return val;
+              if (Array.isArray(val)) return val.map(flattenDescription).filter(Boolean).join(" ");
+              if (typeof val === "object") {
+                const o = val as Record<string, unknown>;
+                if (typeof o.text === "string") return o.text;
+                if (Array.isArray(o.items)) return flattenDescription(o.items);
+              }
+              return "";
+            };
+
             let pushedGoogle = 0;
             for (const it of rawItems.slice(0, 50)) {
               const title = typeof it.title === "string" ? it.title : "";
               const description = typeof it.description === "string"
                 ? it.description
-                : Array.isArray((it as { description_rows?: unknown }).description_rows)
-                  ? ((it as { description_rows: unknown[] }).description_rows.filter((x) => typeof x === "string").join(" "))
-                  : "";
+                : flattenDescription((it as { description_rows?: unknown }).description_rows);
               const text = [title, description].filter(Boolean).join(" — ").trim();
               if (!text) continue;
               const url = typeof it.url === "string"
