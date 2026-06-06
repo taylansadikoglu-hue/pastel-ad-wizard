@@ -241,7 +241,19 @@ function StepAdvertisers({ data, setData }: any) {
         <Field key={i} label={`Advertiser ${i + 1} · root domain (master fingerprint)`} hint="root only">
           <div className="flex gap-2">
             <div className="px-3 py-2 border-2 border-ink rounded-[4px] mono text-xs bg-secondary">https://</div>
-            <input className="input-flat" placeholder={["sephora.com", "lululemon.com", "glossier.com"][i]} value={data.rivals[i]} onChange={(e) => update(i, e.target.value)} />
+            <input className="input-flat flex-1" placeholder={["sephora.com", "lululemon.com", "glossier.com"][i]} value={data.rivals[i]} onChange={(e) => update(i, e.target.value)} />
+            <select
+              className="input-flat mono text-xs"
+              value={data.countries?.[i] ?? "United States"}
+              onChange={(e) => {
+                const c = [...(data.countries ?? ["United States", "United States", "United States"])];
+                c[i] = e.target.value;
+                setData({ ...data, countries: c });
+              }}
+              title="Target country"
+            >
+              {["United States", "Australia", "United Kingdom", "Canada"].map((n) => <option key={n}>{n}</option>)}
+            </select>
           </div>
         </Field>
       ))}
