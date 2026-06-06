@@ -279,6 +279,13 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     if (!isAdmin && activeTab === "integrations") setActiveTab("gallery");
   }, [isAdmin, activeTab]);
 
+  // Honor ?tab=integrations from sidebar nav link
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "integrations" && isAdmin) setActiveTab("integrations");
+  }, [isAdmin]);
+
   const exportCSV = () => {
     const header = ["Advertiser", "Est monthly spend", "Meta %", "Google %", "Programmatic %"];
     const lines = [header.join(",")].concat(
@@ -912,6 +919,7 @@ const NAV_ITEMS = [
   { icon: Radio, label: "Social Listening", href: "/app/sentiment" },
   { icon: Target, label: "Advertiser Hub", href: "/app/advertisers" },
   { icon: BarChart3, label: "PCR Reporting", href: "/app/pcr" },
+  { icon: Plug, label: "Developer Integrations", href: "/app/dashboard?tab=integrations" },
 ];
 
 export function SidebarNav() {
