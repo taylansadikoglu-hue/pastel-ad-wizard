@@ -2,12 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const SYSTEM_PROMPT = `You are a Quantitative Data Analyst distilling raw audience commentary about a brand's advertising into three concise, fluff-free, signal-rich blocks.
+const SYSTEM_PROMPT = `You are a Quantitative Ad Copy Analyst. You receive raw AD COPY scraped from a brand's live placements (Meta Ads Library + Google Ads). Distill three concise, fluff-free, signal-rich blocks that describe what the BRAND is saying in its own ads.
 
 Return STRICT JSON with three string fields:
-- "good": what audiences love, with concrete patterns (no fluff, no marketing speak).
-- "friction": what audiences complain about, including drivers of negative sentiment.
-- "blueprint": a single ad-angle copy blueprint that exploits "good" and addresses "friction". Punchy, copy-ready.
+- "good": the strongest value propositions the brand pushes in its ad copy (concrete benefits, offers, proof points).
+- "friction": the targeted customer pain points the brand attacks — the problems/objections the ads imply the audience has.
+- "blueprint": the core marketing hook distilled into one punchy, copy-ready ad angle that captures their dominant message.
 
 Each block: 2-3 sentences max. No hedging, no preamble, no emojis.`;
 
@@ -84,10 +84,15 @@ export const startScan = createServerFn({ method: "POST" })
       // ---------- DataForSEO: Google Ads search ----------
       if (dfsLogin && dfsPass) {
         try {
-          const basic = Buffer.from(`${dfsLogin}:${dfsPass}`).toString("base64");
+          // Basic Auth: base64(login:password). Prefer btoa (Worker-native); fallback to Buffer.
+          const raw = `${dfsLogin}:${dfsPass}`;
+          const basic = typeof btoa === "function" ? btoa(raw) : Buffer.from(raw).toString("base64");
           const res = await fetch("https://api.dataforseo.com/v3/serp/google/ads_search/live/advanced", {
             method: "POST",
-            headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/json" },
+            headers: {
+              Authorization: `Basic ${basic}`,
+              "Content-Type": "application/json",
+            },
             body: JSON.stringify([{ keyword: domain, location_code: 2840, language_code: "en", depth: 20 }]),
           });
           if (res.ok) {
@@ -104,10 +109,11 @@ export const startScan = createServerFn({ method: "POST" })
               });
             }
           } else {
-            console.warn(`DataForSEO ${res.status}`, await res.text().catch(() => ""));
+            const body = await res.text().catch(() => "");
+            console.error(`DataForSEO HTTP ${res.status}`, body.slice(0, 500));
           }
         } catch (e) {
-          console.error("DataForSEO failed", e);
+          console.error("DataForSEO request failed", e);
         }
       }
 
