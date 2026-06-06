@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,15 @@ import {
   Grid3x3, Radio, Plug, ThumbsUp, AlertTriangle, PenTool, KeyRound, Save,
   BarChart3, PieChart as PieIcon, Loader2,
 } from "lucide-react";
+
+// Safely coerce any DB value to a renderable string — kills "[object Object]"
+// leaks from raw JSONB columns that older rows may have written.
+function safeText(v: unknown, fallback = ""): string {
+  if (v == null) return fallback;
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  try { return JSON.stringify(v); } catch { return fallback; }
+}
 
 const DATE_RANGES = [
   { label: "Last 7 Days", locked: false },
@@ -130,6 +139,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [chatLog, setChatLog] = useState<{ role: "user" | "ai"; text: string }[]>([
     { role: "ai", text: "Welcome — ask me anything about the tracked advertisers' creative." },
   ]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const exportRef = useRef<HTMLDivElement>(null);
 
   // Auth user + profile → top-left user card binds to session metadata
   useEffect(() => {
@@ -218,11 +229,12 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       setLivePlacements(
         data.map((p) => {
           const extracted = extractMediaUrl(p.creative_url, p.raw);
+          const hookText = safeText(p.hook, "").trim() || "Live creative — hook pending AI extraction.";
           return {
-            brand: brandFromDomain(p.domain),
-            hook: p.hook ?? "Live creative — hook pending AI extraction.",
-            channel: p.channel ?? "Meta",
-            days: p.days_running ?? 1,
+            brand: brandFromDomain(safeText(p.domain)),
+            hook: hookText,
+            channel: safeText(p.channel, "Meta"),
+            days: typeof p.days_running === "number" ? p.days_running : 1,
             length: "0:--",
             aiTag: "Live",
             mediaUrl: extracted.url,
@@ -360,9 +372,32 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     toast.success("CSV exported");
   };
 
-  const exportPDF = () => {
-    toast("Opening print dialog — choose 'Save as PDF'");
-    setTimeout(() => window.print(), 150);
+  const exportPDF = async () => {
+    const node = exportRef.current;
+    if (!node) {
+      toast.error("Nothing to export yet");
+      return;
+    }
+    try {
+      toast("Generating pitch PDF…");
+      const mod = await import("html2pdf.js");
+      const html2pdf = (mod as { default: (...args: unknown[]) => unknown }).default ?? (mod as unknown as (...args: unknown[]) => unknown);
+      await (html2pdf as (...args: unknown[]) => { set: (opts: unknown) => { from: (el: HTMLElement) => { save: () => Promise<void> } } })()
+        .set({
+          margin: 10,
+          filename: `revenuead-pitch-${new Date().toISOString().slice(0, 10)}.pdf`,
+          image: { type: "jpeg", quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+          jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+        })
+        .from(node)
+        .save();
+      toast.success("Pitch PDF downloaded");
+    } catch (e) {
+      console.error("PDF export failed", e);
+      toast.error("PDF export failed — falling back to print dialog");
+      window.print();
+    }
   };
 
   return (
@@ -440,7 +475,12 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="flex items-center gap-2 flex-1 max-w-md">
             <div className="flex items-center gap-2 input-flat">
               <Search size={14} />
-              <input className="flex-1 bg-transparent outline-none text-sm" placeholder="Search creative, hooks, advertisers..." />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent outline-none text-sm"
+                placeholder="Search creative, hooks, advertisers..."
+              />
               <span className="mono text-[10px] px-1 border border-ink rounded-[2px]">⌘K</span>
             </div>
           </div>
@@ -507,8 +547,12 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="mono text-[10px] text-muted-foreground">WORKSPACE / MEDIA MIX</div>
-              <h1 className="text-2xl font-bold mt-1">Media mix & share of voice matrix — beauty & activewear niche</h1>
-              <p className="text-sm text-muted-foreground mt-1">Channel allocation pulled from {visible.length} of {rows.length} tracked advertisers. Recalibrate any total below.</p>
+              <h1 className="text-2xl font-bold mt-1">Media mix & share of voice matrix</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {liveSentiment.length > 0
+                  ? <>Tracking {new Set(liveSentiment.map((s) => s.domain)).size} live advertiser{new Set(liveSentiment.map((s) => s.domain)).size === 1 ? "" : "s"} · {visible.length} of {rows.length} selected for the matrix below.</>
+                  : <>Channel allocation pulled from {visible.length} of {rows.length} tracked advertisers. Recalibrate any total below.</>}
+              </p>
             </div>
             <div className="flex gap-2">
               <button className="btn-flat" onClick={exportPDF}>
@@ -541,7 +585,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               ))}
           </div>
 
-          {activeTab === "gallery" && <>
+          {activeTab === "gallery" && <><div ref={exportRef} className="space-y-6">
           {/* Matrix + Chart */}
           <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
             <div className="card-flat overflow-hidden">
@@ -751,6 +795,11 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   .filter((v) =>
                     videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14
                   )
+                  .filter((v) => {
+                    const q = searchQuery.trim().toLowerCase();
+                    if (!q) return true;
+                    return v.brand.toLowerCase().includes(q) || v.hook.toLowerCase().includes(q) || v.channel.toLowerCase().includes(q);
+                  })
                   .map((v, idx) => (
                     <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
                       <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative overflow-hidden">
@@ -795,7 +844,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
           {/* 3-Second Rule Insight Cards — bound to sentiment_insights */}
           <div>
-            <div className="mono text-[10px] text-muted-foreground mb-2">THE 3-SECOND RULE / strategic conclusions</div>
+            <div className="mono text-[10px] text-muted-foreground mb-2">
+              SENTIMENT RADAR · {liveSentiment.length} reading{liveSentiment.length === 1 ? "" : "s"}
+              {liveSentiment[0] ? ` · latest: ${brandFromDomain(liveSentiment[0].domain)}` : ""}
+            </div>
             {liveSentiment.length === 0 ? (
               <div className="card-flat p-6 text-sm text-muted-foreground text-center">
                 No data found, please add a domain under the Advertisers tab.
@@ -831,7 +883,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               </div>
             )}
           </div>
-          </>}
+          </div></>}
 
 
 
