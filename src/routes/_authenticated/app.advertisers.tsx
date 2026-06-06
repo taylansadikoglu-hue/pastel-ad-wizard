@@ -576,47 +576,125 @@ function AdvertisersPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {filtered.map((e) => (
-                  <article
-                    key={e.id}
-                    className="card-flat overflow-hidden flex flex-col"
-                  >
-                    <MediaEmbed
-                      url={e.media.url}
-                      type={e.media.type}
-                      title={e.hook ?? e.brand}
-                    />
-                    <div className="p-3 space-y-2 flex-1 flex flex-col">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-sm truncate">{e.brand}</span>
-                        <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">
-                          {e.channelNorm}
-                        </span>
+                {filtered.map((e) => {
+                  const sentiment = sentimentByDomain[e.domain];
+                  const goodText = readableSentiment(sentiment?.good);
+                  const frictionText = readableSentiment(sentiment?.friction);
+                  const blueprintText = readableSentiment(sentiment?.blueprint);
+                  return (
+                  <Dialog key={e.id}>
+                    <DialogTrigger asChild>
+                      <article
+                        className="card-flat overflow-hidden flex flex-col cursor-pointer text-left hover:shadow-md transition-shadow"
+                        role="button"
+                        tabIndex={0}
+                      >
+                        <MediaEmbed
+                          url={e.media.url}
+                          type={e.media.type}
+                          title={e.hook ?? e.brand}
+                        />
+                        <div className="p-3 space-y-2 flex-1 flex flex-col">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-sm truncate">{e.brand}</span>
+                            <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">
+                              {e.channelNorm}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-3 min-h-[2.5rem]">
+                            {e.hook ?? "—"}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-ink/20">
+                            <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px] inline-flex items-center gap-1">
+                              {e.adType === "Video" ? <Film size={10} /> : <ImageIcon size={10} />}
+                              {e.adType}
+                            </span>
+                            <span
+                              className={`mono text-[10px] px-1.5 py-0.5 border rounded-[3px] ${
+                                e.days >= 14
+                                  ? "border-ink bg-secondary"
+                                  : "border-ink/40"
+                              }`}
+                            >
+                              {e.days}d flight
+                            </span>
+                            <span className="mono text-[10px] text-muted-foreground ml-auto">
+                              {new Date(e.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </article>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          {e.brand}
+                          <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">
+                            {e.channelNorm}
+                          </span>
+                          <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px]">
+                            {e.adType}
+                          </span>
+                        </DialogTitle>
+                        <DialogDescription className="mono text-[10px]">
+                          {e.domain} · {e.days}d flight · {new Date(e.created_at).toLocaleDateString()}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        {e.media.url && e.media.type === "video" ? (
+                          <video
+                            controls
+                            autoPlay
+                            preload="metadata"
+                            className="w-full max-h-[60vh] bg-black border-2 border-ink object-contain rounded-[3px]"
+                            src={e.media.url}
+                          />
+                        ) : e.media.url && e.media.type === "image" ? (
+                          <img
+                            src={e.media.url}
+                            alt={e.hook ?? e.brand}
+                            className="w-full max-h-[60vh] object-contain border-2 border-ink bg-secondary rounded-[3px]"
+                          />
+                        ) : e.media.url ? (
+                          <iframe
+                            src={e.media.url}
+                            title={e.hook ?? e.brand}
+                            className="w-full h-[60vh] border-2 border-ink bg-secondary rounded-[3px]"
+                            sandbox="allow-scripts allow-same-origin"
+                          />
+                        ) : null}
+                        {e.hook && (
+                          <section>
+                            <h4 className="mono text-[10px] uppercase font-bold mb-1">Ad copy</h4>
+                            <p className="text-sm whitespace-pre-wrap">{e.hook}</p>
+                          </section>
+                        )}
+                        {blueprintText && (
+                          <section>
+                            <h4 className="mono text-[10px] uppercase font-bold mb-1">Blueprint</h4>
+                            <p className="text-sm whitespace-pre-wrap">{blueprintText}</p>
+                          </section>
+                        )}
+                        {goodText && (
+                          <section>
+                            <h4 className="mono text-[10px] uppercase font-bold mb-1">What audiences love</h4>
+                            <p className="text-sm whitespace-pre-wrap">{goodText}</p>
+                          </section>
+                        )}
+                        {frictionText && (
+                          <section>
+                            <h4 className="mono text-[10px] uppercase font-bold mb-1">Friction</h4>
+                            <p className="text-sm whitespace-pre-wrap">{frictionText}</p>
+                          </section>
+                        )}
+                        {!goodText && !frictionText && !blueprintText && (
+                          <p className="text-xs text-muted-foreground">No sentiment analysis available yet for {e.brand}.</p>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-3 min-h-[2.5rem]">
-                        {e.hook ?? "—"}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-ink/20">
-                        <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px] inline-flex items-center gap-1">
-                          {e.adType === "Video" ? <Film size={10} /> : <ImageIcon size={10} />}
-                          {e.adType}
-                        </span>
-                        <span
-                          className={`mono text-[10px] px-1.5 py-0.5 border rounded-[3px] ${
-                            e.days >= 14
-                              ? "border-ink bg-secondary"
-                              : "border-ink/40"
-                          }`}
-                        >
-                          {e.days}d flight
-                        </span>
-                        <span className="mono text-[10px] text-muted-foreground ml-auto">
-                          {new Date(e.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                ))}
+                    </DialogContent>
+                  </Dialog>
+                  );
+                })}
               </div>
             )}
           </TabsContent>
