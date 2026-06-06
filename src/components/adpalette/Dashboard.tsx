@@ -918,16 +918,16 @@ export function SidebarNav() {
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   return (
     <nav className="p-2 space-y-1 flex-1">
-      {NAV_ITEMS.map((it) => {
-        const active = pathname === it.href || (it.href === "/app/dashboard" && pathname === "/app");
+      {NAV_ITEMS.map((item) => {
+        const active = pathname === item.href || (item.href === "/app/dashboard" && pathname === "/app");
         return (
           <button
-            key={it.label}
+            key={item.label}
             type="button"
-            onClick={() => window.location.href = it.href}
+            onClick={() => window.location.href = item.href}
             className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-[4px] text-sm font-medium border-2 ${active ? "border-ink bg-secondary shadow-flat-sm" : "border-transparent hover:border-ink"}`}
           >
-            <it.icon size={15} /> {it.label}
+            <item.icon size={15} /> {item.label}
           </button>
         );
       })}
