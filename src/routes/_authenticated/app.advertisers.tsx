@@ -338,6 +338,15 @@ function AdvertisersPage() {
               className="input-flat mono flex-1"
               disabled={busy || rows.length >= MAX_BRANDS}
             />
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value as typeof country)}
+              className="input-flat mono text-xs"
+              disabled={busy || rows.length >= MAX_BRANDS}
+              title="Target country"
+            >
+              {["United States", "Australia", "United Kingdom", "Canada"].map((n) => <option key={n}>{n}</option>)}
+            </select>
             <button
               onClick={addDomain}
               disabled={busy || rows.length >= MAX_BRANDS}
