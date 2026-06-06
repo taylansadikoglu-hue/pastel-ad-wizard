@@ -172,7 +172,15 @@ export const startScan = createServerFn({ method: "POST" })
             body: bodyStr,
           });
           if (res.ok) {
-            const json = (await res.json()) as { status_code?: number; status_message?: string; tasks?: Array<{ status_code?: number; status_message?: string; result?: Array<{ items?: Array<Record<string, unknown>> }> }> };
+            const json = (await res.json()) as {
+              status_code?: number;
+              status_message?: string;
+              tasks?: Array<{
+                status_code?: number;
+                status_message?: string;
+                result?: Array<{ items?: Array<Record<string, unknown>>; items_count?: number }>;
+              }>;
+            };
             const task = json.tasks?.[0];
             if ((json.status_code && json.status_code >= 40000) || (task?.status_code && task.status_code >= 40000)) {
               console.error("DataForSEO API error", {
@@ -182,17 +190,46 @@ export const startScan = createServerFn({ method: "POST" })
                 taskStatusMessage: task?.status_message,
               });
             }
-            const items = json.tasks?.[0]?.result?.[0]?.items ?? [];
-            for (const it of items.slice(0, 30)) {
-              const text = String(it.title ?? it.description ?? "").trim();
-              if (text) adCopyBuffer.push(text);
+            // DataForSEO ads_search returns nested result[].items[]. Each item is typically
+            // type "ads_search" with shape: { type, rank_group, rank_absolute, title,
+            // description, url, breadcrumb, highlighted[], extensions, advertiser, ... }.
+            // Some accounts also return container items whose ads live under `items` again.
+            const rawItems: Array<Record<string, unknown>> = [];
+            for (const r of task?.result ?? []) {
+              for (const it of r?.items ?? []) {
+                rawItems.push(it);
+                const nested = (it as { items?: Array<Record<string, unknown>> }).items;
+                if (Array.isArray(nested)) rawItems.push(...nested);
+              }
+            }
+            console.log(`DataForSEO parsed ${rawItems.length} raw items for ${domainVariable}`);
+            if (rawItems[0]) console.log("DataForSEO sample item keys:", Object.keys(rawItems[0]));
+
+            let pushedGoogle = 0;
+            for (const it of rawItems.slice(0, 50)) {
+              const title = typeof it.title === "string" ? it.title : "";
+              const description = typeof it.description === "string"
+                ? it.description
+                : Array.isArray((it as { description_rows?: unknown }).description_rows)
+                  ? ((it as { description_rows: unknown[] }).description_rows.filter((x) => typeof x === "string").join(" "))
+                  : "";
+              const text = [title, description].filter(Boolean).join(" — ").trim();
+              if (!text) continue;
+              const url = typeof it.url === "string"
+                ? it.url
+                : typeof (it as { breadcrumb?: string }).breadcrumb === "string"
+                  ? (it as { breadcrumb: string }).breadcrumb
+                  : undefined;
+              adCopyBuffer.push(text);
               placements.push({
                 channel: "Google",
                 hook: text.slice(0, 200),
-                creative_url: typeof it.url === "string" ? it.url : undefined,
+                creative_url: url,
                 raw: it,
               });
+              pushedGoogle++;
             }
+            console.log(`DataForSEO mapped ${pushedGoogle} Google placements for ${domainVariable}`);
           } else {
             const body = await res.text().catch(() => "");
             console.error("DataForSEO HTTP request failed", { status: res.status, body: body.slice(0, 500) });
