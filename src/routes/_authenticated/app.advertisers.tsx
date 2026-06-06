@@ -350,27 +350,29 @@ function AdvertisersPage() {
         {/* Add brand */}
         <div className="card-flat p-4">
           <label className="mono text-[10px] uppercase font-bold block mb-2">
-            Add Competitor Domain (e.g., target.com)
+            Add Competitor Domain
           </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <Input
+              ref={inputRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => captureDomainInput(e.currentTarget.value)}
+              onInput={(e) => captureDomainInput(e.currentTarget.value)}
               onKeyDown={(e) => e.key === "Enter" && addDomain()}
-              placeholder="competitor.com"
+              placeholder="Enter domain"
               className="flex-1 h-10 text-sm font-mono"
               disabled={busy || rows.length >= MAX_BRANDS}
             />
             <Select
               value={country}
-              onValueChange={(v) => setCountry(v as typeof country)}
+              onValueChange={captureCountry}
               disabled={busy || rows.length >= MAX_BRANDS}
             >
               <SelectTrigger className="w-full sm:w-56 h-10 text-sm">
                 <SelectValue placeholder="Target country" />
               </SelectTrigger>
               <SelectContent className="z-50">
-                {["United States", "Australia", "United Kingdom", "Canada"].map((n) => (
+                {COUNTRY_OPTIONS.map((n) => (
                   <SelectItem key={n} value={n}>{n}</SelectItem>
                 ))}
               </SelectContent>
