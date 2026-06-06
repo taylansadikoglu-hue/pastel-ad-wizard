@@ -338,31 +338,36 @@ function AdvertisersPage() {
           <label className="mono text-[10px] uppercase font-bold block mb-2">
             Add Competitor Domain (e.g., target.com)
           </label>
-          <div className="flex gap-2">
-            <input
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addDomain()}
               placeholder="competitor.com"
-              className="input-flat mono flex-1"
+              className="flex-1 h-10 text-sm font-mono"
               disabled={busy || rows.length >= MAX_BRANDS}
             />
-            <select
+            <Select
               value={country}
-              onChange={(e) => setCountry(e.target.value as typeof country)}
-              className="input-flat mono text-xs w-44 shrink-0"
+              onValueChange={(v) => setCountry(v as typeof country)}
               disabled={busy || rows.length >= MAX_BRANDS}
-              title="Target country"
             >
-              {["United States", "Australia", "United Kingdom", "Canada"].map((n) => <option key={n}>{n}</option>)}
-            </select>
-            <button
+              <SelectTrigger className="w-full sm:w-56 h-10 text-sm">
+                <SelectValue placeholder="Target country" />
+              </SelectTrigger>
+              <SelectContent className="z-50">
+                {["United States", "Australia", "United Kingdom", "Canada"].map((n) => (
+                  <SelectItem key={n} value={n}>{n}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
               onClick={addDomain}
               disabled={busy || rows.length >= MAX_BRANDS}
-              className="btn-flat btn-primary"
+              className="h-10 gap-1.5"
             >
               {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Add brand
-            </button>
+            </Button>
           </div>
         </div>
 
