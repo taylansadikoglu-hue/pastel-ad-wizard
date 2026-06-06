@@ -22,10 +22,29 @@ const DomainSchema = z.object({
 
 export const startScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => DomainSchema.parse(input))
+  .inputValidator((input: unknown) => {
+    // Defensive: accept either the raw payload, a `{ data: {...} }` wrapper,
+    // or a stringified JSON blob — then validate with Zod.
+    let raw: unknown = input;
+    if (typeof raw === "string") {
+      try { raw = JSON.parse(raw); } catch { /* leave as-is */ }
+    }
+    if (raw && typeof raw === "object" && "data" in (raw as Record<string, unknown>)) {
+      const inner = (raw as Record<string, unknown>).data;
+      if (inner && typeof inner === "object") raw = inner;
+    }
+    console.log("startScan inputValidator raw payload:", raw);
+    return DomainSchema.parse(raw);
+  })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const domain = data.domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    console.log("startScan handler received data:", data);
+    const rawDomain = (data?.domain ?? "").toString();
+    const domain = rawDomain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    if (!domain) {
+      console.error("startScan aborted: empty domain after normalization", { data });
+      throw new Error("Domain is required");
+    }
     const countryVariable: string = data.country ?? "United States";
 
     const { data: integ } = await supabase
