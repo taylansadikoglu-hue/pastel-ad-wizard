@@ -51,11 +51,6 @@ const AuthenticatedAppSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppPcrRoute = AuthenticatedAppPcrRouteImport.update({
-  id: '/pcr',
-  path: '/pcr',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
 const AuthenticatedAppSentimentRoute =
   AuthenticatedAppSentimentRouteImport.update({
     id: '/sentiment',
