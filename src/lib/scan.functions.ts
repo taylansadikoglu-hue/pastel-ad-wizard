@@ -51,14 +51,19 @@ export const startScan = createServerFn({ method: "POST" })
       // ---------- Apify: Facebook Ads Library (ad copy + creatives) ----------
       if (apifyToken) {
         try {
+          const advertiserName = domain.replace(/^www\./, "").split(".")[0]?.trim();
+          if (!advertiserName) throw new Error("Empty advertiser/page name for Apify ads scrape");
           const url = `https://api.apify.com/v2/acts/curious_coder~facebook-ads-library-scraper/run-sync-get-dataset-items?token=${apifyToken}&timeout=120`;
           const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              urls: [{ url: `https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&q=${encodeURIComponent(domain)}` }],
-              count: 25,
+              urls: [{ url: `https://www.facebook.com/${encodeURIComponent(advertiserName)}` }],
+              max_results: 15,
+              limitPerSource: 15,
+              count: 15,
               "scrapePageAds.activeStatus": "all",
+              "scrapePageAds.countryCode": "US",
             }),
           });
           if (res.ok) {
@@ -120,15 +125,7 @@ export const startScan = createServerFn({ method: "POST" })
             console.error("DataForSEO request skipped: empty keyword/domain");
             throw new Error("Empty keyword for DataForSEO");
           }
-          const payload = [
-            {
-              keyword,
-              location_name: "United States",
-              language_name: "English",
-              depth: 20,
-            },
-          ];
-          const bodyStr = JSON.stringify(payload);
+          const bodyStr = JSON.stringify([{ keyword, location_name: "United States", language_name: "English" }]);
           console.log("DataForSEO request prepared", {
             loginPrefix: dfsLogin.slice(0, 3),
             basicLen: basic.length,
