@@ -167,19 +167,24 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     (async () => {
       const { data } = await supabase
         .from("ad_placements")
-        .select("domain, channel, hook, days_running, creative_url, created_at")
+        .select("domain, channel, hook, days_running, creative_url, raw, created_at")
         .order("created_at", { ascending: false })
         .limit(12);
       if (!active || !data || data.length === 0) return;
       setLivePlacements(
-        data.map((p) => ({
-          brand: brandFromDomain(p.domain),
-          hook: p.hook ?? "Live creative — hook pending AI extraction.",
-          channel: p.channel ?? "Meta",
-          days: p.days_running ?? 1,
-          length: "0:--",
-          aiTag: "Live",
-        }))
+        data.map((p) => {
+          const extracted = extractMediaUrl(p.creative_url, p.raw);
+          return {
+            brand: brandFromDomain(p.domain),
+            hook: p.hook ?? "Live creative — hook pending AI extraction.",
+            channel: p.channel ?? "Meta",
+            days: p.days_running ?? 1,
+            length: "0:--",
+            aiTag: "Live",
+            mediaUrl: extracted.url,
+            mediaType: extracted.type,
+          };
+        })
       );
     })();
   }, []);
