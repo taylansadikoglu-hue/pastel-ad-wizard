@@ -73,9 +73,12 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
       // Fire real backend: save profile + trigger live scan for each entered domain
       (async () => {
         try {
-          const domains = data.rivals.filter(Boolean);
+          const entries = data.rivals
+            .map((d: string, i: number) => ({ domain: (d || "").trim(), country: data.countries[i] || "United States" }))
+            .filter((e) => e.domain);
+          const domains = entries.map((e) => e.domain);
           await saveProfile({ data: { agency_name: data.agency || "My Agency", agency_domain: domains[0] ?? null } });
-          await Promise.all(domains.map((d: string) => startScan({ data: { domain: d } }).catch((e) => console.error("scan", d, e))));
+          await Promise.all(entries.map((e) => startScan({ data: { domain: e.domain, country: e.country as "United States" | "Australia" | "United Kingdom" | "Canada" } }).catch((err) => console.error("scan", e.domain, err))));
         } catch (e) {
           console.error(e);
           toast.error("Couldn't kick off scans — check Developer Integrations.");
