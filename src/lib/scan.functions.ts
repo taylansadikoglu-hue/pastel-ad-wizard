@@ -137,7 +137,7 @@ export const startScan = createServerFn({ method: "POST" })
             throw new Error("Empty keyword for DataForSEO");
           }
           console.log("DataForSEO Payload:", { keyword: domainVariable, location: countryVariable });
-          const bodyStr = JSON.stringify([{ keyword: domainVariable, location_name: countryVariable, language_name: "English" }]);
+          const bodyStr = JSON.stringify([{ keyword: "chemistwarehouse.com.au", location_name: "United States", language_name: "English" }]);
           console.log("DataForSEO request prepared", {
             loginPrefix: dfsLogin.slice(0, 3),
             basicLen: basic.length,
