@@ -40,8 +40,8 @@ export const startScan = createServerFn({ method: "POST" })
     if (scanErr || !scan) throw new Error(scanErr?.message ?? "Failed to create scan");
     const scanId = scan.id;
 
-    // Fire async background work — don't await
-    (async () => {
+    // Execute pipeline inline — Worker runtimes cancel un-awaited promises after response
+    const pipeline = (async () => {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const commentBuffer: string[] = [];
       type Placement = { channel: string; hook: string; creative_url?: string; days_running?: number; raw: unknown };
@@ -173,14 +173,20 @@ export const startScan = createServerFn({ method: "POST" })
         .from("domain_scans")
         .update({ status: "done" })
         .eq("id", scanId);
-    })().catch(async (err) => {
+    })();
+
+    // Await pipeline so Cloudflare Worker keeps request alive; surface errors as status=error.
+    try {
+      await pipeline;
+    } catch (err) {
       console.error("Scan pipeline failed", err);
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin
         .from("domain_scans")
         .update({ status: "error", error: String(err).slice(0, 500) })
         .eq("id", scanId);
-    });
+      return { scan_id: scanId, domain, status: "error" as const };
+    }
 
-    return { scan_id: scanId, domain, status: "running" as const };
+    return { scan_id: scanId, domain, status: "done" as const };
   });
