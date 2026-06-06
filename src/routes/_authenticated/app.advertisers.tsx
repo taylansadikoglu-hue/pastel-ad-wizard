@@ -256,7 +256,7 @@ function AdvertisersPage() {
   const addDomain = async () => {
     const domain = normalize(inputRef.current?.value ?? input);
     if (!domain || !/\.[a-z]{2,}$/.test(domain)) {
-      toast.error("Enter a valid domain (e.g. target.com)");
+      toast.error("Enter a valid domain");
       return;
     }
     if (rows.length >= MAX_BRANDS) {
