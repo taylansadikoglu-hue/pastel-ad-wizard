@@ -795,6 +795,11 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   .filter((v) =>
                     videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14
                   )
+                  .filter((v) => {
+                    const q = searchQuery.trim().toLowerCase();
+                    if (!q) return true;
+                    return v.brand.toLowerCase().includes(q) || v.hook.toLowerCase().includes(q) || v.channel.toLowerCase().includes(q);
+                  })
                   .map((v, idx) => (
                     <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
                       <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative overflow-hidden">
