@@ -26,6 +26,7 @@ export const startScan = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const domain = data.domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    const countryVariable: string = data.country ?? "United States";
 
     const { data: integ } = await supabase
       .from("integrations")
