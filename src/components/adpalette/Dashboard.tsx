@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,15 @@ import {
   Grid3x3, Radio, Plug, ThumbsUp, AlertTriangle, PenTool, KeyRound, Save,
   BarChart3, PieChart as PieIcon, Loader2,
 } from "lucide-react";
+
+// Safely coerce any DB value to a renderable string — kills "[object Object]"
+// leaks from raw JSONB columns that older rows may have written.
+function safeText(v: unknown, fallback = ""): string {
+  if (v == null) return fallback;
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  try { return JSON.stringify(v); } catch { return fallback; }
+}
 
 const DATE_RANGES = [
   { label: "Last 7 Days", locked: false },
