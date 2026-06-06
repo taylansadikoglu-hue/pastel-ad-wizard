@@ -585,7 +585,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               ))}
           </div>
 
-          {activeTab === "gallery" && <>
+          {activeTab === "gallery" && <><div ref={exportRef} className="space-y-6">
           {/* Matrix + Chart */}
           <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
             <div className="card-flat overflow-hidden">
