@@ -912,6 +912,7 @@ const NAV_ITEMS = [
   { icon: Radio, label: "Social Listening", href: "/app/sentiment" },
   { icon: Target, label: "Advertiser Hub", href: "/app/advertisers" },
   { icon: BarChart3, label: "PCR Reporting", href: "/app/pcr" },
+  { icon: Plug, label: "Developer Integrations", href: "/app/dashboard?tab=integrations" },
 ];
 
 export function SidebarNav() {
