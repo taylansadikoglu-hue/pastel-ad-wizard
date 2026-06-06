@@ -57,50 +57,41 @@ function synthRow(domain: string): Competitor {
 function extractMediaUrl(
   creative: unknown,
   raw: unknown,
-): { url: string | null; type: "video" | "image" | "none" } {
-  const classify = (u: string): "video" | "image" | "none" => {
+): { url: string | null; type: "video" | "image" | "iframe" | "none" } {
+  const classify = (u: string, keyHint = ""): "video" | "image" | "iframe" => {
     const lo = u.toLowerCase();
+    const key = keyHint.toLowerCase();
+    if (key.includes("video")) return "video";
+    if (key.includes("image") || key.includes("picture") || key.includes("thumbnail")) return "image";
     if (/\.(mp4|mov|webm|m3u8)(\?|$)/.test(lo)) return "video";
     if (/\.(jpg|jpeg|png|gif|webp|avif)(\?|$)/.test(lo)) return "image";
-    return "none";
+    return "iframe";
   };
-  const visit = (val: unknown, depth = 0): string | null => {
-    if (!val || depth > 6) return null;
+  const collect = (val: unknown, depth = 0, keyHint = ""):
+    { url: string; type: "video" | "image" | "iframe" }[] => {
+    if (!val || depth > 6) return [];
     if (typeof val === "string") {
-      if (/^https?:\/\//.test(val)) return val;
-      return null;
+      return /^https?:\/\//.test(val) ? [{ url: val, type: classify(val, keyHint) }] : [];
     }
     if (Array.isArray(val)) {
-      for (const v of val) {
-        const hit = visit(v, depth + 1);
-        if (hit) return hit;
-      }
-      return null;
+      return val.flatMap((v) => collect(v, depth + 1, keyHint));
     }
     if (typeof val === "object") {
       const obj = val as Record<string, unknown>;
-      const keyOrder = ["video_hd_url", "video_sd_url", "video_url", "image_url", "original_image_url", "resized_image_url", "url", "src", "href"];
-      for (const k of keyOrder) {
-        const hit = visit(obj[k], depth + 1);
-        if (hit) return hit;
-      }
-      for (const v of Object.values(obj)) {
-        const hit = visit(v, depth + 1);
-        if (hit) return hit;
-      }
+      const keyOrder = ["video_hd_url", "video_sd_url", "video_url", "video", "image_url", "original_image_url", "resized_image_url", "thumbnail_url", "picture", "image", "url", "src", "href"];
+      const ordered = keyOrder.filter((k) => k in obj);
+      const remaining = Object.keys(obj).filter((k) => !ordered.includes(k));
+      return [...ordered, ...remaining].flatMap((k) => collect(obj[k], depth + 1, k));
     }
-    return null;
+    return [];
   };
-  const url = visit(creative) ?? visit(raw);
-  if (!url) return { url: null, type: "none" };
-  let type = classify(url);
-  // If extension is ambiguous, guess by surrounding object keys
-  if (type === "none" && creative && typeof creative === "object") {
-    const flat = JSON.stringify(creative).toLowerCase();
-    if (flat.includes("video")) type = "video";
-    else if (flat.includes("image")) type = "image";
-  }
-  return { url, type };
+  const rawCandidates = collect(raw);
+  const creativeCandidates = collect(creative);
+  const direct = [...rawCandidates, ...creativeCandidates].find((c) => c.type === "video" || c.type === "image");
+  const fallback = [...creativeCandidates, ...rawCandidates].find(Boolean);
+  if (direct) return direct;
+  if (fallback) return fallback;
+  return { url: null, type: "none" };
 }
 
 
@@ -130,7 +121,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [resendKey, setResendKey] = useState("");
   const [integSaving, setIntegSaving] = useState(false);
   const [liveSentiment, setLiveSentiment] = useState<{ domain: string; good: string | null; friction: string | null; blueprint: string | null }[]>([]);
-  const [livePlacements, setLivePlacements] = useState<{ brand: string; hook: string; channel: string; days: number; length: string; aiTag: string; mediaUrl: string | null; mediaType: "video" | "image" | "none" }[]>([]);
+  const [livePlacements, setLivePlacements] = useState<{ brand: string; hook: string; channel: string; days: number; length: string; aiTag: string; mediaUrl: string | null; mediaType: "video" | "image" | "iframe" | "none" }[]>([]);
   const [runningScans, setRunningScans] = useState<string[]>([]);
   const [userName, setUserName] = useState<string>("");
   const [userInitials, setUserInitials] = useState<string>("YOU");
@@ -775,9 +766,13 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                         ) : v.mediaType === "image" && v.mediaUrl ? (
                           <img src={v.mediaUrl} alt={`${v.brand} creative`} className="w-full h-full object-cover" loading="lazy" />
                         ) : v.mediaUrl ? (
-                          <a href={v.mediaUrl} target="_blank" rel="noreferrer" className="text-xs underline font-semibold">
-                            Open creative ↗
-                          </a>
+                          <iframe
+                            src={v.mediaUrl}
+                            title={`${v.brand} creative`}
+                            className="w-full h-full border-0 bg-paper"
+                            loading="lazy"
+                            sandbox="allow-scripts allow-same-origin allow-popups"
+                          />
                         ) : (
                           <Play size={22} />
                         )}

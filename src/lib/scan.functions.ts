@@ -27,9 +27,9 @@ export const startScan = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .maybeSingle();
 
-    const apifyToken = integ?.apify_token ?? process.env.APIFY_API_TOKEN ?? null;
-    const dfsLogin = integ?.dataforseo_login ?? process.env.DATAFORSEO_LOGIN ?? null;
-    const dfsPass = integ?.dataforseo_password ?? process.env.DATAFORSEO_PASSWORD ?? null;
+    const apifyToken = integ?.apify_token?.trim() || process.env.APIFY_API_TOKEN || null;
+    const dfsLogin = integ?.dataforseo_login?.trim() || process.env.DATAFORSEO_LOGIN || null;
+    const dfsPass = integ?.dataforseo_password?.trim() || process.env.DATAFORSEO_PASSWORD || null;
 
     // Create scan row
     const { data: scan, error: scanErr } = await supabase
@@ -84,9 +84,7 @@ export const startScan = createServerFn({ method: "POST" })
       // ---------- DataForSEO: Google Ads search ----------
       if (dfsLogin && dfsPass) {
         try {
-          // Basic Auth: base64(login:password). Prefer btoa (Worker-native); fallback to Buffer.
-          const raw = `${dfsLogin}:${dfsPass}`;
-          const basic = typeof btoa === "function" ? btoa(raw) : Buffer.from(raw).toString("base64");
+          const basic = Buffer.from(`${dfsLogin}:${dfsPass}`, "utf-8").toString("base64");
           const res = await fetch("https://api.dataforseo.com/v3/serp/google/ads_search/live/advanced", {
             method: "POST",
             headers: {
@@ -96,7 +94,16 @@ export const startScan = createServerFn({ method: "POST" })
             body: JSON.stringify([{ keyword: domain, location_code: 2840, language_code: "en", depth: 20 }]),
           });
           if (res.ok) {
-            const json = (await res.json()) as { tasks?: Array<{ result?: Array<{ items?: Array<Record<string, unknown>> }> }> };
+            const json = (await res.json()) as { status_code?: number; status_message?: string; tasks?: Array<{ status_code?: number; status_message?: string; result?: Array<{ items?: Array<Record<string, unknown>> }> }> };
+            const task = json.tasks?.[0];
+            if ((json.status_code && json.status_code >= 40000) || (task?.status_code && task.status_code >= 40000)) {
+              console.error("DataForSEO API error", {
+                statusCode: json.status_code,
+                statusMessage: json.status_message,
+                taskStatusCode: task?.status_code,
+                taskStatusMessage: task?.status_message,
+              });
+            }
             const items = json.tasks?.[0]?.result?.[0]?.items ?? [];
             for (const it of items.slice(0, 30)) {
               const text = String(it.title ?? it.description ?? "").trim();
@@ -110,11 +117,13 @@ export const startScan = createServerFn({ method: "POST" })
             }
           } else {
             const body = await res.text().catch(() => "");
-            console.error(`DataForSEO HTTP ${res.status}`, body.slice(0, 500));
+            console.error("DataForSEO HTTP request failed", { status: res.status, body: body.slice(0, 500) });
           }
         } catch (e) {
           console.error("DataForSEO request failed", e);
         }
+      } else {
+        console.error("DataForSEO request skipped: missing login or password credential");
       }
 
       // Insert placements
