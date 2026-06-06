@@ -52,6 +52,56 @@ function synthRow(domain: string): Competitor {
   return { name: brandFromDomain(domain), spend, meta, google, programmatic };
 }
 
+// Pull a usable media URL out of creative_url (which may be a string OR a JSON object)
+// or fall back to scanning the raw scrape payload.
+function extractMediaUrl(
+  creative: unknown,
+  raw: unknown,
+): { url: string | null; type: "video" | "image" | "none" } {
+  const classify = (u: string): "video" | "image" | "none" => {
+    const lo = u.toLowerCase();
+    if (/\.(mp4|mov|webm|m3u8)(\?|$)/.test(lo)) return "video";
+    if (/\.(jpg|jpeg|png|gif|webp|avif)(\?|$)/.test(lo)) return "image";
+    return "none";
+  };
+  const visit = (val: unknown, depth = 0): string | null => {
+    if (!val || depth > 6) return null;
+    if (typeof val === "string") {
+      if (/^https?:\/\//.test(val)) return val;
+      return null;
+    }
+    if (Array.isArray(val)) {
+      for (const v of val) {
+        const hit = visit(v, depth + 1);
+        if (hit) return hit;
+      }
+      return null;
+    }
+    if (typeof val === "object") {
+      const obj = val as Record<string, unknown>;
+      const keyOrder = ["video_hd_url", "video_sd_url", "video_url", "image_url", "original_image_url", "resized_image_url", "url", "src", "href"];
+      for (const k of keyOrder) {
+        const hit = visit(obj[k], depth + 1);
+        if (hit) return hit;
+      }
+      for (const v of Object.values(obj)) {
+        const hit = visit(v, depth + 1);
+        if (hit) return hit;
+      }
+    }
+    return null;
+  };
+  const url = visit(creative) ?? visit(raw);
+  if (!url) return { url: null, type: "none" };
+  let type = classify(url);
+  // If extension is ambiguous, guess by surrounding object keys
+  if (type === "none" && creative && typeof creative === "object") {
+    const flat = JSON.stringify(creative).toLowerCase();
+    if (flat.includes("video")) type = "video";
+    else if (flat.includes("image")) type = "image";
+  }
+  return { url, type };
+
 const CHANNEL_COLORS_STD = ["var(--primary)", "#23251D", "#A1A39A"];
 const CHANNEL_COLORS_PASTEL = ["var(--pastel-lilac)", "var(--pastel-sage)", "var(--pastel-peach)"];
 
