@@ -40,8 +40,8 @@ export const startScan = createServerFn({ method: "POST" })
     if (scanErr || !scan) throw new Error(scanErr?.message ?? "Failed to create scan");
     const scanId = scan.id;
 
-    // Fire async background work — don't await
-    (async () => {
+    // Execute pipeline inline — Worker runtimes cancel un-awaited promises after response
+    const pipeline = (async () => {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const commentBuffer: string[] = [];
       type Placement = { channel: string; hook: string; creative_url?: string; days_running?: number; raw: unknown };
