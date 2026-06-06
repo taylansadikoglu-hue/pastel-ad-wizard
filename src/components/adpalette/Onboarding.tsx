@@ -46,6 +46,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
     fullName: "", email: "", password: "",
     agency: "", focus: FOCUS_OPTIONS[0],
     rivals: ["", "", ""],
+    countries: ["United States", "United States", "United States"],
     plan: "agency" as PlanKey,
     card: "", cardName: "", exp: "", cvc: "",
   });
@@ -72,9 +73,12 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
       // Fire real backend: save profile + trigger live scan for each entered domain
       (async () => {
         try {
-          const domains = data.rivals.filter(Boolean);
+          const entries = data.rivals
+            .map((d: string, i: number) => ({ domain: (d || "").trim(), country: data.countries[i] || "United States" }))
+            .filter((e) => e.domain);
+          const domains = entries.map((e) => e.domain);
           await saveProfile({ data: { agency_name: data.agency || "My Agency", agency_domain: domains[0] ?? null } });
-          await Promise.all(domains.map((d: string) => startScan({ data: { domain: d } }).catch((e) => console.error("scan", d, e))));
+          await Promise.all(entries.map((e) => startScan({ data: { domain: e.domain, country: e.country as "United States" | "Australia" | "United Kingdom" | "Canada" } }).catch((err) => console.error("scan", e.domain, err))));
         } catch (e) {
           console.error(e);
           toast.error("Couldn't kick off scans — check Developer Integrations.");
@@ -237,7 +241,19 @@ function StepAdvertisers({ data, setData }: any) {
         <Field key={i} label={`Advertiser ${i + 1} · root domain (master fingerprint)`} hint="root only">
           <div className="flex gap-2">
             <div className="px-3 py-2 border-2 border-ink rounded-[4px] mono text-xs bg-secondary">https://</div>
-            <input className="input-flat" placeholder={["sephora.com", "lululemon.com", "glossier.com"][i]} value={data.rivals[i]} onChange={(e) => update(i, e.target.value)} />
+            <input className="input-flat flex-1" placeholder={["sephora.com", "lululemon.com", "glossier.com"][i]} value={data.rivals[i]} onChange={(e) => update(i, e.target.value)} />
+            <select
+              className="input-flat mono text-xs"
+              value={data.countries?.[i] ?? "United States"}
+              onChange={(e) => {
+                const c = [...(data.countries ?? ["United States", "United States", "United States"])];
+                c[i] = e.target.value;
+                setData({ ...data, countries: c });
+              }}
+              title="Target country"
+            >
+              {["United States", "Australia", "United Kingdom", "Canada"].map((n) => <option key={n}>{n}</option>)}
+            </select>
           </div>
         </Field>
       ))}

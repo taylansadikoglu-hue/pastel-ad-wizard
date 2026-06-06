@@ -164,6 +164,7 @@ function AdvertisersPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [input, setInput] = useState("");
+  const [country, setCountry] = useState<"United States" | "Australia" | "United Kingdom" | "Canada">("United States");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -245,7 +246,7 @@ function AdvertisersPage() {
     }
     setBusy(true);
     try {
-      await startScan({ data: { domain } });
+      await startScan({ data: { domain, country } });
       setInput("");
       toast.success(`Tracking ${domain}`);
       load();
@@ -337,6 +338,15 @@ function AdvertisersPage() {
               className="input-flat mono flex-1"
               disabled={busy || rows.length >= MAX_BRANDS}
             />
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value as typeof country)}
+              className="input-flat mono text-xs"
+              disabled={busy || rows.length >= MAX_BRANDS}
+              title="Target country"
+            >
+              {["United States", "Australia", "United Kingdom", "Canada"].map((n) => <option key={n}>{n}</option>)}
+            </select>
             <button
               onClick={addDomain}
               disabled={busy || rows.length >= MAX_BRANDS}
