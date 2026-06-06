@@ -115,21 +115,33 @@ export const startScan = createServerFn({ method: "POST" })
       if (dfsLogin && dfsPass) {
         try {
           const basic = Buffer.from(`${dfsLogin}:${dfsPass}`, "utf-8").toString("base64");
-          console.log("DataForSEO request prepared", { loginPrefix: dfsLogin.slice(0, 3), basicLen: basic.length });
+          const keyword = (domain ?? "").toString().trim();
+          if (!keyword) {
+            console.error("DataForSEO request skipped: empty keyword/domain");
+            throw new Error("Empty keyword for DataForSEO");
+          }
+          const payload = [
+            {
+              keyword,
+              location_name: "United States",
+              language_name: "English",
+              depth: 20,
+            },
+          ];
+          const bodyStr = JSON.stringify(payload);
+          console.log("DataForSEO request prepared", {
+            loginPrefix: dfsLogin.slice(0, 3),
+            basicLen: basic.length,
+            keyword,
+            bodyPreview: bodyStr.slice(0, 200),
+          });
           const res = await fetch("https://api.dataforseo.com/v3/serp/google/ads_search/live/advanced", {
             method: "POST",
             headers: {
               Authorization: `Basic ${basic}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify([
-              {
-                keyword: domain,
-                location_name: "United States",
-                language_name: "English",
-                depth: 20,
-              },
-            ]),
+            body: bodyStr,
           });
           if (res.ok) {
             const json = (await res.json()) as { status_code?: number; status_message?: string; tasks?: Array<{ status_code?: number; status_message?: string; result?: Array<{ items?: Array<Record<string, unknown>> }> }> };
