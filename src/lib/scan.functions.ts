@@ -2,12 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const SYSTEM_PROMPT = `You are a Quantitative Data Analyst distilling raw audience commentary about a brand's advertising into three concise, fluff-free, signal-rich blocks.
+const SYSTEM_PROMPT = `You are a Quantitative Ad Copy Analyst. You receive raw AD COPY scraped from a brand's live placements (Meta Ads Library + Google Ads). Distill three concise, fluff-free, signal-rich blocks that describe what the BRAND is saying in its own ads.
 
 Return STRICT JSON with three string fields:
-- "good": what audiences love, with concrete patterns (no fluff, no marketing speak).
-- "friction": what audiences complain about, including drivers of negative sentiment.
-- "blueprint": a single ad-angle copy blueprint that exploits "good" and addresses "friction". Punchy, copy-ready.
+- "good": the strongest value propositions the brand pushes in its ad copy (concrete benefits, offers, proof points).
+- "friction": the targeted customer pain points the brand attacks — the problems/objections the ads imply the audience has.
+- "blueprint": the core marketing hook distilled into one punchy, copy-ready ad angle that captures their dominant message.
 
 Each block: 2-3 sentences max. No hedging, no preamble, no emojis.`;
 
