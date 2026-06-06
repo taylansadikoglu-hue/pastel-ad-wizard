@@ -2,14 +2,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const SYSTEM_PROMPT = `You are a Quantitative Ad Copy Analyst. You receive raw AD COPY scraped from a brand's live placements (Meta Ads Library + Google Ads). Distill three concise, fluff-free, signal-rich blocks that describe what the BRAND is saying in its own ads.
+const SYSTEM_PROMPT = `You are a Quantitative Data Analyst. You receive two distinct corpora about a competitor brand:
+
+1. AD COPY — text scraped from the brand's live paid placements (Meta Ads Library + Google Ads).
+2. CONSUMER COMMENTS — real user comments and engagement scraped from the brand's social posts (Facebook/Instagram).
 
 Return STRICT JSON with three string fields:
-- "good": the strongest value propositions the brand pushes in its ad copy (concrete benefits, offers, proof points).
-- "friction": the targeted customer pain points the brand attacks — the problems/objections the ads imply the audience has.
-- "blueprint": the core marketing hook distilled into one punchy, copy-ready ad angle that captures their dominant message.
+- "good": analyze the CONSUMER COMMENTS — what real users praise, love, or repeatedly call out as a strength. Cite recurring themes.
+- "friction": analyze the CONSUMER COMMENTS — the concrete pain points, complaints, objections, or frustrations users voice in their own words.
+- "blueprint": analyze the AD COPY only — distill the competitor's core marketing hook into one punchy, copy-ready ad angle that captures their dominant message.
 
-Each block: 2-3 sentences max. No hedging, no preamble, no emojis.`;
+Each block: 2-3 sentences max. No hedging, no preamble, no emojis. If a corpus is empty, say so explicitly in that field.`;
 
 const DomainSchema = z.object({ domain: z.string().min(3).max(255) });
 
@@ -20,7 +23,6 @@ export const startScan = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const domain = data.domain.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
 
-    // Load this agency's stored API credentials
     const { data: integ } = await supabase
       .from("integrations")
       .select("apify_token, dataforseo_login, dataforseo_password")
@@ -31,7 +33,6 @@ export const startScan = createServerFn({ method: "POST" })
     const dfsLogin = integ?.dataforseo_login?.trim() || process.env.DATAFORSEO_LOGIN || null;
     const dfsPass = integ?.dataforseo_password?.trim() || process.env.DATAFORSEO_PASSWORD || null;
 
-    // Create scan row
     const { data: scan, error: scanErr } = await supabase
       .from("domain_scans")
       .insert({ user_id: userId, domain, status: "running" })
@@ -40,14 +41,14 @@ export const startScan = createServerFn({ method: "POST" })
     if (scanErr || !scan) throw new Error(scanErr?.message ?? "Failed to create scan");
     const scanId = scan.id;
 
-    // Execute pipeline inline — Worker runtimes cancel un-awaited promises after response
     const pipeline = (async () => {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const adCopyBuffer: string[] = [];
       const commentBuffer: string[] = [];
       type Placement = { channel: string; hook: string; creative_url?: string; days_running?: number; raw: unknown };
       const placements: Placement[] = [];
 
-      // ---------- Apify: Facebook Ads Library ----------
+      // ---------- Apify: Facebook Ads Library (ad copy + creatives) ----------
       if (apifyToken) {
         try {
           const url = `https://api.apify.com/v2/acts/curious_coder~facebook-ads-library-scraper/run-sync-get-dataset-items?token=${apifyToken}&timeout=120`;
@@ -64,7 +65,7 @@ export const startScan = createServerFn({ method: "POST" })
             const items = (await res.json()) as Array<Record<string, unknown>>;
             for (const it of items.slice(0, 50)) {
               const text = String((it as Record<string, string>).ad_creative_body ?? (it as Record<string, string>).snapshot ?? "").trim();
-              if (text) commentBuffer.push(text);
+              if (text) adCopyBuffer.push(text);
               placements.push({
                 channel: "Meta",
                 hook: text.slice(0, 200) || "(no copy)",
@@ -74,17 +75,47 @@ export const startScan = createServerFn({ method: "POST" })
               });
             }
           } else {
-            console.warn(`Apify ${res.status}`, await res.text().catch(() => ""));
+            console.warn(`Apify ads ${res.status}`, await res.text().catch(() => ""));
           }
         } catch (e) {
-          console.error("Apify failed", e);
+          console.error("Apify ads scraper failed", e);
         }
+
+        // ---------- Apify: Social comment scraper (Instagram + Facebook posts/comments) ----------
+        try {
+          const handle = domain.split(".")[0];
+          const url = `https://api.apify.com/v2/acts/apify~instagram-comment-scraper/run-sync-get-dataset-items?token=${apifyToken}&timeout=120`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              directUrls: [`https://www.instagram.com/${handle}/`],
+              resultsLimit: 100,
+              isNewestComments: true,
+            }),
+          });
+          if (res.ok) {
+            const items = (await res.json()) as Array<Record<string, unknown>>;
+            for (const it of items.slice(0, 200)) {
+              const text = String(it.text ?? it.comment ?? "").trim();
+              if (text) commentBuffer.push(text);
+            }
+            console.log(`Social listening: pulled ${commentBuffer.length} comments for ${handle}`);
+          } else {
+            console.error("Apify comment scraper HTTP error", res.status, await res.text().catch(() => ""));
+          }
+        } catch (e) {
+          console.error("Apify comment scraper failed", e);
+        }
+      } else {
+        console.error("Apify scrapers skipped: missing apify_token credential");
       }
 
       // ---------- DataForSEO: Google Ads search ----------
       if (dfsLogin && dfsPass) {
         try {
           const basic = Buffer.from(`${dfsLogin}:${dfsPass}`, "utf-8").toString("base64");
+          console.log("DataForSEO request prepared", { loginPrefix: dfsLogin.slice(0, 3), basicLen: basic.length });
           const res = await fetch("https://api.dataforseo.com/v3/serp/google/ads_search/live/advanced", {
             method: "POST",
             headers: {
@@ -107,7 +138,7 @@ export const startScan = createServerFn({ method: "POST" })
             const items = json.tasks?.[0]?.result?.[0]?.items ?? [];
             for (const it of items.slice(0, 30)) {
               const text = String(it.title ?? it.description ?? "").trim();
-              if (text) commentBuffer.push(text);
+              if (text) adCopyBuffer.push(text);
               placements.push({
                 channel: "Google",
                 hook: text.slice(0, 200),
@@ -126,7 +157,6 @@ export const startScan = createServerFn({ method: "POST" })
         console.error("DataForSEO request skipped: missing login or password credential");
       }
 
-      // Insert placements
       if (placements.length) {
         await supabaseAdmin.from("ad_placements").insert(
           placements.map((p) => ({ user_id: userId, scan_id: scanId, domain, channel: p.channel, hook: p.hook, creative_url: p.creative_url, days_running: p.days_running, raw: p.raw as never }))
@@ -134,16 +164,18 @@ export const startScan = createServerFn({ method: "POST" })
       }
 
       // ---------- Lovable AI Gateway: gpt-4o-mini distillation ----------
-      let good = "No commentary available yet.";
-      let friction = "No friction signals captured yet.";
-      let blueprint = `Lead with the strongest proof point you have for ${domain} and address the most common objection in one line.`;
+      let good = "No consumer comments captured yet.";
+      let friction = "No consumer comments captured yet.";
+      let blueprint = `No ad copy captured yet for ${domain}.`;
       const model = "openai/gpt-4o-mini";
 
-      if (commentBuffer.length) {
+      if (adCopyBuffer.length || commentBuffer.length) {
         try {
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) throw new Error("LOVABLE_API_KEY missing");
-          const sample = commentBuffer.slice(0, 80).join("\n---\n").slice(0, 12000);
+          const adSample = adCopyBuffer.slice(0, 60).join("\n---\n").slice(0, 6000);
+          const commentSample = commentBuffer.slice(0, 120).join("\n---\n").slice(0, 6000);
+          const userMsg = `Brand domain: ${domain}\n\n=== AD COPY ===\n${adSample || "(none)"}\n\n=== CONSUMER COMMENTS ===\n${commentSample || "(none)"}\n\nReturn JSON only.`;
           const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -154,7 +186,7 @@ export const startScan = createServerFn({ method: "POST" })
               model,
               messages: [
                 { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: `Brand domain: ${domain}\n\nRaw audience + ad commentary:\n${sample}\n\nReturn JSON only.` },
+                { role: "user", content: userMsg },
               ],
               response_format: { type: "json_object" },
             }),
@@ -190,7 +222,6 @@ export const startScan = createServerFn({ method: "POST" })
         .eq("id", scanId);
     })();
 
-    // Await pipeline so Cloudflare Worker keeps request alive; surface errors as status=error.
     try {
       await pipeline;
     } catch (err) {
