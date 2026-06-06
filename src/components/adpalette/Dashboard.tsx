@@ -844,7 +844,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
           {/* 3-Second Rule Insight Cards — bound to sentiment_insights */}
           <div>
-            <div className="mono text-[10px] text-muted-foreground mb-2">THE 3-SECOND RULE / strategic conclusions</div>
+            <div className="mono text-[10px] text-muted-foreground mb-2">
+              SENTIMENT RADAR · {liveSentiment.length} reading{liveSentiment.length === 1 ? "" : "s"}
+              {liveSentiment[0] ? ` · latest: ${brandFromDomain(liveSentiment[0].domain)}` : ""}
+            </div>
             {liveSentiment.length === 0 ? (
               <div className="card-flat p-6 text-sm text-muted-foreground text-center">
                 No data found, please add a domain under the Advertisers tab.
