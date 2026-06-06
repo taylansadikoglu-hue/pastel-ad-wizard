@@ -46,6 +46,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
     fullName: "", email: "", password: "",
     agency: "", focus: FOCUS_OPTIONS[0],
     rivals: ["", "", ""],
+    countries: ["United States", "United States", "United States"],
     plan: "agency" as PlanKey,
     card: "", cardName: "", exp: "", cvc: "",
   });
