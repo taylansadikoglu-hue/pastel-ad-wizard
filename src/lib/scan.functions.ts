@@ -122,7 +122,14 @@ export const startScan = createServerFn({ method: "POST" })
               Authorization: `Basic ${basic}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify([{ keyword: domain, location_code: 2840, language_code: "en", depth: 20 }]),
+            body: JSON.stringify([
+              {
+                keyword: domain,
+                location_name: "United States",
+                language_name: "English",
+                depth: 20,
+              },
+            ]),
           });
           if (res.ok) {
             const json = (await res.json()) as { status_code?: number; status_message?: string; tasks?: Array<{ status_code?: number; status_message?: string; result?: Array<{ items?: Array<Record<string, unknown>> }> }> };
