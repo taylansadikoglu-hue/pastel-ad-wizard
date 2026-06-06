@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
@@ -22,6 +22,9 @@ import {
 import { Button } from "@/components/ui/button";
 
 const MAX_BRANDS = 7;
+const COUNTRY_OPTIONS = ["United States", "Australia", "United Kingdom", "Canada"] as const;
+
+type Country = (typeof COUNTRY_OPTIONS)[number];
 
 type Row = { id: string; domain: string; status: string; created_at: string };
 
@@ -173,7 +176,8 @@ function AdvertisersPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [input, setInput] = useState("");
-  const [country, setCountry] = useState<"United States" | "Australia" | "United Kingdom" | "Canada">("United States");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [country, setCountry] = useState<Country>("United States");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
