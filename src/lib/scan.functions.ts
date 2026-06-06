@@ -14,7 +14,11 @@ Return STRICT JSON with three string fields:
 
 Each block: 2-3 sentences max. No hedging, no preamble, no emojis. If a corpus is empty, say so explicitly in that field.`;
 
-const DomainSchema = z.object({ domain: z.string().min(3).max(255) });
+const COUNTRY_NAMES = ["United States", "Australia", "United Kingdom", "Canada"] as const;
+const DomainSchema = z.object({
+  domain: z.string().min(3).max(255),
+  country: z.enum(COUNTRY_NAMES).optional().default("United States"),
+});
 
 export const startScan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
