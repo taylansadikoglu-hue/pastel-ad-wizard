@@ -753,8 +753,25 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   )
                   .map((v, idx) => (
                     <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
-                      <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative">
-                        <Play size={22} />
+                      <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative overflow-hidden">
+                        {v.mediaType === "video" && v.mediaUrl ? (
+                          <video
+                            src={v.mediaUrl}
+                            className="w-full h-full object-cover"
+                            controls
+                            muted
+                            playsInline
+                            preload="metadata"
+                          />
+                        ) : v.mediaType === "image" && v.mediaUrl ? (
+                          <img src={v.mediaUrl} alt={`${v.brand} creative`} className="w-full h-full object-cover" loading="lazy" />
+                        ) : v.mediaUrl ? (
+                          <a href={v.mediaUrl} target="_blank" rel="noreferrer" className="text-xs underline font-semibold">
+                            Open creative ↗
+                          </a>
+                        ) : (
+                          <Play size={22} />
+                        )}
                         <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.length}</span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -772,32 +789,43 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             )}
           </div>
 
-          {/* 3-Second Rule Insight Cards */}
+          {/* 3-Second Rule Insight Cards — bound to sentiment_insights */}
           <div>
             <div className="mono text-[10px] text-muted-foreground mb-2">THE 3-SECOND RULE / strategic conclusions</div>
-            <div className="grid md:grid-cols-3 gap-4">
-              <InsightCard
-                icon={Activity}
-                tag="Creative velocity"
-                tone="primary"
-                text="Sephora just deployed 14 new TikTok video ad variations focusing on user-generated unboxing hooks."
-                metric="+14 creatives · 48h"
-              />
-              <InsightCard
-                icon={Clock}
-                tag="Ad longevity winner"
-                tone="ink"
-                text="Lululemon's core minimalist programmatic banner has been running unchanged for 90 consecutive days, signaling stable top-performing ad conversions."
-                metric="90 days · 0 edits"
-              />
-              <InsightCard
-                icon={TrendingUp}
-                tag="Macro shift trend"
-                tone="secondary"
-                text="Average category trends reveal an immediate 15% budget redirection out of paid search toward highly visual Meta and TikTok social placements."
-                metric="-15% search · +15% social"
-              />
-            </div>
+            {liveSentiment.length === 0 ? (
+              <div className="card-flat p-6 text-sm text-muted-foreground text-center">
+                No data found, please add a domain under the Advertisers tab.
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-4">
+                {liveSentiment.slice(0, 3).map((s, i) => (
+                  <div key={`${s.domain}-${i}`} className="space-y-3">
+                    <div className="mono text-[10px] uppercase font-bold">{brandFromDomain(s.domain)}</div>
+                    <InsightCard
+                      icon={ThumbsUp}
+                      tag="The Good"
+                      tone="primary"
+                      text={s.good ?? "No value propositions captured yet."}
+                      metric={s.domain}
+                    />
+                    <InsightCard
+                      icon={AlertTriangle}
+                      tag="The Friction"
+                      tone="ink"
+                      text={s.friction ?? "No pain points captured yet."}
+                      metric={s.domain}
+                    />
+                    <InsightCard
+                      icon={PenTool}
+                      tag="Ad Angle Blueprint"
+                      tone="secondary"
+                      text={s.blueprint ?? "No blueprint yet."}
+                      metric={s.domain}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           </>}
 
