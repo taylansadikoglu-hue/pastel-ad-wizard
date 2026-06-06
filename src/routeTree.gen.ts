@@ -15,7 +15,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiBarbsRouteImport } from './routes/api/barbs'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
-import { Route as AuthenticatedAppPcrRouteImport } from './routes/_authenticated/app.pcr'
 import { Route as AuthenticatedAppSentimentRouteImport } from './routes/_authenticated/app.sentiment'
 import { Route as AuthenticatedAppPcrRouteImport } from './routes/_authenticated/app.pcr'
 import { Route as AuthenticatedAppCreativeRouteImport } from './routes/_authenticated/app.creative'
@@ -52,6 +51,11 @@ const AuthenticatedAppSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppPcrRoute = AuthenticatedAppPcrRouteImport.update({
+  id: '/pcr',
+  path: '/pcr',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppSentimentRoute =
   AuthenticatedAppSentimentRouteImport.update({
     id: '/sentiment',
