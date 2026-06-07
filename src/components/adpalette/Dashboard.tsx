@@ -234,16 +234,30 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       };
     };
     const load = async () => {
+      const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || "(unset)";
+      console.info("[ad_placements] query → from('ad_placements').select(*).order(created_at desc).limit(24) on", supabaseUrl);
       const { data, error } = await supabase
         .from("ad_placements")
         .select("domain, channel, hook, days_running, creative_url, raw, created_at")
         .order("created_at", { ascending: false })
         .limit(24);
-      if (error) console.error("ad_placements load failed", error);
+      if (error) {
+        console.error("[ad_placements] query failed", error);
+        return;
+      }
+      console.info("[ad_placements] rows returned:", data?.length ?? 0);
+      if (data?.length) {
+        const byChannel: Record<string, number> = {};
+        for (const r of data) byChannel[r.channel ?? "(null)"] = (byChannel[r.channel ?? "(null)"] ?? 0) + 1;
+        console.info("[ad_placements] channel breakdown:", byChannel);
+      }
       if (!active || !data) return;
-      setLivePlacements(data.map(mapRow));
+      const mapped = data.map(mapRow);
+      console.info("[ad_placements] rows after mapping (rendered):", mapped.length);
+      setLivePlacements(mapped);
     };
     load();
+
     const channel = supabase
       .channel("ad-placements-live")
       .on(
