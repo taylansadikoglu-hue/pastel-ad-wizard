@@ -216,34 +216,51 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     };
   }, []);
 
-  // Continuous Inspiration Loop → ad_placements
+  // Continuous Inspiration Loop → ad_placements (any channel: Meta, Google, etc.)
   useEffect(() => {
     let active = true;
-    (async () => {
-      const { data } = await supabase
+    const mapRow = (p: { domain: string; channel: string | null; hook: string | null; days_running: number | null; creative_url: string | null; raw: unknown }) => {
+      const extracted = extractMediaUrl(p.creative_url, p.raw);
+      const hookText = safeText(p.hook, "").trim() || "Live creative — hook pending AI extraction.";
+      return {
+        brand: brandFromDomain(safeText(p.domain)),
+        hook: hookText,
+        channel: safeText(p.channel, "Live"),
+        days: typeof p.days_running === "number" ? p.days_running : 1,
+        length: "0:--",
+        aiTag: "Live",
+        mediaUrl: extracted.url,
+        mediaType: extracted.type,
+      };
+    };
+    const load = async () => {
+      const { data, error } = await supabase
         .from("ad_placements")
         .select("domain, channel, hook, days_running, creative_url, raw, created_at")
         .order("created_at", { ascending: false })
-        .limit(12);
-      if (!active || !data || data.length === 0) return;
-      setLivePlacements(
-        data.map((p) => {
-          const extracted = extractMediaUrl(p.creative_url, p.raw);
-          const hookText = safeText(p.hook, "").trim() || "Live creative — hook pending AI extraction.";
-          return {
-            brand: brandFromDomain(safeText(p.domain)),
-            hook: hookText,
-            channel: safeText(p.channel, "Meta"),
-            days: typeof p.days_running === "number" ? p.days_running : 1,
-            length: "0:--",
-            aiTag: "Live",
-            mediaUrl: extracted.url,
-            mediaType: extracted.type,
-          };
-        })
-      );
-    })();
+        .limit(24);
+      if (error) console.error("ad_placements load failed", error);
+      if (!active || !data) return;
+      setLivePlacements(data.map(mapRow));
+    };
+    load();
+    const channel = supabase
+      .channel("ad-placements-live")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "ad_placements" },
+        (payload) => {
+          const r = payload.new as Parameters<typeof mapRow>[0];
+          setLivePlacements((prev) => [mapRow(r), ...prev].slice(0, 24));
+        }
+      )
+      .subscribe();
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
   }, []);
+
 
   // Load saved integrations once
   useEffect(() => {
