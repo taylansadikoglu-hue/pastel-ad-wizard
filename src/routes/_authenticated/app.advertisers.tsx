@@ -34,17 +34,17 @@ const COUNTRY_OPTIONS = ["United States", "Australia", "United Kingdom", "Canada
 
 type Country = (typeof COUNTRY_OPTIONS)[number];
 
-type Row = { id: string; domain: string; status: string; created_at: string };
+type Row = { id: number; domain: string; status: string; created_at: string | null };
 
 type Placement = {
-  id: string;
+  id: number;
   domain: string;
-  channel: string;
+  channel: string | null;
   hook: string | null;
   days_running: number | null;
   creative_url: string | null;
   raw: unknown;
-  created_at: string;
+  created_at: string | null;
 };
 
 type Sentiment = {
