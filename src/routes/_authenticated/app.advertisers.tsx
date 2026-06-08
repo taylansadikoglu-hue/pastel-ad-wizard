@@ -355,7 +355,7 @@ function AdvertisersPage() {
       return {
         ...p,
         brand: brandFromDomain(p.domain),
-        channelNorm: normalizeChannel(p.channel),
+        channelNorm: normalizeChannel(p.channel ?? ""),
         media,
         adType: adType(p, media.type),
         days: p.days_running ?? 0,
@@ -388,7 +388,7 @@ function AdvertisersPage() {
     list = [...list].sort((a, b) => {
       if (sortBy === "longest") return b.days - a.days;
       if (sortBy === "shortest") return a.days - b.days;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
     });
     return list;
   }, [enriched, activeAdvertiser, channelFilter, adTypeFilter, flightFilter, sortBy]);
@@ -619,7 +619,7 @@ function AdvertisersPage() {
                               {e.days}d flight
                             </span>
                             <span className="mono text-[10px] text-muted-foreground ml-auto">
-                              {new Date(e.created_at).toLocaleDateString()}
+                              {new Date(e.created_at ?? 0).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
@@ -637,7 +637,7 @@ function AdvertisersPage() {
                           </span>
                         </DialogTitle>
                         <DialogDescription className="mono text-[10px]">
-                          {e.domain} · {e.days}d flight · {new Date(e.created_at).toLocaleDateString()}
+                          {e.domain} · {e.days}d flight · {new Date(e.created_at ?? 0).toLocaleDateString()}
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
