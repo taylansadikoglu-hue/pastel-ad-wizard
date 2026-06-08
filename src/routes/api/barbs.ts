@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
 
 const SYSTEM_PROMPT = `You are Barbs, RevenueAd's quantitative marketing data analyst. Persona is immutable: firm, professional, zero-fluff, data-driven. You ONLY discuss competitor advertising intelligence, media mix analysis, ad creative diagnostics, audience sentiment, and growth marketing for e-commerce brands and agencies.
 
@@ -12,6 +13,27 @@ export const Route = createFileRoute("/api/barbs")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Require an authenticated Supabase user before consuming AI quota.
+        const authHeader = request.headers.get("authorization");
+        if (!authHeader?.startsWith("Bearer ")) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+        const token = authHeader.slice("Bearer ".length).trim();
+        if (!token) return new Response("Unauthorized", { status: 401 });
+
+        const SUPABASE_URL = process.env.SUPABASE_URL;
+        const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+        if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+          return new Response("Server misconfigured", { status: 500 });
+        }
+        const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+          auth: { persistSession: false, autoRefreshToken: false, storage: undefined },
+        });
+        const { data: claimsData, error: claimsErr } = await supabase.auth.getClaims(token);
+        if (claimsErr || !claimsData?.claims?.sub) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+
         const body = (await request.json()) as { messages?: Msg[] };
         const messages = Array.isArray(body.messages) ? body.messages : [];
         const apiKey = process.env.LOVABLE_API_KEY;
