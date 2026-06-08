@@ -34,17 +34,17 @@ const COUNTRY_OPTIONS = ["United States", "Australia", "United Kingdom", "Canada
 
 type Country = (typeof COUNTRY_OPTIONS)[number];
 
-type Row = { id: string; domain: string; status: string; created_at: string };
+type Row = { id: number; domain: string; status: string; created_at: string | null };
 
 type Placement = {
-  id: string;
+  id: number;
   domain: string;
-  channel: string;
+  channel: string | null;
   hook: string | null;
   days_running: number | null;
   creative_url: string | null;
   raw: unknown;
-  created_at: string;
+  created_at: string | null;
 };
 
 type Sentiment = {
@@ -341,7 +341,7 @@ function AdvertisersPage() {
     }
   };
 
-  const removeDomain = async (_id: string, domain: string) => {
+  const removeDomain = async (_id: number, domain: string) => {
     const { error } = await supabase.from("domain_scans").delete().eq("domain", domain);
     if (error) return toast.error(error.message);
     toast(`${domain} removed`);
@@ -355,7 +355,7 @@ function AdvertisersPage() {
       return {
         ...p,
         brand: brandFromDomain(p.domain),
-        channelNorm: normalizeChannel(p.channel),
+        channelNorm: normalizeChannel(p.channel ?? ""),
         media,
         adType: adType(p, media.type),
         days: p.days_running ?? 0,
@@ -388,7 +388,7 @@ function AdvertisersPage() {
     list = [...list].sort((a, b) => {
       if (sortBy === "longest") return b.days - a.days;
       if (sortBy === "shortest") return a.days - b.days;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
     });
     return list;
   }, [enriched, activeAdvertiser, channelFilter, adTypeFilter, flightFilter, sortBy]);
@@ -619,7 +619,7 @@ function AdvertisersPage() {
                               {e.days}d flight
                             </span>
                             <span className="mono text-[10px] text-muted-foreground ml-auto">
-                              {new Date(e.created_at).toLocaleDateString()}
+                              {new Date(e.created_at ?? 0).toLocaleDateString()}
                             </span>
                           </div>
                         </div>
@@ -637,7 +637,7 @@ function AdvertisersPage() {
                           </span>
                         </DialogTitle>
                         <DialogDescription className="mono text-[10px]">
-                          {e.domain} · {e.days}d flight · {new Date(e.created_at).toLocaleDateString()}
+                          {e.domain} · {e.days}d flight · {new Date(e.created_at ?? 0).toLocaleDateString()}
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4">
