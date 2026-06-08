@@ -16,40 +16,37 @@ export type Database = {
     Tables: {
       ad_placements: {
         Row: {
-          channel: string
-          created_at: string
-          creative_url: string | null
-          days_running: number | null
+          ad_title: string | null
+          ad_type: string | null
+          channel_platform: string | null
+          created_at: string | null
           domain: string
-          hook: string | null
-          id: string
-          raw: Json | null
-          scan_id: string | null
-          user_id: string
+          id: number
+          media_url: string | null
+          raw_copy: string | null
+          scan_id: number | null
         }
         Insert: {
-          channel: string
-          created_at?: string
-          creative_url?: string | null
-          days_running?: number | null
+          ad_title?: string | null
+          ad_type?: string | null
+          channel_platform?: string | null
+          created_at?: string | null
           domain: string
-          hook?: string | null
-          id?: string
-          raw?: Json | null
-          scan_id?: string | null
-          user_id: string
+          id?: number
+          media_url?: string | null
+          raw_copy?: string | null
+          scan_id?: number | null
         }
         Update: {
-          channel?: string
-          created_at?: string
-          creative_url?: string | null
-          days_running?: number | null
+          ad_title?: string | null
+          ad_type?: string | null
+          channel_platform?: string | null
+          created_at?: string | null
           domain?: string
-          hook?: string | null
-          id?: string
-          raw?: Json | null
-          scan_id?: string | null
-          user_id?: string
+          id?: number
+          media_url?: string | null
+          raw_copy?: string | null
+          scan_id?: number | null
         }
         Relationships: [
           {
@@ -61,133 +58,77 @@ export type Database = {
           },
         ]
       }
+      advertiser_matrix: {
+        Row: {
+          created_at: string | null
+          domain: string
+          est_monthly_spend: number | null
+          google_pct: number | null
+          id: number
+          meta_pct: number | null
+          primary_channel: string | null
+          prog_pct: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          domain: string
+          est_monthly_spend?: number | null
+          google_pct?: number | null
+          id?: number
+          meta_pct?: number | null
+          primary_channel?: string | null
+          prog_pct?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          domain?: string
+          est_monthly_spend?: number | null
+          google_pct?: number | null
+          id?: number
+          meta_pct?: number | null
+          primary_channel?: string | null
+          prog_pct?: number | null
+        }
+        Relationships: []
+      }
       domain_scans: {
         Row: {
-          created_at: string
+          created_at: string | null
           domain: string
-          error: string | null
-          id: string
+          id: number
           status: string
-          updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           domain: string
-          error?: string | null
-          id?: string
+          id?: number
           status?: string
-          updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           domain?: string
-          error?: string | null
-          id?: string
+          id?: number
           status?: string
-          updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
-      integrations: {
+      system_config: {
         Row: {
-          apify_token: string | null
-          dataforseo_login: string | null
-          dataforseo_password: string | null
-          resend_api_key: string | null
-          updated_at: string
-          user_id: string
+          key: string
+          value: string
         }
         Insert: {
-          apify_token?: string | null
-          dataforseo_login?: string | null
-          dataforseo_password?: string | null
-          resend_api_key?: string | null
-          updated_at?: string
-          user_id: string
+          key: string
+          value: string
         }
         Update: {
-          apify_token?: string | null
-          dataforseo_login?: string | null
-          dataforseo_password?: string | null
-          resend_api_key?: string | null
-          updated_at?: string
-          user_id?: string
+          key?: string
+          value?: string
         }
         Relationships: []
-      }
-      profiles: {
-        Row: {
-          agency_domain: string | null
-          agency_name: string | null
-          created_at: string
-          id: string
-          stripe_status: string
-          updated_at: string
-        }
-        Insert: {
-          agency_domain?: string | null
-          agency_name?: string | null
-          created_at?: string
-          id: string
-          stripe_status?: string
-          updated_at?: string
-        }
-        Update: {
-          agency_domain?: string | null
-          agency_name?: string | null
-          created_at?: string
-          id?: string
-          stripe_status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      sentiment_insights: {
-        Row: {
-          blueprint: string | null
-          created_at: string
-          domain: string
-          friction: string | null
-          good: string | null
-          id: string
-          model: string | null
-          scan_id: string | null
-          user_id: string
-        }
-        Insert: {
-          blueprint?: string | null
-          created_at?: string
-          domain: string
-          friction?: string | null
-          good?: string | null
-          id?: string
-          model?: string | null
-          scan_id?: string | null
-          user_id: string
-        }
-        Update: {
-          blueprint?: string | null
-          created_at?: string
-          domain?: string
-          friction?: string | null
-          good?: string | null
-          id?: string
-          model?: string | null
-          scan_id?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sentiment_insights_scan_id_fkey"
-            columns: ["scan_id"]
-            isOneToOne: false
-            referencedRelation: "domain_scans"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
