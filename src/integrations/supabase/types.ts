@@ -18,33 +18,48 @@ export type Database = {
         Row: {
           ad_title: string | null
           ad_type: string | null
+          channel: string | null
           channel_platform: string | null
           created_at: string | null
+          creative_url: string | null
+          days_running: number | null
           domain: string
+          hook: string | null
           id: number
           media_url: string | null
+          raw: Json | null
           raw_copy: string | null
           scan_id: number | null
         }
         Insert: {
           ad_title?: string | null
           ad_type?: string | null
+          channel?: string | null
           channel_platform?: string | null
           created_at?: string | null
+          creative_url?: string | null
+          days_running?: number | null
           domain: string
+          hook?: string | null
           id?: number
           media_url?: string | null
+          raw?: Json | null
           raw_copy?: string | null
           scan_id?: number | null
         }
         Update: {
           ad_title?: string | null
           ad_type?: string | null
+          channel?: string | null
           channel_platform?: string | null
           created_at?: string | null
+          creative_url?: string | null
+          days_running?: number | null
           domain?: string
+          hook?: string | null
           id?: number
           media_url?: string | null
+          raw?: Json | null
           raw_copy?: string | null
           scan_id?: number | null
         }
@@ -114,6 +129,104 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      integrations: {
+        Row: {
+          apify_token: string | null
+          created_at: string
+          dataforseo_login: string | null
+          dataforseo_password: string | null
+          resend_api_key: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          apify_token?: string | null
+          created_at?: string
+          dataforseo_login?: string | null
+          dataforseo_password?: string | null
+          resend_api_key?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          apify_token?: string | null
+          created_at?: string
+          dataforseo_login?: string | null
+          dataforseo_password?: string | null
+          resend_api_key?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          agency_domain: string | null
+          agency_name: string | null
+          created_at: string
+          id: string
+          stripe_status: string
+          updated_at: string
+        }
+        Insert: {
+          agency_domain?: string | null
+          agency_name?: string | null
+          created_at?: string
+          id: string
+          stripe_status?: string
+          updated_at?: string
+        }
+        Update: {
+          agency_domain?: string | null
+          agency_name?: string | null
+          created_at?: string
+          id?: string
+          stripe_status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sentiment_insights: {
+        Row: {
+          blueprint: string | null
+          created_at: string
+          domain: string
+          friction: string | null
+          good: string | null
+          id: number
+          scan_id: number | null
+          user_id: string | null
+        }
+        Insert: {
+          blueprint?: string | null
+          created_at?: string
+          domain: string
+          friction?: string | null
+          good?: string | null
+          id?: number
+          scan_id?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          blueprint?: string | null
+          created_at?: string
+          domain?: string
+          friction?: string | null
+          good?: string | null
+          id?: number
+          scan_id?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sentiment_insights_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "domain_scans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_config: {
         Row: {
