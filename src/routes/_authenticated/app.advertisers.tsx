@@ -341,7 +341,7 @@ function AdvertisersPage() {
     }
   };
 
-  const removeDomain = async (_id: string, domain: string) => {
+  const removeDomain = async (_id: number, domain: string) => {
     const { error } = await supabase.from("domain_scans").delete().eq("domain", domain);
     if (error) return toast.error(error.message);
     toast(`${domain} removed`);
