@@ -126,9 +126,18 @@ type Placement = {
 
 type MediaKind = "video" | "image" | "iframe" | "none";
 
+function normalizeDomain(raw: string | null | undefined): string {
+  return (raw ?? "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
+}
+
 function brandFromDomain(domain: string) {
-  const root =
-    domain.replace(/^https?:\/\//, "").replace(/^www\./, "").split(/[./]/)[0] ?? domain;
+  const root = normalizeDomain(domain).split(/[./]/)[0] ?? domain;
   return root.charAt(0).toUpperCase() + root.slice(1);
 }
 
