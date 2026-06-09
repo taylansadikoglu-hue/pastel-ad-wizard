@@ -425,7 +425,7 @@ function MediaEmbed({
   }
 
   // Meta with no creative → social feed mockup
-  return <MetaFeedAdMockup brand={brand} body={body} />;
+  return <MetaFeedAdMockup brand={brand} body={body} domain={domain} />;
 }
 
 function AdvertisersPage() {
