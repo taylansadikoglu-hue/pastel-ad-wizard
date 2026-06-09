@@ -206,16 +206,32 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     };
   }, []);
 
-  // Continuous Inspiration Loop → ad_placements (any channel: Meta, Google, etc.)
+  // Continuous Inspiration Loop → ad_placements (channel = Meta/Google, ad_type = Image/Video)
   useEffect(() => {
     let active = true;
-    const mapRow = (p: { domain: string; channel: string | null; hook: string | null; days_running: number | null; creative_url: string | null; raw: unknown }) => {
+    const normalizeChan = (c: string | null): "Meta" | "Google" => {
+      const k = (c ?? "").toLowerCase();
+      if (k.includes("google") || k.includes("youtube") || k.includes("search")) return "Google";
+      return "Meta";
+    };
+    const normalizeType = (t: string | null, mt: "video" | "image" | "iframe" | "none"): "Video" | "Image" | "Other" => {
+      const k = (t ?? "").toLowerCase();
+      if (k.includes("video")) return "Video";
+      if (k.includes("image") || k.includes("photo")) return "Image";
+      if (mt === "video") return "Video";
+      if (mt === "image") return "Image";
+      return "Other";
+    };
+    const mapRow = (p: { domain: string; channel: string | null; ad_type: string | null; hook: string | null; days_running: number | null; creative_url: string | null; raw: unknown }) => {
       const extracted = extractMediaUrl(p.creative_url, p.raw);
       const hookText = safeText(p.hook, "").trim() || "Live creative — hook pending AI extraction.";
+      const chan = normalizeChan(p.channel);
       return {
         brand: brandFromDomain(safeText(p.domain)),
         hook: hookText,
-        channel: safeText(p.channel, "Live"),
+        channel: safeText(p.channel, chan),
+        channelNorm: chan,
+        adType: normalizeType(p.ad_type, extracted.type),
         days: typeof p.days_running === "number" ? p.days_running : 1,
         length: "0:--",
         aiTag: "Live",
@@ -224,27 +240,17 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       };
     };
     const load = async () => {
-      const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || "(unset)";
-      console.info("[ad_placements] query → from('ad_placements').select(*).order(created_at desc).limit(24) on", supabaseUrl);
       const { data, error } = await supabase
         .from("ad_placements")
-        .select("domain, channel, hook, days_running, creative_url, raw, created_at")
+        .select("domain, channel, ad_type, hook, days_running, creative_url, raw, created_at")
         .order("created_at", { ascending: false })
         .limit(24);
       if (error) {
         console.error("[ad_placements] query failed", error);
         return;
       }
-      console.info("[ad_placements] rows returned:", data?.length ?? 0);
-      if (data?.length) {
-        const byChannel: Record<string, number> = {};
-        for (const r of data) byChannel[r.channel ?? "(null)"] = (byChannel[r.channel ?? "(null)"] ?? 0) + 1;
-        console.info("[ad_placements] channel breakdown:", byChannel);
-      }
       if (!active || !data) return;
-      const mapped = data.map(mapRow);
-      console.info("[ad_placements] rows after mapping (rendered):", mapped.length);
-      setLivePlacements(mapped);
+      setLivePlacements(data.map(mapRow));
     };
     load();
 
@@ -265,69 +271,6 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     };
   }, []);
 
-
-  // Load saved integrations once
-  useEffect(() => {
-    getIntegrations()
-      .then((d) => {
-        if (!d) return;
-        if (d.apify_token) setApifyToken(d.apify_token);
-        if (d.dataforseo_login) setDfsLogin(d.dataforseo_login);
-        if (d.dataforseo_password) setDfsPassword(d.dataforseo_password);
-        if (d.resend_api_key) setResendKey(d.resend_api_key);
-      })
-      .catch(() => {});
-  }, []);
-
-
-  // Subscribe to live sentiment_insights for this user
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      const { data } = await supabase
-        .from("sentiment_insights")
-        .select("domain, good, friction, blueprint, created_at")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (active && data) setLiveSentiment(data);
-    };
-    load();
-    const channel = supabase
-      .channel("sentiment-live")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "sentiment_insights" },
-        (payload) => {
-          const r = payload.new as { domain: string; good: string | null; friction: string | null; blueprint: string | null };
-          setLiveSentiment((prev) => [r, ...prev].slice(0, 20));
-          toast.success(`New sentiment radar reading: ${r.domain}`);
-        }
-      )
-      .subscribe();
-    return () => {
-      active = false;
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const saveAllIntegrations = async () => {
-    setIntegSaving(true);
-    try {
-      await saveIntegrations({
-        data: {
-          apify_token: apifyToken || null,
-          dataforseo_login: dfsLogin || null,
-          dataforseo_password: dfsPassword || null,
-          resend_api_key: resendKey || null,
-        },
-      });
-      toast.success("Integrations saved");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setIntegSaving(false);
-    }
-  };
 
 
   const visible = rows.filter((r) => selected[r.name]);
