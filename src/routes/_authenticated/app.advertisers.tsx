@@ -221,6 +221,35 @@ function extractRawCopy(raw: unknown): string {
     .join("\n\n");
 }
 
+function luxuryTermForDomain(domain: string): string {
+  const d = (domain ?? "").toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "");
+  const map: Array<[RegExp, string]> = [
+    [/(^|\.)nab\.com\.au/, "Premium Banking Solutions"],
+    [/(^|\.)realestate\.com\.au/, "Premium Property Listing"],
+    [/(^|\.)domain\.com\.au/, "Premium Property Listing"],
+    [/(^|\.)commbank\.com\.au/, "Premium Banking Solutions"],
+    [/(^|\.)anz\.com(\.au)?/, "Premium Banking Solutions"],
+    [/(^|\.)westpac\.com\.au/, "Premium Banking Solutions"],
+    [/(^|\.)qantas\.com(\.au)?/, "Premium Travel Experiences"],
+    [/(^|\.)woolworths\.com\.au/, "Premium Grocery Selection"],
+    [/(^|\.)coles\.com\.au/, "Premium Grocery Selection"],
+  ];
+  for (const [re, label] of map) if (re.test(d)) return label;
+  return "Premium Targeted Campaign";
+}
+
+function sanitiseTemplate(text: string | null | undefined, domain: string): string {
+  if (!text) return "";
+  // Replace any {{ ... }} (including nested dotted paths) with a luxury term.
+  // Collapse adjacent replacements and tidy whitespace.
+  const term = luxuryTermForDomain(domain);
+  return text
+    .replace(/\{\{\s*[^{}]*?\s*\}\}/g, term)
+    .replace(/\{\{[\s\S]*?\}\}/g, term)
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 function GoogleSearchAdMockup({
   domain,
   hook,
@@ -234,6 +263,8 @@ function GoogleSearchAdMockup({
 }) {
   const isModal = size === "modal";
   const displayUrl = domain.replace(/^https?:\/\//, "").replace(/^www\./, "");
+  const safeHook = sanitiseTemplate(hook, domain) || luxuryTermForDomain(domain);
+  const safeBody = sanitiseTemplate(body, domain);
   return (
     <div
       className={`w-full bg-white text-left flex flex-col justify-center ${
@@ -256,7 +287,7 @@ function GoogleSearchAdMockup({
         }`}
         style={{ fontFamily: "arial, sans-serif" }}
       >
-        {hook}
+        {safeHook}
       </div>
       <div
         className={`text-gray-700 ${
@@ -264,7 +295,7 @@ function GoogleSearchAdMockup({
         }`}
         style={{ fontFamily: "arial, sans-serif" }}
       >
-        {body || `Discover what ${displayUrl} has to offer — official site.`}
+        {safeBody || `Discover what ${displayUrl} has to offer — official site.`}
       </div>
     </div>
   );
@@ -273,14 +304,17 @@ function GoogleSearchAdMockup({
 function MetaFeedAdMockup({
   brand,
   body,
+  domain = "",
   size = "card",
 }: {
   brand: string;
   body: string;
+  domain?: string;
   size?: "card" | "modal";
 }) {
   const isModal = size === "modal";
   const initial = brand.charAt(0).toUpperCase();
+  const safeBody = sanitiseTemplate(body, domain || brand);
   return (
     <div
       className={`w-full bg-white text-left flex flex-col ${
@@ -313,7 +347,7 @@ function MetaFeedAdMockup({
             isModal ? "text-sm leading-relaxed whitespace-pre-wrap" : "text-[11px] leading-snug line-clamp-3"
           }`}
         >
-          {body || `Discover the latest from ${brand}.`}
+          {safeBody || `Discover the latest from ${brand}.`}
         </p>
       </div>
       {isModal && (
@@ -391,7 +425,7 @@ function MediaEmbed({
   }
 
   // Meta with no creative → social feed mockup
-  return <MetaFeedAdMockup brand={brand} body={body} />;
+  return <MetaFeedAdMockup brand={brand} body={body} domain={domain} />;
 }
 
 function AdvertisersPage() {
@@ -870,11 +904,11 @@ function AdvertisersPage() {
                                 className="w-full max-h-[60vh] object-contain border-2 border-ink bg-secondary rounded-[3px]"
                               />
                             ) : (
-                              <MetaFeedAdMockup brand={e.brand} body={body || hook} size="modal" />
+                              <MetaFeedAdMockup brand={e.brand} body={body || hook} domain={e.domain} size="modal" />
                             )}
 
                             {(() => {
-                              const copy = (body || hook || "").trim();
+                              const copy = sanitiseTemplate((body || hook || "").trim(), e.domain);
                               const isThin = copy.length < 24;
                               return (
                                 <section
