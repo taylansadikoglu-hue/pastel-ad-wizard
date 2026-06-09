@@ -1127,6 +1127,86 @@ function AdvertisersPage() {
                               );
                             })()}
 
+                            {/* Strategy AI — client-ready strategist note */}
+                            {(() => {
+                              const r = (e.raw && typeof e.raw === "object" ? (e.raw as Record<string, unknown>) : {}) as Record<string, unknown>;
+                              const pick = (k: string): string => {
+                                const top = (e as unknown as Record<string, unknown>)[k];
+                                const v = (typeof top === "string" && top.trim()) ? top : (typeof r[k] === "string" ? (r[k] as string) : "");
+                                return (v ?? "").toString().trim();
+                              };
+                              const buyerStage = pick("buyer_stage") || "Unclassified";
+                              const offerType = pick("offer_type") || "Unclassified";
+                              const emotionalDriver = pick("emotional_driver") || "Unclassified";
+                              const hookAnalysis = pick("hook_analysis") || "No hook analysis available yet.";
+                              const takeaway = pick("strategist_takeaway") || "No strategist takeaway available yet.";
+                              const chips: Array<{ label: string; value: string }> = [
+                                { label: "Buyer Stage", value: buyerStage },
+                                { label: "Offer Type", value: offerType },
+                                { label: "Emotional Driver", value: emotionalDriver },
+                              ];
+                              return (
+                                <section
+                                  className="rounded-[6px] border border-ink/10 p-5 space-y-4"
+                                  style={{
+                                    background: "linear-gradient(180deg, #fbf6ea 0%, #f6efdc 100%)",
+                                    boxShadow: "0 1px 0 rgba(255,255,255,0.7) inset, 0 10px 28px -20px rgba(35,37,29,0.35)",
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+                                        style={{ background: "#c8a96a", color: "#2a2519" }}
+                                      >
+                                        AI
+                                      </span>
+                                      <h4 className="mono text-[11px] uppercase font-semibold tracking-[0.18em] text-ink/80">
+                                        Strategy AI
+                                      </h4>
+                                    </div>
+                                    <span className="mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "#9a7c3e" }}>
+                                      Strategist Note
+                                    </span>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    {chips.map((c) => (
+                                      <div
+                                        key={c.label}
+                                        className="rounded-[4px] border border-ink/10 bg-paper/70 px-3 py-2"
+                                      >
+                                        <div className="mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+                                          {c.label}
+                                        </div>
+                                        <div className="text-[13px] font-semibold text-ink mt-0.5 leading-snug">
+                                          {c.value}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                    <div className="mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                                      Hook Analysis
+                                    </div>
+                                    <p className="text-[13.5px] leading-[1.65] text-ink/90 whitespace-pre-wrap">
+                                      {hookAnalysis}
+                                    </p>
+                                  </div>
+
+                                  <div className="space-y-1.5 border-t border-ink/10 pt-3">
+                                    <div className="mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "#9a7c3e" }}>
+                                      Strategist Takeaway
+                                    </div>
+                                    <p className="text-[13.5px] leading-[1.65] text-ink font-medium whitespace-pre-wrap italic">
+                                      {takeaway}
+                                    </p>
+                                  </div>
+                                </section>
+                              );
+                            })()}
+
                             {/* Audience Sentiment Matrix */}
                             <section className="rounded-[6px] border border-ink/10 bg-paper p-5 space-y-4" style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -18px rgba(35,37,29,0.3)" }}>
                               <div className="flex items-center justify-between">
