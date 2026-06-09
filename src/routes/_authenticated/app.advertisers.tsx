@@ -599,36 +599,80 @@ function AdvertisersPage() {
                           {e.domain} · {e.days}d flight · {new Date(e.created_at ?? 0).toLocaleDateString()}
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-4">
-                        {e.media.url && e.media.type === "video" ? (
-                          <video
-                            controls
-                            autoPlay
-                            preload="metadata"
-                            className="w-full max-h-[60vh] bg-black border-2 border-ink object-contain rounded-[3px]"
-                            src={e.media.url}
-                          />
-                        ) : e.media.url && e.media.type === "image" ? (
-                          <img
-                            src={e.media.url}
-                            alt={e.hook ?? e.brand}
-                            className="w-full max-h-[60vh] object-contain border-2 border-ink bg-secondary rounded-[3px]"
-                          />
-                        ) : e.media.url ? (
-                          <iframe
-                            src={e.media.url}
-                            title={e.hook ?? e.brand}
-                            className="w-full h-[60vh] border-2 border-ink bg-secondary rounded-[3px]"
-                            sandbox="allow-scripts allow-same-origin"
-                          />
-                        ) : null}
-                        {e.hook && (
-                          <section>
-                            <h4 className="mono text-[10px] uppercase font-bold mb-1">Ad copy</h4>
-                            <p className="text-sm whitespace-pre-wrap">{e.hook}</p>
-                          </section>
-                        )}
-                      </div>
+                      {(() => {
+                        const isStaticImage =
+                          typeof e.creative_url === "string" &&
+                          /\.(jpe?g|png|gif|webp|avif)(\?|$)/i.test(e.creative_url);
+                        const isGoogle = e.channelNorm === "Google";
+                        const allowEmbed = !isGoogle && isStaticImage;
+                        const rawCopy = (() => {
+                          const out: string[] = [];
+                          const walk = (v: unknown, depth = 0) => {
+                            if (!v || depth > 5) return;
+                            if (typeof v === "string") {
+                              const s = v.trim();
+                              if (s && !/^https?:\/\//i.test(s) && s.length > 2) out.push(s);
+                            } else if (Array.isArray(v)) {
+                              v.forEach((x) => walk(x, depth + 1));
+                            } else if (typeof v === "object") {
+                              Object.values(v as Record<string, unknown>).forEach((x) =>
+                                walk(x, depth + 1),
+                              );
+                            }
+                          };
+                          walk(e.raw);
+                          return Array.from(new Set(out)).join("\n\n");
+                        })();
+                        return (
+                          <div className="space-y-4">
+                            {allowEmbed && e.media.url && e.media.type === "video" ? (
+                              <video
+                                controls
+                                autoPlay
+                                preload="metadata"
+                                className="w-full max-h-[60vh] bg-black border-2 border-ink object-contain rounded-[3px]"
+                                src={e.media.url}
+                              />
+                            ) : allowEmbed && e.media.url && e.media.type === "image" ? (
+                              <img
+                                src={e.media.url}
+                                alt={e.hook ?? e.brand}
+                                className="w-full max-h-[60vh] object-contain border-2 border-ink bg-secondary rounded-[3px]"
+                              />
+                            ) : (
+                              <article className="card-flat p-5 space-y-4 bg-paper">
+                                <h3 className="font-serif text-2xl font-bold leading-tight text-ink">
+                                  {e.hook ?? e.brand}
+                                </h3>
+                                {rawCopy && (
+                                  <div>
+                                    <h4 className="mono text-[10px] uppercase font-bold mb-2 text-muted-foreground">
+                                      Ad copy
+                                    </h4>
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-ink">
+                                      {rawCopy}
+                                    </p>
+                                  </div>
+                                )}
+                                {isGoogle && (
+                                  <div className="pt-2">
+                                    <span className="mono text-[10px] uppercase font-bold inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-ink rounded-[3px] bg-secondary">
+                                      <span className="inline-flex h-2 w-2 rounded-full bg-ink" />
+                                      Google Search Ad
+                                    </span>
+                                  </div>
+                                )}
+                              </article>
+                            )}
+                            {allowEmbed && e.hook && (
+                              <section>
+                                <h4 className="mono text-[10px] uppercase font-bold mb-1">Ad copy</h4>
+                                <p className="text-sm whitespace-pre-wrap">{e.hook}</p>
+                              </section>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </DialogContent>
                   </Dialog>
                   );
