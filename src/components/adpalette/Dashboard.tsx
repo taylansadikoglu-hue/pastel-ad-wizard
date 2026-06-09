@@ -562,7 +562,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r) => {
+                    {displayRows.map((r) => {
                       const primary = r.meta >= r.google && r.meta >= r.programmatic
                         ? "Meta" : r.google >= r.programmatic ? "Google" : "Programmatic";
                       return (
