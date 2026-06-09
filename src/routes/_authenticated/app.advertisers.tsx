@@ -483,7 +483,7 @@ function AdvertisersPage() {
   // filters
   const [channelFilter, setChannelFilter] = useState<string>("All");
   const [adTypeFilter, setAdTypeFilter] = useState<string>("All");
-  const [flightFilter, setFlightFilter] = useState<"all" | "short" | "long">("all");
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [sortBy, setSortBy] = useState<"recent" | "longest" | "shortest">("recent");
   const [activeAdvertiser, setActiveAdvertiser] = useState<string>("__all");
 
