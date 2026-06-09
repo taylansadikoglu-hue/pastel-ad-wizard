@@ -540,8 +540,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   </thead>
                   <tbody>
                     {displayRows.map((r) => {
-                      const primary = r.meta >= r.google && r.meta >= r.programmatic
-                        ? "Meta" : r.google >= r.programmatic ? "Google" : "Programmatic";
+                      const liveSpend = placementSpend.get(r.name);
                       return (
                         <tr key={r.name} className="border-b border-ink/30 last:border-0">
                           <td className="px-3 py-2.5">
@@ -549,12 +548,9 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                               className="w-4 h-4 accent-[var(--ink)] cursor-pointer" />
                           </td>
                           <td className="px-3 py-2.5 font-semibold">{r.name}</td>
-                          <td className="px-3 py-2.5 mono">{fmt(r.spend)}</td>
-                          <td className="px-3 py-2.5 mono">{r.meta}%</td>
-                          <td className="px-3 py-2.5 mono">{r.google}%</td>
-                          <td className="px-3 py-2.5 mono">{r.programmatic}%</td>
-                          <td className="px-3 py-2.5">
-                            <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">{primary}</span>
+                          <td className="px-3 py-2.5 mono">{typeof liveSpend === "number" && liveSpend > 0 ? fmt(liveSpend) : <span className="text-muted-foreground">Data unavailable</span>}</td>
+                          <td className="px-3 py-2.5 mono text-muted-foreground" colSpan={4}>
+                            Channel mix unavailable — awaiting live media-mix feed.
                           </td>
                         </tr>
                       );
@@ -563,7 +559,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <tfoot className="bg-secondary border-t-2 border-ink">
                     <tr>
                       <td colSpan={2} className="px-3 py-2 mono text-[11px] font-bold">SELECTED TOTAL</td>
-                      <td className="px-3 py-2 mono font-bold">{fmt(totalSpend)}</td>
+                      <td className="px-3 py-2 mono font-bold">{totalSpend > 0 ? fmt(totalSpend) : <span className="text-muted-foreground font-normal">Data unavailable</span>}</td>
                       <td colSpan={4} className="px-3 py-2 mono text-[10px] text-muted-foreground">{visible.length} of {rows.length} active</td>
                     </tr>
                   </tfoot>
