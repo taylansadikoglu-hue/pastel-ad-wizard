@@ -287,26 +287,45 @@ function AdvertisersPage() {
   };
 
   const removeDomain = async (_id: number, domain: string) => {
-    const { error } = await supabase.from("domain_scans").delete().eq("domain", domain);
-    if (error) return toast.error(error.message);
-    toast(`${domain} removed`);
-    load();
+    // Optimistic UI — clear from state first so the grid never references a deleted row.
+    setRows((prev) => prev.filter((r) => r.domain !== domain));
+    setPlacements((prev) => prev.filter((p) => p.domain !== domain));
+    setActiveAdvertiser((cur) => (cur === domain ? "__all" : cur));
+    try {
+      // Cascade: purge child rows first so foreign references can't orphan the UI.
+      await supabase.from("ad_placements").delete().eq("domain", domain);
+      const { error } = await supabase.from("domain_scans").delete().eq("domain", domain);
+      if (error) throw error;
+      toast(`${domain} removed`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to remove domain");
+    } finally {
+      load();
+    }
   };
 
-  // Enriched placements w/ derived fields
+  // Enriched placements w/ derived fields + AU market filter
   const enriched = useMemo(() => {
-    return placements.map((p) => {
-      const media = extractMediaUrl(p.creative_url, p.raw);
-      return {
-        ...p,
-        brand: brandFromDomain(p.domain),
-        channelNorm: normalizeChannel(p.channel ?? ""),
-        media,
-        adType: adType(p, media.type),
-        days: p.days_running ?? 0,
-      };
-    });
-  }, [placements]);
+    const auOnly = country === "Australia";
+    return placements
+      .filter((p) => !auOnly || !isForeignToAU(p.domain))
+      .map((p) => {
+        const media = extractMediaUrl(p.creative_url, p.raw);
+        return {
+          ...p,
+          brand: brandFromDomain(p.domain),
+          channelNorm: normalizeChannel(p.channel ?? ""),
+          media,
+          adType: adType(p, media.type),
+          days: p.days_running ?? 0,
+        };
+      });
+  }, [placements, country]);
+
+  const visibleRows = useMemo(
+    () => (country === "Australia" ? rows.filter((r) => !isForeignToAU(r.domain)) : rows),
+    [rows, country],
+  );
 
   const advertisers = useMemo(() => {
     const set = new Map<string, { domain: string; brand: string; count: number }>();
@@ -316,12 +335,12 @@ function AdvertisersPage() {
       set.set(e.domain, prev);
     }
     // also include tracked rows even if no placements
-    for (const r of rows) {
+    for (const r of visibleRows) {
       if (!set.has(r.domain))
         set.set(r.domain, { domain: r.domain, brand: brandFromDomain(r.domain), count: 0 });
     }
     return Array.from(set.values()).sort((a, b) => b.count - a.count);
-  }, [enriched, rows]);
+  }, [enriched, visibleRows]);
 
   const filtered = useMemo(() => {
     let list = enriched;
@@ -337,6 +356,7 @@ function AdvertisersPage() {
     });
     return list;
   }, [enriched, activeAdvertiser, channelFilter, adTypeFilter, flightFilter, sortBy]);
+
 
   const channelCounts = useMemo(() => {
     const base = { Meta: 0, Google: 0 } as Record<string, number>;
