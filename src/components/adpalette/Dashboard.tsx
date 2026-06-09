@@ -572,125 +572,134 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               </div>
             </div>
 
-            {/* Chart */}
+            {/* Chart — real channel mix grouped by channel + ad_type from ad_placements */}
             <div className="card-flat p-4">
-              <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
-                <div className="font-bold text-sm">Channel mix by spend</div>
-                <div className="flex items-center border-2 border-ink rounded-[3px] overflow-hidden">
-                  {([
-                    { k: "bar", label: "Bars", icon: BarChart3 },
-                    { k: "pie", label: "Pie", icon: PieIcon },
-                    { k: "table", label: "Table", icon: TableIcon },
-                  ] as const).map((v, i) => (
-                    <button
-                      key={v.k}
-                      onClick={() => setChartView(v.k)}
-                      className={`flex items-center gap-1 px-2 py-1 mono text-[10px] font-bold ${i > 0 ? "border-l-2 border-ink" : ""} ${chartView === v.k ? "bg-primary" : "bg-paper hover:bg-secondary"}`}
-                      aria-pressed={chartView === v.k}
-                    >
-                      <v.icon size={11} /> {v.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mono text-[10px] mb-3 flex-wrap">
-                {["Meta", "Google", "Prog."].map((l, i) => (
-                  <span key={l} className="flex items-center gap-1">
-                    <span className="w-3 h-3 border-2 border-ink" style={{ background: colors[i] }} />{l}
-                  </span>
-                ))}
-              </div>
-              {visible.length === 0 ? (
-                <div className="h-64 grid place-items-center mono text-xs text-muted-foreground border-2 border-dashed border-ink rounded-[4px]">
-                  Select at least one advertiser
-                </div>
-              ) : chartView === "bar" ? (
-                <div className="space-y-3">
-                  {visible.map((r) => (
-                    <div key={r.name}>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-semibold">{r.name}</span>
-                        <span className="mono text-muted-foreground">{fmt(r.spend)}</span>
+              {(() => {
+                const selectedBrands = new Set(
+                  Object.entries(selected).filter(([, v]) => v).map(([k]) => k),
+                );
+                const scoped = livePlacements.filter((p) => selectedBrands.has(p.brand));
+                const groups = { Meta: 0, "Google Search": 0, "Digital Video": 0, "Programmatic Display": 0 } as Record<string, number>;
+                for (const p of scoped) {
+                  if (p.channelNorm === "Meta") groups.Meta += 1;
+                  else if (p.channelNorm === "Google" && p.adType === "Video") groups["Digital Video"] += 1;
+                  else if (p.channelNorm === "Google") groups["Google Search"] += 1;
+                  else groups["Programmatic Display"] += 1;
+                }
+                const total = Object.values(groups).reduce((a, b) => a + b, 0);
+                const segs = (Object.keys(groups) as Array<keyof typeof groups>).map((k, i) => ({
+                  label: k as string,
+                  count: groups[k],
+                  pct: total ? Math.round((groups[k] / total) * 100) : 0,
+                  color: ["var(--primary)", "#23251D", "#A1A39A", "var(--pastel-peach)"][i],
+                }));
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+                      <div>
+                        <div className="font-bold text-sm">Channel mix by spend</div>
+                        <div className="mono text-[10px] text-muted-foreground">{total} live placements · {selectedBrands.size} advertiser{selectedBrands.size === 1 ? "" : "s"}</div>
                       </div>
-                      <div className="flex h-7 border-2 border-ink rounded-[3px] overflow-hidden">
-                        <div style={{ width: `${r.meta}%`, background: colors[0] }} className="border-r-2 border-ink grid place-items-center mono text-[10px] font-bold">{r.meta}</div>
-                        <div style={{ width: `${r.google}%`, background: colors[1], color: theme === "dark" ? "var(--ink)" : "#fff" }} className="border-r-2 border-ink grid place-items-center mono text-[10px] font-bold">{r.google}</div>
-                        <div style={{ width: `${r.programmatic}%`, background: colors[2] }} className="grid place-items-center mono text-[10px] font-bold">{r.programmatic}</div>
+                      <div className="flex items-center border-2 border-ink rounded-[3px] overflow-hidden">
+                        {([
+                          { k: "bar", label: "Bars", icon: BarChart3 },
+                          { k: "pie", label: "Pie", icon: PieIcon },
+                          { k: "table", label: "Table", icon: TableIcon },
+                        ] as const).map((v, i) => (
+                          <button
+                            key={v.k}
+                            onClick={() => setChartView(v.k)}
+                            className={`flex items-center gap-1 px-2 py-1 mono text-[10px] font-bold ${i > 0 ? "border-l-2 border-ink" : ""} ${chartView === v.k ? "bg-primary" : "bg-paper hover:bg-secondary"}`}
+                            aria-pressed={chartView === v.k}
+                          >
+                            <v.icon size={11} /> {v.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : chartView === "pie" ? (
-                (() => {
-                  const agg = visible.reduce(
-                    (a, r) => {
-                      a.meta += (r.meta * r.spend) / 100;
-                      a.google += (r.google * r.spend) / 100;
-                      a.prog += (r.programmatic * r.spend) / 100;
-                      return a;
-                    },
-                    { meta: 0, google: 0, prog: 0 }
-                  );
-                  const total = agg.meta + agg.google + agg.prog || 1;
-                  const segs = [
-                    { label: "Meta", value: agg.meta, color: colors[0] },
-                    { label: "Google", value: agg.google, color: colors[1] },
-                    { label: "Programmatic", value: agg.prog, color: colors[2] },
-                  ];
-                  const cx = 110, cy = 110, r = 95;
-                  let cum = 0;
-                  const arcs = segs.map((s) => {
-                    const start = (cum / total) * Math.PI * 2 - Math.PI / 2;
-                    cum += s.value;
-                    const end = (cum / total) * Math.PI * 2 - Math.PI / 2;
-                    const large = end - start > Math.PI ? 1 : 0;
-                    const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
-                    const x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
-                    const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-                    return { d, color: s.color, label: s.label, pct: Math.round((s.value / total) * 100) };
-                  });
-                  return (
-                    <div className="flex flex-col items-center gap-3">
-                      <svg viewBox="0 0 220 220" className="w-full max-w-[240px]">
-                        {arcs.map((a) => (
-                          <path key={a.label} d={a.d} fill={a.color} stroke="var(--ink)" strokeWidth={2} />
-                        ))}
-                      </svg>
-                      <div className="grid grid-cols-3 gap-2 w-full">
-                        {arcs.map((a) => (
-                          <div key={a.label} className="card-flat-sm p-2 text-center">
-                            <div className="mono text-[10px] uppercase">{a.label}</div>
-                            <div className="mono text-lg font-bold">{a.pct}%</div>
+                    <div className="flex flex-wrap items-center gap-2 mono text-[10px] mb-3">
+                      {segs.map((s) => (
+                        <span key={s.label} className="flex items-center gap-1">
+                          <span className="w-3 h-3 border-2 border-ink" style={{ background: s.color }} />{s.label}
+                        </span>
+                      ))}
+                    </div>
+                    {total === 0 ? (
+                      <div className="h-64 grid place-items-center mono text-xs text-muted-foreground border-2 border-dashed border-ink rounded-[4px]">
+                        No live placements for selected advertisers
+                      </div>
+                    ) : chartView === "bar" ? (
+                      <div className="space-y-3">
+                        {segs.map((s) => (
+                          <div key={s.label}>
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="font-semibold">{s.label}</span>
+                              <span className="mono text-muted-foreground">{s.count} · {s.pct}%</span>
+                            </div>
+                            <div className="h-7 border-2 border-ink rounded-[3px] overflow-hidden bg-paper">
+                              <div style={{ width: `${s.pct}%`, background: s.color }} className="h-full" />
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  );
-                })()
-              ) : (
-                <table className="w-full text-xs">
-                  <thead className="border-b-2 border-ink bg-secondary">
-                    <tr className="text-left">
-                      {["Advertiser", "Meta $", "Google $", "Prog. $", "Total"].map((h) => (
-                        <th key={h} className="px-2 py-1.5 mono text-[10px] uppercase">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visible.map((r) => (
-                      <tr key={r.name} className="border-b border-ink/30 last:border-0">
-                        <td className="px-2 py-1.5 font-semibold">{r.name}</td>
-                        <td className="px-2 py-1.5 mono">{fmt((r.meta * r.spend) / 100)}</td>
-                        <td className="px-2 py-1.5 mono">{fmt((r.google * r.spend) / 100)}</td>
-                        <td className="px-2 py-1.5 mono">{fmt((r.programmatic * r.spend) / 100)}</td>
-                        <td className="px-2 py-1.5 mono font-bold">{fmt(r.spend)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+                    ) : chartView === "pie" ? (
+                      (() => {
+                        const cx = 110, cy = 110, r = 95;
+                        let cum = 0;
+                        const arcs = segs.filter((s) => s.count > 0).map((s) => {
+                          const start = (cum / total) * Math.PI * 2 - Math.PI / 2;
+                          cum += s.count;
+                          const end = (cum / total) * Math.PI * 2 - Math.PI / 2;
+                          const large = end - start > Math.PI ? 1 : 0;
+                          const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
+                          const x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
+                          const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+                          return { d, color: s.color, label: s.label, pct: s.pct };
+                        });
+                        return (
+                          <div className="flex flex-col items-center gap-3">
+                            <svg viewBox="0 0 220 220" className="w-full max-w-[240px]">
+                              {arcs.map((a) => (
+                                <path key={a.label} d={a.d} fill={a.color} stroke="var(--ink)" strokeWidth={2} />
+                              ))}
+                            </svg>
+                            <div className="grid grid-cols-2 gap-2 w-full">
+                              {segs.map((a) => (
+                                <div key={a.label} className="card-flat-sm p-2 text-center">
+                                  <div className="mono text-[10px] uppercase">{a.label}</div>
+                                  <div className="mono text-lg font-bold">{a.pct}%</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <table className="w-full text-xs">
+                        <thead className="border-b-2 border-ink bg-secondary">
+                          <tr className="text-left">
+                            {["Channel grouping", "Placements", "Share"].map((h) => (
+                              <th key={h} className="px-2 py-1.5 mono text-[10px] uppercase">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {segs.map((s) => (
+                            <tr key={s.label} className="border-b border-ink/30 last:border-0">
+                              <td className="px-2 py-1.5 font-semibold">{s.label}</td>
+                              <td className="px-2 py-1.5 mono">{s.count}</td>
+                              <td className="px-2 py-1.5 mono font-bold">{s.pct}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
+
 
 
 
