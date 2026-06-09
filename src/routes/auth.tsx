@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+
 import { ThemeProvider } from "@/components/adpalette/theme";
 
 export const Route = createFileRoute("/auth")({
@@ -56,14 +56,6 @@ function AuthPage() {
     }
   };
 
-  const google = async () => {
-    setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/app` });
-    if (result.error) {
-      toast.error(result.error.message ?? "Google sign-in failed");
-      setLoading(false);
-    }
-  };
 
   return (
     <ThemeProvider>
@@ -80,13 +72,6 @@ function AuthPage() {
             <p className="text-sm text-muted-foreground mt-1">Track every competitor ad placement, live.</p>
           </div>
 
-          <button onClick={google} disabled={loading} className="btn-flat w-full justify-center">
-            Continue with Google
-          </button>
-
-          <div className="flex items-center gap-2 mono text-[11px] text-muted-foreground">
-            <div className="flex-1 border-t-2 border-ink" /> OR <div className="flex-1 border-t-2 border-ink" />
-          </div>
 
           <form onSubmit={submit} className="space-y-3">
             <div>
