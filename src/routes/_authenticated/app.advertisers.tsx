@@ -815,20 +815,11 @@ function AdvertisersPage() {
               <Globe size={12} className="text-primary" /> Net Public Resonance
             </div>
             <div className="flex items-center gap-3">
-              <span
-                className={cn(
-                  "inline-flex items-center justify-center min-w-[68px] h-9 px-3 rounded-full text-[15px] font-bold tabular-nums border",
-                  ribbon.resonance >= 60
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : ribbon.resonance >= 45
-                      ? "bg-amber-50 text-amber-800 border-amber-200"
-                      : "bg-rose-50 text-rose-800 border-rose-200",
-                )}
-              >
-                {ribbon.resonance}%
+              <span className="inline-flex items-center justify-center h-9 px-3 rounded-full text-[12px] font-semibold border bg-ink/5 text-muted-foreground border-ink/10">
+                Data unavailable
               </span>
               <span className="text-[11px] text-muted-foreground leading-snug">
-                Weighted audience sentiment index synthesised from parsed comment streams.
+                Awaiting live sentiment ingestion pipeline.
               </span>
             </div>
           </div>
