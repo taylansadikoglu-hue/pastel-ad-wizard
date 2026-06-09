@@ -678,6 +678,27 @@ function AdvertisersPage() {
     return base;
   }, [enriched, activeAdvertiser]);
 
+  // Executive ribbon aggregates — derived purely from already-loaded data.
+  const ribbon = useMemo(() => {
+    const scopedRows = activeAdvertiser === "__all"
+      ? visibleRows
+      : visibleRows.filter((r) => r.domain === activeAdvertiser);
+    const spend = scopedRows.reduce((s, r) => s + (Number(r.estimated_monthly_spend) || 0), 0);
+    const scopedPl = activeAdvertiser === "__all"
+      ? enriched
+      : enriched.filter((e) => e.domain === activeAdvertiser);
+    const meta = scopedPl.filter((e) => e.channelNorm === "Meta").length;
+    const google = scopedPl.filter((e) => e.channelNorm === "Google").length;
+    const total = scopedPl.length;
+    let resonance = 0;
+    if (total > 0) {
+      const sum = scopedPl.reduce((s, e) => s + sentimentFor(e.id).score, 0);
+      // Map score (-1..1) → 0..100 around a 50 baseline
+      resonance = Math.round(((sum / total) + 1) * 50);
+    }
+    return { spend, meta, google, total, resonance };
+  }, [visibleRows, enriched, activeAdvertiser]);
+
   return (
     <WorkspaceShell
       title="Advertiser Hub"
