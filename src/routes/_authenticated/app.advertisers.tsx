@@ -908,7 +908,7 @@ function AdvertisersPage() {
                             )}
 
                             {(() => {
-                              const copy = (body || hook || "").trim();
+                              const copy = sanitiseTemplate((body || hook || "").trim(), e.domain);
                               const isThin = copy.length < 24;
                               return (
                                 <section
