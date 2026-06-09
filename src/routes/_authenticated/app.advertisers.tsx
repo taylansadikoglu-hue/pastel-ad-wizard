@@ -743,6 +743,16 @@ function AdvertisersPage() {
             </div>
           </div>
 
+          {/* Brand detail metric blocks — only when a specific advertiser is active */}
+          {activeAdvertiser !== "__all" && (() => {
+            const row = rows.find((r) => r.domain === activeAdvertiser);
+            return row ? (
+              <div className="mt-3">
+                <BrandMetricBlocks row={row} />
+              </div>
+            ) : null;
+          })()}
+
           {/* Grid */}
           <TabsContent value={activeAdvertiser} className="mt-3">
             {loading ? (
