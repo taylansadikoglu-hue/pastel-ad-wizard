@@ -72,13 +72,6 @@ function AuthPage() {
             <p className="text-sm text-muted-foreground mt-1">Track every competitor ad placement, live.</p>
           </div>
 
-          <button onClick={google} disabled={loading} className="btn-flat w-full justify-center">
-            Continue with Google
-          </button>
-
-          <div className="flex items-center gap-2 mono text-[11px] text-muted-foreground">
-            <div className="flex-1 border-t-2 border-ink" /> OR <div className="flex-1 border-t-2 border-ink" />
-          </div>
 
           <form onSubmit={submit} className="space-y-3">
             <div>
