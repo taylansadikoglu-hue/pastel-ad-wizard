@@ -605,27 +605,6 @@ function AdvertisersPage() {
                             <p className="text-sm whitespace-pre-wrap">{e.hook}</p>
                           </section>
                         )}
-                        {blueprintText && (
-                          <section>
-                            <h4 className="mono text-[10px] uppercase font-bold mb-1">Blueprint</h4>
-                            <p className="text-sm whitespace-pre-wrap">{blueprintText}</p>
-                          </section>
-                        )}
-                        {goodText && (
-                          <section>
-                            <h4 className="mono text-[10px] uppercase font-bold mb-1">What audiences love</h4>
-                            <p className="text-sm whitespace-pre-wrap">{goodText}</p>
-                          </section>
-                        )}
-                        {frictionText && (
-                          <section>
-                            <h4 className="mono text-[10px] uppercase font-bold mb-1">Friction</h4>
-                            <p className="text-sm whitespace-pre-wrap">{frictionText}</p>
-                          </section>
-                        )}
-                        {!goodText && !frictionText && !blueprintText && (
-                          <p className="text-xs text-muted-foreground">No sentiment analysis available yet for {e.brand}.</p>
-                        )}
                       </div>
                     </DialogContent>
                   </Dialog>
