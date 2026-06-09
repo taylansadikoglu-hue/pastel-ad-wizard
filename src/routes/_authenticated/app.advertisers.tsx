@@ -135,7 +135,11 @@ type Placement = {
   category: string | null;
   campaign_cluster: string | null;
   scan_id: number | null;
+  product_type: string | null;
+  offer_signal: string | null;
+  primary_cta: string | null;
 };
+
 
 
 // Pull a strategist field from a placement (top-level column or nested in `raw`).
