@@ -904,7 +904,7 @@ function AdvertisersPage() {
                                 className="w-full max-h-[60vh] object-contain border-2 border-ink bg-secondary rounded-[3px]"
                               />
                             ) : (
-                              <MetaFeedAdMockup brand={e.brand} body={body || hook} size="modal" />
+                              <MetaFeedAdMockup brand={e.brand} body={body || hook} domain={e.domain} size="modal" />)
                             )}
 
                             {(() => {
