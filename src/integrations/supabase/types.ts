@@ -42,11 +42,14 @@ export type Database = {
           landing_url: string | null
           last_seen: string | null
           media_url: string | null
+          offer_signal: string | null
           offer_theme: string | null
           offer_type: string | null
           page_description: string | null
           page_title: string | null
+          primary_cta: string | null
           product_category: string | null
+          product_type: string | null
           raw: Json | null
           raw_copy: string | null
           scan_id: number | null
@@ -82,11 +85,14 @@ export type Database = {
           landing_url?: string | null
           last_seen?: string | null
           media_url?: string | null
+          offer_signal?: string | null
           offer_theme?: string | null
           offer_type?: string | null
           page_description?: string | null
           page_title?: string | null
+          primary_cta?: string | null
           product_category?: string | null
+          product_type?: string | null
           raw?: Json | null
           raw_copy?: string | null
           scan_id?: number | null
@@ -122,11 +128,14 @@ export type Database = {
           landing_url?: string | null
           last_seen?: string | null
           media_url?: string | null
+          offer_signal?: string | null
           offer_theme?: string | null
           offer_type?: string | null
           page_description?: string | null
           page_title?: string | null
+          primary_cta?: string | null
           product_category?: string | null
+          product_type?: string | null
           raw?: Json | null
           raw_copy?: string | null
           scan_id?: number | null
