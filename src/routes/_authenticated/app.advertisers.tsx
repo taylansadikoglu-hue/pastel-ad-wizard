@@ -149,7 +149,7 @@ function extractRawCopy(raw: unknown): string {
   const uniq = Array.from(new Set(out));
   // Drop boilerplate fluff
   return uniq
-    .filter((s) => !/social media placement content optimized/i.test(s))
+    .filter((s) => !/social media placement content optimi[sz]ed/i.test(s))
     .join("\n\n");
 }
 
