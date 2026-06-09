@@ -299,17 +299,6 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
   const isAdmin = userEmail === ADMIN_EMAIL;
 
-  // Force non-admins off the integrations tab
-  useEffect(() => {
-    if (!isAdmin && activeTab === "integrations") setActiveTab("gallery");
-  }, [isAdmin, activeTab]);
-
-  // Honor ?tab=integrations from sidebar nav link
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("tab") === "integrations" && isAdmin) setActiveTab("integrations");
-  }, [isAdmin]);
 
   const exportCSV = () => {
     const esc = (v: unknown) => {
