@@ -28,6 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ScanStatusPill } from "@/components/adpalette/ScanStatusPill";
 
 const MAX_BRANDS = 7;
 const COUNTRY_OPTIONS = ["Australia", "United States", "United Kingdom", "Canada"] as const;
@@ -427,9 +428,8 @@ function AdvertisersPage() {
                 >
                   <span className="font-semibold text-sm">{brandFromDomain(r.domain)}</span>
                   <span className="mono text-[10px] text-muted-foreground">{r.domain}</span>
-                  <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px]">
-                    {r.status}
-                  </span>
+                  <ScanStatusPill status={r.status} />
+                  
                   <button
                     onClick={() => removeDomain(r.id, r.domain)}
                     className="text-muted-foreground hover:text-foreground"
