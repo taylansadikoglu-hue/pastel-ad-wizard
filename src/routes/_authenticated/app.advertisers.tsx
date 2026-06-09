@@ -176,7 +176,7 @@ function MediaEmbed({
 function AdvertisersPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
-  const [input, _setInput] = useState("");
+  const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [country, setCountry] = useState<Country>("United States");
   const [busy, setBusy] = useState(false);
