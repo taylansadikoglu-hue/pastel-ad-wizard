@@ -153,10 +153,6 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       const initials = (parts[0]?.[0] ?? "Y") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "");
       setUserInitials(initials.toUpperCase().slice(0, 2));
       setChatLog([{ role: "ai", text: `Hi ${display.split(" ")[0]} — ask me anything about the tracked advertisers' creative.` }]);
-      try {
-        const p = await getProfile();
-        if (active && p?.agency_domain) setAgencyDomain(p.agency_domain);
-      } catch {}
     })();
     return () => { active = false; };
   }, []);
