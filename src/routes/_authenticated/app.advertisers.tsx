@@ -347,7 +347,7 @@ function MetaFeedAdMockup({
             isModal ? "text-sm leading-relaxed whitespace-pre-wrap" : "text-[11px] leading-snug line-clamp-3"
           }`}
         >
-          {body || `Discover the latest from ${brand}.`}
+          {safeBody || `Discover the latest from ${brand}.`}
         </p>
       </div>
       {isModal && (
