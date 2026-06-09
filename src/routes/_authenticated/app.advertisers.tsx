@@ -117,18 +117,10 @@ function extractMediaUrl(
   return direct ?? fallback ?? { url: null, type: "none" };
 }
 
-function adType(p: Placement, mediaType: MediaKind): "Video" | "Image" | "Carousel" | "Other" {
-  const r = p.raw as Record<string, unknown> | null;
-  if (r && typeof r === "object") {
-    const t = String(
-      (r as Record<string, unknown>).ad_type ??
-        (r as Record<string, unknown>).type ??
-        "",
-    ).toLowerCase();
-    if (t.includes("carousel")) return "Carousel";
-    if (t.includes("video")) return "Video";
-    if (t.includes("image") || t.includes("photo")) return "Image";
-  }
+function adType(p: Placement, mediaType: MediaKind): "Video" | "Image" | "Other" {
+  const t = (p.ad_type ?? "").toLowerCase();
+  if (t.includes("video")) return "Video";
+  if (t.includes("image") || t.includes("photo")) return "Image";
   if (mediaType === "video") return "Video";
   if (mediaType === "image") return "Image";
   return "Other";
