@@ -414,13 +414,13 @@ function AdvertisersPage() {
         </div>
 
         {/* Tracked brands strip */}
-        {rows.length > 0 && (
+        {visibleRows.length > 0 && (
           <div className="card-flat overflow-hidden">
             <div className="px-4 py-3 border-b-2 border-ink bg-secondary mono text-[10px] uppercase font-bold">
               Tracked brands
             </div>
             <div className="flex flex-wrap gap-2 p-3">
-              {rows.map((r) => (
+              {visibleRows.map((r) => (
                 <div
                   key={r.id}
                   className="flex items-center gap-2 border-2 border-ink rounded-[3px] bg-paper px-2 py-1"
