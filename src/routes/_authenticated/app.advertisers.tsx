@@ -690,13 +690,7 @@ function AdvertisersPage() {
     const meta = scopedPl.filter((e) => e.channelNorm === "Meta").length;
     const google = scopedPl.filter((e) => e.channelNorm === "Google").length;
     const total = scopedPl.length;
-    let resonance = 0;
-    if (total > 0) {
-      const sum = scopedPl.reduce((s, e) => s + sentimentFor(e.id).score, 0);
-      // Map score (-1..1) → 0..100 around a 50 baseline
-      resonance = Math.round(((sum / total) + 1) * 50);
-    }
-    return { spend, meta, google, total, resonance };
+    return { spend, meta, google, total };
   }, [visibleRows, enriched, activeAdvertiser]);
 
   return (
