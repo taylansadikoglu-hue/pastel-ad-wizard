@@ -304,14 +304,17 @@ function GoogleSearchAdMockup({
 function MetaFeedAdMockup({
   brand,
   body,
+  domain = "",
   size = "card",
 }: {
   brand: string;
   body: string;
+  domain?: string;
   size?: "card" | "modal";
 }) {
   const isModal = size === "modal";
   const initial = brand.charAt(0).toUpperCase();
+  const safeBody = sanitiseTemplate(body, domain || brand);
   return (
     <div
       className={`w-full bg-white text-left flex flex-col ${
