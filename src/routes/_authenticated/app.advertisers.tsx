@@ -715,7 +715,8 @@ function AdvertisersPage() {
     const meta = scopedPl.filter((e) => e.channelNorm === "Meta").length;
     const google = scopedPl.filter((e) => e.channelNorm === "Google").length;
     const total = scopedPl.length;
-    return { spend, meta, google, total };
+    const strategy = scopedPl.filter((e) => hasAnyStrategy(e)).length;
+    return { spend, meta, google, total, strategy };
   }, [visibleRows, enriched, activeAdvertiser]);
 
   return (
