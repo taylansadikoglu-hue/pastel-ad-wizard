@@ -56,12 +56,10 @@ function brandFromDomain(domain: string) {
   return root.charAt(0).toUpperCase() + root.slice(1);
 }
 
-function normalizeChannel(c: string): "Meta" | "Google" | "TikTok" | "Programmatic" {
+function normalizeChannel(c: string): "Meta" | "Google" {
   const k = (c || "").toLowerCase();
-  if (k.includes("meta") || k.includes("facebook") || k.includes("instagram")) return "Meta";
   if (k.includes("google") || k.includes("youtube") || k.includes("search")) return "Google";
-  if (k.includes("tiktok")) return "TikTok";
-  return "Programmatic";
+  return "Meta";
 }
 
 function extractMediaUrl(
