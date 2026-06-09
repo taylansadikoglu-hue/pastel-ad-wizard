@@ -42,7 +42,75 @@ function isForeignToAU(domain: string): boolean {
 
 type Country = (typeof COUNTRY_OPTIONS)[number];
 
-type Row = { id: number; domain: string; status: string; created_at: string | null };
+type Row = {
+  id: number;
+  domain: string;
+  status: string;
+  created_at: string | null;
+  estimated_monthly_spend: number | null;
+  total_paid_keywords: number | null;
+  average_cpc: number | null;
+};
+
+const AUD = new Intl.NumberFormat("en-AU", {
+  style: "currency",
+  currency: "AUD",
+  maximumFractionDigits: 0,
+});
+const AUD_DEC = new Intl.NumberFormat("en-AU", {
+  style: "currency",
+  currency: "AUD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const NUM = new Intl.NumberFormat("en-AU");
+
+function BrandMetricBlocks({ row }: { row: Row }) {
+  const spend = row.estimated_monthly_spend;
+  const kw = row.total_paid_keywords;
+  const cpc = row.average_cpc;
+  const cards = [
+    {
+      label: "Est. Monthly Search Acquisition Share",
+      value: spend != null ? `AUD ${AUD.format(Number(spend))}` : "—",
+      subtext:
+        "Proprietary market indexing indicates the target is maintaining a high-priority budget pacing to dominate top-of-funnel Australian visibility share.",
+    },
+    {
+      label: "Active High-Intent Paid Target Keywords",
+      value: kw != null ? NUM.format(Number(kw)) : "—",
+      subtext:
+        "Total unique high-yield search vectors currently captured across active local acquisition clusters.",
+    },
+    {
+      label: "Average Calculated Cost-Per-Click Rate",
+      value: cpc != null ? `AUD ${AUD_DEC.format(Number(cpc))}` : "—",
+      subtext:
+        "Aggregated valuation price-point required to anchor placement tracking parameters across the Australian market landscape.",
+    },
+  ];
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {cards.map((c) => (
+        <div
+          key={c.label}
+          className="border border-ink/90 rounded-[3px] bg-canvas p-5 flex flex-col gap-2"
+          style={{ boxShadow: "0 1px 0 0 rgba(0,0,0,0.04)" }}
+        >
+          <div className="mono text-[10px] uppercase tracking-[0.14em] font-bold text-ink/70">
+            {c.label}
+          </div>
+          <div className="text-3xl font-bold tracking-tight text-ink leading-none mt-1">
+            {c.value}
+          </div>
+          <div className="h-px bg-ink/15 my-1" />
+          <p className="text-[11px] leading-relaxed text-muted-foreground">{c.subtext}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 type Placement = {
   id: number;
