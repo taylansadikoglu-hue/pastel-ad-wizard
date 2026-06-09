@@ -263,6 +263,8 @@ function GoogleSearchAdMockup({
 }) {
   const isModal = size === "modal";
   const displayUrl = domain.replace(/^https?:\/\//, "").replace(/^www\./, "");
+  const safeHook = sanitiseTemplate(hook, domain) || luxuryTermForDomain(domain);
+  const safeBody = sanitiseTemplate(body, domain);
   return (
     <div
       className={`w-full bg-white text-left flex flex-col justify-center ${
