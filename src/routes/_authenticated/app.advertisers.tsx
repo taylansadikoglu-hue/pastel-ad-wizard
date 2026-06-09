@@ -466,6 +466,7 @@ function AdvertisersPage() {
           media,
           adType: adType(p, media.type),
           days: p.days_running ?? 0,
+          body: extractRawCopy(p.raw),
         };
       });
   }, [placements, country]);
