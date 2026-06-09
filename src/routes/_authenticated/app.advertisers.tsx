@@ -183,7 +183,7 @@ function AdvertisersPage() {
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const [country, setCountry] = useState<Country>("United States");
+  const [country, setCountry] = useState<Country>("Australia");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
