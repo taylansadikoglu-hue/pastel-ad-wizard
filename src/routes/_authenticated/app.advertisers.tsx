@@ -807,21 +807,43 @@ function AdvertisersPage() {
               <option value="Image">Image</option>
             </select>
 
-            <div className="flex items-center gap-1">
-              {([
-                { v: "all", l: "All flights" },
-                { v: "short", l: "< 14 days" },
-                { v: "long", l: "14+ days" },
-              ] as const).map((f) => (
+            <Popover>
+              <PopoverTrigger asChild>
                 <button
-                  key={f.v}
-                  onClick={() => setFlightFilter(f.v)}
-                  className={`btn-flat text-[11px] px-2 py-1 ${flightFilter === f.v ? "btn-primary" : ""}`}
+                  className={cn(
+                    "btn-flat text-[11px] px-2.5 py-1 gap-1.5",
+                    (dateRange.from || dateRange.to) && "btn-primary",
+                  )}
                 >
-                  {f.l}
+                  <CalendarIcon size={12} />
+                  {dateRange.from && dateRange.to
+                    ? `${format(dateRange.from, "d MMM")} – ${format(dateRange.to, "d MMM yyyy")}`
+                    : dateRange.from
+                      ? `${format(dateRange.from, "d MMM yyyy")} →`
+                      : "Date range"}
+                  {(dateRange.from || dateRange.to) && (
+                    <X
+                      size={11}
+                      className="ml-1 opacity-70 hover:opacity-100"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setDateRange({});
+                      }}
+                    />
+                  )}
                 </button>
-              ))}
-            </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-50" align="start">
+                <Calendar
+                  mode="range"
+                  selected={{ from: dateRange.from, to: dateRange.to }}
+                  onSelect={(r) => setDateRange({ from: r?.from, to: r?.to })}
+                  numberOfMonths={2}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
 
             <div className="ml-auto flex items-center gap-2">
               <span className="mono text-[10px] uppercase text-muted-foreground">Sort</span>
