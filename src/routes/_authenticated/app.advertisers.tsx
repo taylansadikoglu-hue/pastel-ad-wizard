@@ -126,7 +126,32 @@ type Placement = {
   creative_url: string | null;
   raw: unknown;
   created_at: string | null;
+  buyer_stage: string | null;
+  offer_type: string | null;
+  emotional_driver: string | null;
+  hook_analysis: string | null;
+  strategist_takeaway: string | null;
 };
+
+// Pull a strategist field from a placement (top-level column or nested in `raw`).
+function strategyField(p: Placement, key: "buyer_stage" | "offer_type" | "emotional_driver" | "hook_analysis" | "strategist_takeaway"): string {
+  const top = (p as unknown as Record<string, unknown>)[key];
+  if (typeof top === "string" && top.trim()) return top.trim();
+  const raw = p.raw && typeof p.raw === "object" ? (p.raw as Record<string, unknown>) : null;
+  const nested = raw ? raw[key] : null;
+  if (typeof nested === "string" && nested.trim()) return nested.trim();
+  return "";
+}
+
+function hasAnyStrategy(p: Placement): boolean {
+  return Boolean(
+    strategyField(p, "buyer_stage") ||
+      strategyField(p, "offer_type") ||
+      strategyField(p, "emotional_driver") ||
+      strategyField(p, "hook_analysis") ||
+      strategyField(p, "strategist_takeaway"),
+  );
+}
 
 type MediaKind = "video" | "image" | "iframe" | "none";
 
@@ -497,7 +522,7 @@ function AdvertisersPage() {
         .order("created_at", { ascending: false }),
       supabase
         .from("ad_placements")
-        .select("id, domain, channel, ad_type, hook, days_running, creative_url, raw, created_at")
+        .select("id, domain, channel, ad_type, hook, days_running, creative_url, raw, created_at, buyer_stage, offer_type, emotional_driver, hook_analysis, strategist_takeaway")
         .order("created_at", { ascending: false })
         .limit(500),
     ]);
@@ -690,7 +715,8 @@ function AdvertisersPage() {
     const meta = scopedPl.filter((e) => e.channelNorm === "Meta").length;
     const google = scopedPl.filter((e) => e.channelNorm === "Google").length;
     const total = scopedPl.length;
-    return { spend, meta, google, total };
+    const strategy = scopedPl.filter((e) => hasAnyStrategy(e)).length;
+    return { spend, meta, google, total, strategy };
   }, [visibleRows, enriched, activeAdvertiser]);
 
   return (
@@ -806,16 +832,34 @@ function AdvertisersPage() {
           </div>
           <div className="flex flex-col gap-2 md:border-l md:border-ink/10 md:pl-5">
             <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
-              <Globe size={12} className="text-primary" /> Net Public Resonance
+              <Globe size={12} className="text-primary" /> Strategy AI Coverage
             </div>
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center justify-center h-9 px-3 rounded-full text-[12px] font-semibold border bg-ink/5 text-muted-foreground border-ink/10">
-                Data unavailable
-              </span>
-              <span className="text-[11px] text-muted-foreground leading-snug">
-                Awaiting live sentiment ingestion pipeline.
-              </span>
-            </div>
+            {ribbon.strategy > 0 ? (
+              <>
+                <div className="flex items-end gap-3">
+                  <div className="text-[28px] font-bold tracking-tight leading-none text-ink tabular-nums">
+                    {ribbon.strategy}
+                    <span className="text-[14px] font-semibold text-muted-foreground"> / {ribbon.total}</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold pb-1" style={{ color: "#9a7c3e" }}>
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#c8a96a" }} />
+                    {ribbon.total ? Math.round((ribbon.strategy / ribbon.total) * 100) : 0}% analysed
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-ink/5 overflow-hidden">
+                  <div className="h-full" style={{ width: ribbon.total ? `${(ribbon.strategy / ribbon.total) * 100}%` : "0%", background: "#c8a96a" }} />
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center justify-center h-9 px-3 rounded-full text-[12px] font-semibold border bg-ink/5 text-muted-foreground border-ink/10">
+                  Strategy AI pending
+                </span>
+                <span className="text-[11px] text-muted-foreground leading-snug">
+                  Strategist analysis will appear here once placements are processed.
+                </span>
+              </div>
+            )}
           </div>
         </section>
 
@@ -979,6 +1023,7 @@ function AdvertisersPage() {
                           </p>
                           {(() => {
                             const variants = enriched.filter((x) => x.domain === e.domain).length;
+                            const hasStrategy = hasAnyStrategy(e);
                             return (
                               <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-ink/10">
                                 <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px] inline-flex items-center gap-1">
@@ -989,6 +1034,19 @@ function AdvertisersPage() {
                                   <span className={`h-1.5 w-1.5 rounded-full ${e.channelNorm === "Meta" ? "bg-[#1877f2]" : "bg-[#1a73e8]"}`} />
                                   ×{variants}
                                 </span>
+                                {hasStrategy ? (
+                                  <span
+                                    className="mono text-[10px] px-1.5 py-0.5 rounded-[3px] inline-flex items-center gap-1 border"
+                                    style={{ background: "#fbf1d4", color: "#7a5f24", borderColor: "rgba(200,169,106,0.55)" }}
+                                  >
+                                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#c8a96a" }} />
+                                    Strategy AI
+                                  </span>
+                                ) : (
+                                  <span className="mono text-[10px] px-1.5 py-0.5 rounded-[3px] inline-flex items-center gap-1 border border-ink/10 bg-ink/5 text-muted-foreground">
+                                    Strategy AI pending
+                                  </span>
+                                )}
                                 <span className="mono text-[10px] text-muted-foreground ml-auto">
                                   {format(new Date(e.created_at ?? Date.now()), "d MMM")}
                                 </span>
@@ -1219,20 +1277,30 @@ function AdvertisersPage() {
                             })()}
 
 
-                            {/* Audience Sentiment Matrix — hidden until live sentiment pipeline lands */}
-                            <section className="rounded-[6px] border border-ink/10 bg-paper p-5 space-y-2" style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -18px rgba(35,37,29,0.3)" }}>
-                              <div className="flex items-center justify-between gap-3">
-                                <h4 className="mono text-[11px] uppercase font-semibold tracking-[0.18em] text-muted-foreground">
-                                  Audience Sentiment Matrix
-                                </h4>
-                                <span className="mono text-[10px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full border border-ink/10 bg-ink/5 text-muted-foreground">
-                                  Data unavailable
-                                </span>
-                              </div>
-                              <p className="text-[12px] text-muted-foreground">
-                                Favourable Intent, Neutral Engagement and Brand Friction will appear once the live sentiment ingestion pipeline is connected.
-                              </p>
-                            </section>
+                            {/* Strategy AI pending fallback — only when no strategist fields are present */}
+                            {!hasAnyStrategy(e) && (
+                              <section className="rounded-[6px] border border-ink/10 bg-paper p-5 space-y-2" style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -18px rgba(35,37,29,0.3)" }}>
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+                                      style={{ background: "#ece4cf", color: "#7a5f24" }}
+                                    >
+                                      AI
+                                    </span>
+                                    <h4 className="mono text-[11px] uppercase font-semibold tracking-[0.18em] text-muted-foreground">
+                                      Strategy AI
+                                    </h4>
+                                  </div>
+                                  <span className="mono text-[10px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full border border-ink/10 bg-ink/5 text-muted-foreground">
+                                    Strategy AI pending
+                                  </span>
+                                </div>
+                                <p className="text-[12px] text-muted-foreground">
+                                  Buyer stage, offer type, emotional driver, hook analysis and strategist takeaway will appear here once this placement is processed.
+                                </p>
+                              </section>
+                            )}
                           </div>
                         );
                       })()}
