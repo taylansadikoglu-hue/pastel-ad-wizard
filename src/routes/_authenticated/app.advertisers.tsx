@@ -984,8 +984,6 @@ function AdvertisersPage() {
                             {e.hook ?? "—"}
                           </p>
                           {(() => {
-                            const s = sentimentFor(e.id);
-                            const tier = sentimentTierShort(s);
                             const variants = enriched.filter((x) => x.domain === e.domain).length;
                             return (
                               <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-ink/10">
@@ -996,9 +994,6 @@ function AdvertisersPage() {
                                 <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px] inline-flex items-center gap-1">
                                   <span className={`h-1.5 w-1.5 rounded-full ${e.channelNorm === "Meta" ? "bg-[#1877f2]" : "bg-[#1a73e8]"}`} />
                                   ×{variants}
-                                </span>
-                                <span className={cn("mono text-[10px] px-1.5 py-0.5 border rounded-[3px]", tier.cls)}>
-                                  {tier.label}
                                 </span>
                                 <span className="mono text-[10px] text-muted-foreground ml-auto">
                                   {format(new Date(e.created_at ?? Date.now()), "d MMM")}
