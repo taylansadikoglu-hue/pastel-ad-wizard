@@ -1064,6 +1064,56 @@ function AdvertisersPage() {
             );
           })()}
 
+          {/* Offer IQ — live ad_placements offer signals */}
+          {(() => {
+            const scoped = activeAdvertiser === "__all"
+              ? enriched
+              : enriched.filter((e) => e.domain === activeAdvertiser);
+            if (scoped.length === 0) return null;
+            const tally = (key: "product_type" | "offer_signal" | "primary_cta") => {
+              const m = new Map<string, number>();
+              for (const p of scoped) {
+                const v = ((p as Placement)[key] ?? "").trim();
+                if (!v) continue;
+                m.set(v, (m.get(v) ?? 0) + 1);
+              }
+              return Array.from(m.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6);
+            };
+            const products = tally("product_type");
+            const offers = tally("offer_signal");
+            const ctas = tally("primary_cta");
+            if (products.length === 0 && offers.length === 0 && ctas.length === 0) return null;
+            const Col = ({ title, rows }: { title: string; rows: [string, number][] }) => (
+              <div className="flex flex-col">
+                <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-muted-foreground px-4 py-2 border-b border-ink/10">{title}</div>
+                {rows.length === 0 ? (
+                  <div className="px-4 py-3 text-xs text-muted-foreground/60">No data</div>
+                ) : (
+                  <ul className="divide-y divide-ink/5">
+                    {rows.map(([label, count], i) => (
+                      <li key={label} className={`flex items-center justify-between gap-3 px-4 py-2 ${i % 2 === 0 ? "bg-paper/40" : ""}`}>
+                        <span className="text-sm truncate" title={label}>{label}</span>
+                        <span className="text-xs tabular-nums text-muted-foreground shrink-0">{count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+            return (
+              <div className="mt-3 card-flat overflow-hidden">
+                <div className="px-4 py-3 border-b border-ink/10 bg-paper/60 flex flex-wrap items-center gap-x-6 gap-y-2">
+                  <div className="text-[11px] uppercase tracking-[0.14em] font-semibold text-foreground">Offer IQ</div>
+                  <div className="text-[11px] text-muted-foreground ml-auto">Top product types, offer signals & CTAs across {scoped.length} placements</div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-ink/10">
+                  <Col title="Top Product Types" rows={products} />
+                  <Col title="Top Offer Signals" rows={offers} />
+                  <Col title="Top CTAs" rows={ctas} />
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Grid */}
           <TabsContent value={activeAdvertiser} className="mt-3">
