@@ -221,6 +221,35 @@ function extractRawCopy(raw: unknown): string {
     .join("\n\n");
 }
 
+function luxuryTermForDomain(domain: string): string {
+  const d = (domain ?? "").toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "");
+  const map: Array<[RegExp, string]> = [
+    [/(^|\.)nab\.com\.au/, "Premium Banking Solutions"],
+    [/(^|\.)realestate\.com\.au/, "Premium Property Listing"],
+    [/(^|\.)domain\.com\.au/, "Premium Property Listing"],
+    [/(^|\.)commbank\.com\.au/, "Premium Banking Solutions"],
+    [/(^|\.)anz\.com(\.au)?/, "Premium Banking Solutions"],
+    [/(^|\.)westpac\.com\.au/, "Premium Banking Solutions"],
+    [/(^|\.)qantas\.com(\.au)?/, "Premium Travel Experiences"],
+    [/(^|\.)woolworths\.com\.au/, "Premium Grocery Selection"],
+    [/(^|\.)coles\.com\.au/, "Premium Grocery Selection"],
+  ];
+  for (const [re, label] of map) if (re.test(d)) return label;
+  return "Premium Targeted Campaign";
+}
+
+function sanitiseTemplate(text: string | null | undefined, domain: string): string {
+  if (!text) return "";
+  // Replace any {{ ... }} (including nested dotted paths) with a luxury term.
+  // Collapse adjacent replacements and tidy whitespace.
+  const term = luxuryTermForDomain(domain);
+  return text
+    .replace(/\{\{\s*[^{}]*?\s*\}\}/g, term)
+    .replace(/\{\{[\s\S]*?\}\}/g, term)
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 function GoogleSearchAdMockup({
   domain,
   hook,
