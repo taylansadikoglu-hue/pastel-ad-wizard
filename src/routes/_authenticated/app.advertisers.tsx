@@ -470,13 +470,16 @@ function AdvertisersPage() {
     const seen = new Set<string>();
     const unique: Row[] = [];
     for (const r of scans ?? []) {
-      if (!seen.has(r.domain)) {
-        seen.add(r.domain);
-        unique.push(r as Row);
+      const d = normalizeDomain(r.domain);
+      if (!seen.has(d)) {
+        seen.add(d);
+        unique.push({ ...(r as Row), domain: d });
       }
     }
     setRows(unique);
-    setPlacements((pls ?? []) as Placement[]);
+    setPlacements(
+      ((pls ?? []) as Placement[]).map((p) => ({ ...p, domain: normalizeDomain(p.domain) })),
+    );
     setLoading(false);
   };
 
@@ -500,13 +503,21 @@ function AdvertisersPage() {
     };
   }, []);
 
-  const normalize = (raw: string) =>
-    raw
-      .trim()
-      .toLowerCase()
-      .replace(/^https?:\/\//, "")
-      .replace(/^www\./, "")
-      .replace(/\/.*$/, "");
+  // Polling fallback: while any tracked scan is still in-flight (not ready/error),
+  // refetch every 4s so the grid flips from Queued → live cards even if the
+  // realtime channel is throttled or the publication payload is dropped.
+  useEffect(() => {
+    const inFlight = rows.some((r) => {
+      const s = (r.status ?? "").toLowerCase();
+      return s !== "ready" && s !== "completed" && s !== "done" && s !== "error" && s !== "failed";
+    });
+    if (!inFlight) return;
+    const id = setInterval(() => load(), 4000);
+    return () => clearInterval(id);
+  }, [rows]);
+
+  const normalize = (raw: string) => normalizeDomain(raw);
+
 
   const captureDomainInput = (value: string) => {
     setInput(value);
