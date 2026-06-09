@@ -63,7 +63,7 @@ const ScanReadyEmail = ({
 
           <Section style={statsRow}>
             <Section style={statCell}>
-              <Text style={statValue}>{advertiserCount ?? '—'}</Text>
+              <Text style={statValue}>{advertiserCount != null ? String(advertiserCount) : '—'}</Text>
               <Text style={statLabel}>Advertisers</Text>
             </Section>
             <Section style={statCell}>
