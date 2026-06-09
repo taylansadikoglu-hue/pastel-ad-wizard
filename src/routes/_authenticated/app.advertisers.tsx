@@ -348,7 +348,7 @@ function AdvertisersPage() {
     const [{ data: scans }, { data: pls }] = await Promise.all([
       supabase
         .from("domain_scans")
-        .select("id, domain, status, created_at")
+        .select("id, domain, status, created_at, estimated_monthly_spend, total_paid_keywords, average_cpc")
         .order("created_at", { ascending: false }),
       supabase
         .from("ad_placements")
