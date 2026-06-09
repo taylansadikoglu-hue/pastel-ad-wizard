@@ -18,50 +18,65 @@ export type Database = {
         Row: {
           ad_title: string | null
           ad_type: string | null
+          buyer_stage: string | null
           channel: string | null
           channel_platform: string | null
           created_at: string | null
           creative_url: string | null
           days_running: number | null
           domain: string
+          emotional_driver: string | null
           hook: string | null
+          hook_analysis: string | null
           id: number
           media_url: string | null
+          offer_type: string | null
           raw: Json | null
           raw_copy: string | null
           scan_id: number | null
+          strategist_takeaway: string | null
         }
         Insert: {
           ad_title?: string | null
           ad_type?: string | null
+          buyer_stage?: string | null
           channel?: string | null
           channel_platform?: string | null
           created_at?: string | null
           creative_url?: string | null
           days_running?: number | null
           domain: string
+          emotional_driver?: string | null
           hook?: string | null
+          hook_analysis?: string | null
           id?: number
           media_url?: string | null
+          offer_type?: string | null
           raw?: Json | null
           raw_copy?: string | null
           scan_id?: number | null
+          strategist_takeaway?: string | null
         }
         Update: {
           ad_title?: string | null
           ad_type?: string | null
+          buyer_stage?: string | null
           channel?: string | null
           channel_platform?: string | null
           created_at?: string | null
           creative_url?: string | null
           days_running?: number | null
           domain?: string
+          emotional_driver?: string | null
           hook?: string | null
+          hook_analysis?: string | null
           id?: number
           media_url?: string | null
+          offer_type?: string | null
           raw?: Json | null
           raw_copy?: string | null
           scan_id?: number | null
+          strategist_takeaway?: string | null
         }
         Relationships: [
           {
@@ -230,33 +245,45 @@ export type Database = {
       }
       sentiment_insights: {
         Row: {
+          ad_angle_blueprint: string | null
           blueprint: string | null
           created_at: string
           domain: string
+          dominant_theme: string | null
           friction: string | null
+          funnel_stage: string | null
           good: string | null
           id: number
           scan_id: number | null
+          strategist_takeaway: string | null
           user_id: string | null
         }
         Insert: {
+          ad_angle_blueprint?: string | null
           blueprint?: string | null
           created_at?: string
           domain: string
+          dominant_theme?: string | null
           friction?: string | null
+          funnel_stage?: string | null
           good?: string | null
           id?: number
           scan_id?: number | null
+          strategist_takeaway?: string | null
           user_id?: string | null
         }
         Update: {
+          ad_angle_blueprint?: string | null
           blueprint?: string | null
           created_at?: string
           domain?: string
+          dominant_theme?: string | null
           friction?: string | null
+          funnel_stage?: string | null
           good?: string | null
           id?: number
           scan_id?: number | null
+          strategist_takeaway?: string | null
           user_id?: string | null
         }
         Relationships: [
