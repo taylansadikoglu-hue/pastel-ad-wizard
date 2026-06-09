@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter } from "lucide-react";
+import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter, Search } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
 import { startScan } from "@/lib/scan.functions";
@@ -132,23 +132,62 @@ function adType(p: Placement, mediaType: MediaKind): "Video" | "Image" | "Other"
   return "Other";
 }
 
+function PaidTextAdPlaceholder({ brand }: { brand: string }) {
+  return (
+    <div className="aspect-video w-full border-b-2 border-ink bg-gradient-to-br from-secondary to-paper flex flex-col items-center justify-center gap-2 px-4 text-center">
+      <div className="w-12 h-12 rounded-full border-2 border-ink bg-paper flex items-center justify-center shadow-flat-sm">
+        <Search size={22} strokeWidth={2.25} />
+      </div>
+      <div className="mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground">
+        Google Search
+      </div>
+      <div className="mono text-[10px] px-2 py-0.5 border-2 border-ink rounded-[3px] bg-primary text-primary-foreground font-semibold">
+        Paid Text Ad
+      </div>
+    </div>
+  );
+}
+
 function MediaEmbed({
+  creativeUrl,
   url,
   type,
   title,
+  channel,
+  brand,
 }: {
+  creativeUrl: string | null;
   url: string | null;
   type: MediaKind;
   title: string;
+  channel: "Meta" | "Google";
+  brand: string;
 }) {
-  if (!url || type === "none") {
+  // Google paid text ads or genuinely empty media → premium placeholder
+  const directImg =
+    typeof creativeUrl === "string" && /^https?:\/\//.test(creativeUrl) ? creativeUrl : null;
+
+  if (channel === "Google" && !directImg) {
+    return <PaidTextAdPlaceholder brand={brand} />;
+  }
+
+  // Prefer the raw creative_url as a direct <img> — Meta CDN URLs often lack
+  // a recognizable image extension but are valid images.
+  if (directImg) {
     return (
-      <div className="aspect-video w-full bg-secondary border-b-2 border-ink flex items-center justify-center text-xs text-muted-foreground mono">
-        No media
-      </div>
+      <img
+        src={directImg}
+        alt={title}
+        loading="lazy"
+        className="aspect-video w-full object-cover border-b-2 border-ink bg-secondary"
+        onError={(ev) => {
+          (ev.currentTarget as HTMLImageElement).style.display = "none";
+        }}
+      />
     );
   }
-  if (type === "video") {
+
+  if (url && type === "video") {
     return (
       <video
         controls
@@ -158,7 +197,7 @@ function MediaEmbed({
       />
     );
   }
-  if (type === "image") {
+  if (url && type === "image") {
     return (
       <img
         src={url}
@@ -168,15 +207,7 @@ function MediaEmbed({
       />
     );
   }
-  return (
-    <iframe
-      src={url}
-      title={title}
-      loading="lazy"
-      className="aspect-video w-full border-b-2 border-ink bg-secondary"
-      sandbox="allow-scripts allow-same-origin"
-    />
-  );
+  return <PaidTextAdPlaceholder brand={brand} />;
 }
 
 function AdvertisersPage() {
@@ -549,9 +580,12 @@ function AdvertisersPage() {
                         tabIndex={0}
                       >
                         <MediaEmbed
+                          creativeUrl={e.creative_url}
                           url={e.media.url}
                           type={e.media.type}
                           title={e.hook ?? e.brand}
+                          channel={e.channelNorm}
+                          brand={e.brand}
                         />
                         <div className="p-3 space-y-2 flex-1 flex flex-col">
                           <div className="flex items-center justify-between gap-2">
