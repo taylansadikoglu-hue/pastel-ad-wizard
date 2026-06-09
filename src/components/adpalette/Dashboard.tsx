@@ -977,6 +977,76 @@ function InsightCard({
   );
 }
 
+const SENTIMENT_AXES = [
+  "Positive Feedback",
+  "Product Quality",
+  "Customer Service",
+  "Ad Engagement",
+] as const;
+
+// Deterministic mock-fallback sentiment per brand so the radar stays populated
+// even before a live sentiment ingestion pipeline lands.
+function sentimentForBrand(name: string): number[] {
+  if (!name) return [60, 60, 60, 60];
+  const h = hashStr(name);
+  return SENTIMENT_AXES.map((_, i) => 55 + ((h >> (i * 3)) % 40));
+}
+
+function SentimentRadar({ scores }: { scores: number[] }) {
+  const size = 260;
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = size / 2 - 30;
+  const axes = SENTIMENT_AXES.length;
+  const angle = (i: number) => (i / axes) * Math.PI * 2 - Math.PI / 2;
+  const point = (i: number, value: number) => {
+    const a = angle(i);
+    const r = (value / 100) * radius;
+    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r] as const;
+  };
+  const rings = [0.25, 0.5, 0.75, 1];
+  const polygon = scores.map((v, i) => point(i, v).join(",")).join(" ");
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[280px] mx-auto">
+      {rings.map((r) => (
+        <polygon
+          key={r}
+          points={SENTIMENT_AXES.map((_, i) => point(i, r * 100).join(",")).join(" ")}
+          fill="none"
+          stroke="var(--ink)"
+          strokeOpacity={0.25}
+          strokeWidth={1}
+        />
+      ))}
+      {SENTIMENT_AXES.map((_, i) => {
+        const [x, y] = point(i, 100);
+        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--ink)" strokeOpacity={0.25} strokeWidth={1} />;
+      })}
+      <polygon points={polygon} fill="var(--primary)" fillOpacity={0.35} stroke="var(--ink)" strokeWidth={2} />
+      {scores.map((v, i) => {
+        const [x, y] = point(i, v);
+        return <circle key={i} cx={x} cy={y} r={3.5} fill="var(--ink)" />;
+      })}
+      {SENTIMENT_AXES.map((label, i) => {
+        const [x, y] = point(i, 118);
+        return (
+          <text
+            key={label}
+            x={x}
+            y={y}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="mono"
+            style={{ fontSize: 9, fontWeight: 700, fill: "var(--ink)" }}
+          >
+            {label}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
 function aiReply(q: string, visible: Competitor[]): string {
   const total = visible.reduce((a, b) => a + b.spend, 0);
   if (/mix|channel/i.test(q)) {
