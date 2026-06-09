@@ -1023,6 +1023,7 @@ function AdvertisersPage() {
                           </p>
                           {(() => {
                             const variants = enriched.filter((x) => x.domain === e.domain).length;
+                            const hasStrategy = hasAnyStrategy(e);
                             return (
                               <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-ink/10">
                                 <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px] inline-flex items-center gap-1">
@@ -1033,6 +1034,19 @@ function AdvertisersPage() {
                                   <span className={`h-1.5 w-1.5 rounded-full ${e.channelNorm === "Meta" ? "bg-[#1877f2]" : "bg-[#1a73e8]"}`} />
                                   ×{variants}
                                 </span>
+                                {hasStrategy ? (
+                                  <span
+                                    className="mono text-[10px] px-1.5 py-0.5 rounded-[3px] inline-flex items-center gap-1 border"
+                                    style={{ background: "#fbf1d4", color: "#7a5f24", borderColor: "rgba(200,169,106,0.55)" }}
+                                  >
+                                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#c8a96a" }} />
+                                    Strategy AI
+                                  </span>
+                                ) : (
+                                  <span className="mono text-[10px] px-1.5 py-0.5 rounded-[3px] inline-flex items-center gap-1 border border-ink/10 bg-ink/5 text-muted-foreground">
+                                    Strategy AI pending
+                                  </span>
+                                )}
                                 <span className="mono text-[10px] text-muted-foreground ml-auto">
                                   {format(new Date(e.created_at ?? Date.now()), "d MMM")}
                                 </span>
