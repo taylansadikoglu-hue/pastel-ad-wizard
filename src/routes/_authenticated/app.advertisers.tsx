@@ -30,7 +30,14 @@ import {
 } from "@/components/ui/dialog";
 
 const MAX_BRANDS = 7;
-const COUNTRY_OPTIONS = ["United States", "Australia", "United Kingdom", "Canada"] as const;
+const COUNTRY_OPTIONS = ["Australia", "United States", "United Kingdom", "Canada"] as const;
+
+// Country-code TLD (2-letter) — excludes .au when AU is the selected market.
+function isForeignToAU(domain: string): boolean {
+  const m = domain.toLowerCase().match(/\.([a-z]{2})$/);
+  if (!m) return false; // gTLD (.com/.net/.org/...) → keep
+  return m[1] !== "au";
+}
 
 type Country = (typeof COUNTRY_OPTIONS)[number];
 
