@@ -287,7 +287,7 @@ function GoogleSearchAdMockup({
         }`}
         style={{ fontFamily: "arial, sans-serif" }}
       >
-        {hook}
+        {safeHook}
       </div>
       <div
         className={`text-gray-700 ${
@@ -295,7 +295,7 @@ function GoogleSearchAdMockup({
         }`}
         style={{ fontFamily: "arial, sans-serif" }}
       >
-        {body || `Discover what ${displayUrl} has to offer — official site.`}
+        {safeBody || `Discover what ${displayUrl} has to offer — official site.`}
       </div>
     </div>
   );
