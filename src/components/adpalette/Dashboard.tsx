@@ -778,8 +778,9 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                     const firstSeen = v.createdAt ? new Date(v.createdAt) : null;
                     const firstSeenLabel = firstSeen ? firstSeen.toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
                     return (
-                    <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
-                      <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative overflow-hidden">
+                    <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 flex flex-col gap-2 min-w-0">
+                      <div className="aspect-video w-full border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative overflow-hidden shrink-0">
+
                         {v.mediaType === "video" && v.mediaUrl ? (
                           <video src={v.mediaUrl} className="w-full h-full object-cover" controls muted playsInline preload="metadata" />
                         ) : v.mediaType === "image" && v.mediaUrl ? (
