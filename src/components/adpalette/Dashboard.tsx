@@ -269,14 +269,13 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   }, [livePlacements]);
 
   const displayRows = useMemo(
-    () => rows.map((r) => ({ ...r, spend: placementSpend.get(r.name) ?? r.spend })),
+    () => rows.map((r) => ({ ...r, spend: placementSpend.get(r.name) ?? 0 })),
     [rows, placementSpend],
   );
   const visible = displayRows.filter((r) => selected[r.name]);
   const colors = theme === "dark" ? CHANNEL_COLORS_PASTEL : CHANNEL_COLORS_STD;
   const totalSpend = useMemo(() => visible.reduce((a, b) => a + b.spend, 0), [visible]);
   const focusedBrand = visible[0]?.name ?? displayRows[0]?.name ?? "";
-  const sentimentScores = useMemo(() => sentimentForBrand(focusedBrand), [focusedBrand]);
 
   const toggleRow = (n: string) => setSelected((s) => ({ ...s, [n]: !s[n] }));
   const setSpend = (name: string, value: number) =>
