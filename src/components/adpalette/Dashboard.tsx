@@ -275,9 +275,31 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
 
 
-  const visible = rows.filter((r) => selected[r.name]);
+  // Derive spend from live placements: Google Search × $150 + Digital Video × $450.
+  // Falls back to baseline synthetic spend only when zero placements exist for a brand.
+  const placementSpend = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of livePlacements) {
+      let inc = 0;
+      if (p.channelNorm === "Google" && p.adType === "Video") inc = 450;
+      else if (p.channelNorm === "Google") inc = 150;
+      else if (p.channelNorm === "Meta") inc = p.adType === "Video" ? 450 : 150;
+      // Programmatic Display fallback uses search-tier proxy
+      else inc = 150;
+      map.set(p.brand, (map.get(p.brand) ?? 0) + inc);
+    }
+    return map;
+  }, [livePlacements]);
+
+  const displayRows = useMemo(
+    () => rows.map((r) => ({ ...r, spend: placementSpend.get(r.name) ?? r.spend })),
+    [rows, placementSpend],
+  );
+  const visible = displayRows.filter((r) => selected[r.name]);
   const colors = theme === "dark" ? CHANNEL_COLORS_PASTEL : CHANNEL_COLORS_STD;
   const totalSpend = useMemo(() => visible.reduce((a, b) => a + b.spend, 0), [visible]);
+  const focusedBrand = visible[0]?.name ?? displayRows[0]?.name ?? "";
+  const sentimentScores = useMemo(() => sentimentForBrand(focusedBrand), [focusedBrand]);
 
   const toggleRow = (n: string) => setSelected((s) => ({ ...s, [n]: !s[n] }));
   const setSpend = (name: string, value: number) =>
@@ -540,7 +562,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r) => {
+                    {displayRows.map((r) => {
                       const primary = r.meta >= r.google && r.meta >= r.programmatic
                         ? "Meta" : r.google >= r.programmatic ? "Google" : "Programmatic";
                       return (
@@ -812,6 +834,36 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
           </div>
 
+          {/* Sentiment Radar — mock-fallback sentiment web tied to focused advertiser */}
+          <div className="card-flat overflow-hidden">
+            <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2 font-bold text-sm">
+                  <Radio size={14} /> Sentiment Radar
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Audience perception web for <span className="font-semibold">{focusedBrand || "—"}</span> across feedback, product, support, and ad-engagement axes.
+                </p>
+              </div>
+              <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper">MOCK · falls back to deterministic blend</span>
+            </div>
+            <div className="p-5 grid md:grid-cols-[1fr_1.1fr] gap-5 items-center">
+              <SentimentRadar scores={sentimentScores} />
+              <div className="grid grid-cols-2 gap-2">
+                {SENTIMENT_AXES.map((a, i) => (
+                  <div key={a} className="card-flat-sm p-3">
+                    <div className="mono text-[10px] uppercase text-muted-foreground">{a}</div>
+                    <div className="mono text-2xl font-bold">{sentimentScores[i]}</div>
+                    <div className="h-1.5 mt-1 border border-ink bg-paper rounded-[2px] overflow-hidden">
+                      <div className="h-full bg-primary" style={{ width: `${sentimentScores[i]}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+
           </div>
 
         </main>
@@ -922,6 +974,76 @@ function InsightCard({
         <button onClick={() => toast(`${tag} · opened detail view`)} className="underline underline-offset-2 font-semibold">Open evidence →</button>
       </div>
     </div>
+  );
+}
+
+const SENTIMENT_AXES = [
+  "Positive Feedback",
+  "Product Quality",
+  "Customer Service",
+  "Ad Engagement",
+] as const;
+
+// Deterministic mock-fallback sentiment per brand so the radar stays populated
+// even before a live sentiment ingestion pipeline lands.
+function sentimentForBrand(name: string): number[] {
+  if (!name) return [60, 60, 60, 60];
+  const h = hashStr(name);
+  return SENTIMENT_AXES.map((_, i) => 55 + ((h >> (i * 3)) % 40));
+}
+
+function SentimentRadar({ scores }: { scores: number[] }) {
+  const size = 260;
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = size / 2 - 30;
+  const axes = SENTIMENT_AXES.length;
+  const angle = (i: number) => (i / axes) * Math.PI * 2 - Math.PI / 2;
+  const point = (i: number, value: number) => {
+    const a = angle(i);
+    const r = (value / 100) * radius;
+    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r] as const;
+  };
+  const rings = [0.25, 0.5, 0.75, 1];
+  const polygon = scores.map((v, i) => point(i, v).join(",")).join(" ");
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[280px] mx-auto">
+      {rings.map((r) => (
+        <polygon
+          key={r}
+          points={SENTIMENT_AXES.map((_, i) => point(i, r * 100).join(",")).join(" ")}
+          fill="none"
+          stroke="var(--ink)"
+          strokeOpacity={0.25}
+          strokeWidth={1}
+        />
+      ))}
+      {SENTIMENT_AXES.map((_, i) => {
+        const [x, y] = point(i, 100);
+        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--ink)" strokeOpacity={0.25} strokeWidth={1} />;
+      })}
+      <polygon points={polygon} fill="var(--primary)" fillOpacity={0.35} stroke="var(--ink)" strokeWidth={2} />
+      {scores.map((v, i) => {
+        const [x, y] = point(i, v);
+        return <circle key={i} cx={x} cy={y} r={3.5} fill="var(--ink)" />;
+      })}
+      {SENTIMENT_AXES.map((label, i) => {
+        const [x, y] = point(i, 118);
+        return (
+          <text
+            key={label}
+            x={x}
+            y={y}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="mono"
+            style={{ fontSize: 9, fontWeight: 700, fill: "var(--ink)" }}
+          >
+            {label}
+          </text>
+        );
+      })}
+    </svg>
   );
 }
 
