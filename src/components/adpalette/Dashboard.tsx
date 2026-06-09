@@ -913,21 +913,21 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
           )}
 
-          {/* Sentiment Radar — hidden until live sentiment ingestion pipeline lands */}
+          {/* Strategy AI panel — populated per placement in Advertiser Hub */}
           <div className="card-flat overflow-hidden">
             <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <div className="flex items-center gap-2 font-bold text-sm">
-                  <Radio size={14} /> Sentiment Radar
+                  <Radio size={14} /> Strategy AI
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Audience perception web for <span className="font-semibold">{focusedBrand || "—"}</span>.
+                  Strategist analysis for <span className="font-semibold">{focusedBrand || "—"}</span> — buyer stage, offer type, hook analysis and takeaway.
                 </p>
               </div>
-              <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper text-muted-foreground">Data unavailable</span>
+              <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper text-muted-foreground">Strategy AI pending</span>
             </div>
             <div className="p-5 text-xs text-muted-foreground">
-              Live sentiment ingestion is not yet connected. Radar will populate automatically once the pipeline lands.
+              Open the Advertiser Hub and tap any placement to view the Strategy AI breakdown when it has been processed.
             </div>
           </div>
 
