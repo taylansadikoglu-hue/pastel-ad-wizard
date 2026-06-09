@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter } from "lucide-react";
+import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter, Search } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
 import { startScan } from "@/lib/scan.functions";
