@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter, MoreHorizontal, ThumbsUp, MessageCircle, Share2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Calendar as CalendarIcon, X, TrendingUp, Activity, Database, Globe } from "lucide-react";
+import { format } from "date-fns";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
 import { startScan } from "@/lib/scan.functions";
@@ -28,6 +29,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { ScanStatusPill } from "@/components/adpalette/ScanStatusPill";
 
 const MAX_BRANDS = 7;
