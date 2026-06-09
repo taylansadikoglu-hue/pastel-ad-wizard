@@ -180,34 +180,25 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     return () => { active = false; };
   }, []);
 
-  // Track in-flight domain scans → drives skeleton banner
+  // Track in-flight domain scans → drives skeleton banner.
+  // One-shot load on mount; no polling loop, no realtime resubscription —
+  // avoids flashing the dashboard every few seconds.
   useEffect(() => {
     let active = true;
-    const load = async () => {
+    (async () => {
       const { data } = await supabase
         .from("domain_scans")
         .select("domain, status")
         .in("status", ["queued", "running"]);
       if (active) setRunningScans((data ?? []).map((r) => r.domain));
-    };
-    load();
-    const channel = supabase
-      .channel("scan-status")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "domain_scans" },
-        () => load()
-      )
-      .subscribe();
-    const iv = setInterval(load, 8000);
-    return () => {
-      active = false;
-      clearInterval(iv);
-      supabase.removeChannel(channel);
-    };
+    })();
+    return () => { active = false; };
   }, []);
 
   // Continuous Inspiration Loop → ad_placements (channel = Meta/Google, ad_type = Image/Video)
+  // One-shot fetch on mount. We intentionally do NOT subscribe to postgres_changes
+  // or poll on an interval here — those caused the grid to flash and reset
+  // checkbox interactions whenever the scraper inserted a row.
   useEffect(() => {
     let active = true;
     const normalizeChan = (c: string | null): "Meta" | "Google" => {
@@ -223,55 +214,39 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       if (mt === "image") return "Image";
       return "Other";
     };
-    const mapRow = (p: { domain: string; channel: string | null; ad_type: string | null; hook: string | null; days_running: number | null; creative_url: string | null; raw: unknown; created_at?: string | null }) => {
-      const extracted = extractMediaUrl(p.creative_url, p.raw);
-      const hookText = safeText(p.hook, "").trim() || "Live creative — hook pending AI extraction.";
-      const chan = normalizeChan(p.channel);
-      return {
-        brand: brandFromDomain(safeText(p.domain)),
-        hook: hookText,
-        channel: safeText(p.channel, chan),
-        channelNorm: chan,
-        adType: normalizeType(p.ad_type, extracted.type),
-        days: typeof p.days_running === "number" ? p.days_running : 1,
-        length: "0:--",
-        aiTag: "Live",
-        mediaUrl: extracted.url,
-        mediaType: extracted.type,
-        createdAt: p.created_at ?? null,
-      };
-    };
-    const load = async () => {
+    (async () => {
       const { data, error } = await supabase
         .from("ad_placements")
         .select("domain, channel, ad_type, hook, days_running, creative_url, raw, created_at")
         .order("created_at", { ascending: false })
-        .limit(24);
+        .limit(48);
       if (error) {
         console.error("[ad_placements] query failed", error);
         return;
       }
       if (!active || !data) return;
-      setLivePlacements(data.map(mapRow));
-    };
-    load();
-
-    const channel = supabase
-      .channel("ad-placements-live")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "ad_placements" },
-        (payload) => {
-          const r = payload.new as Parameters<typeof mapRow>[0];
-          setLivePlacements((prev) => [mapRow(r), ...prev].slice(0, 24));
-        }
-      )
-      .subscribe();
-    return () => {
-      active = false;
-      supabase.removeChannel(channel);
-    };
+      setLivePlacements(data.map((p) => {
+        const extracted = extractMediaUrl(p.creative_url, p.raw);
+        const hookText = safeText(p.hook, "").trim() || "Live creative — hook pending AI extraction.";
+        const chan = normalizeChan(p.channel);
+        return {
+          brand: brandFromDomain(safeText(p.domain)),
+          hook: hookText,
+          channel: safeText(p.channel, chan),
+          channelNorm: chan,
+          adType: normalizeType(p.ad_type, extracted.type),
+          days: typeof p.days_running === "number" ? p.days_running : 1,
+          length: "0:--",
+          aiTag: "Live",
+          mediaUrl: extracted.url,
+          mediaType: extracted.type,
+          createdAt: p.created_at ?? null,
+        };
+      }));
+    })();
+    return () => { active = false; };
   }, []);
+
 
 
 
@@ -803,8 +778,9 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                     const firstSeen = v.createdAt ? new Date(v.createdAt) : null;
                     const firstSeenLabel = firstSeen ? firstSeen.toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
                     return (
-                    <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
-                      <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative overflow-hidden">
+                    <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 flex flex-col gap-2 min-w-0">
+                      <div className="aspect-video w-full border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative overflow-hidden shrink-0">
+
                         {v.mediaType === "video" && v.mediaUrl ? (
                           <video src={v.mediaUrl} className="w-full h-full object-cover" controls muted playsInline preload="metadata" />
                         ) : v.mediaType === "image" && v.mediaUrl ? (
@@ -816,15 +792,16 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                         )}
                         <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.adType}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm">{v.brand}</span>
-                        <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{v.channel}</span>
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="font-semibold text-sm truncate">{v.brand}</span>
+                        <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] shrink-0 truncate max-w-[120px]">{v.channel}</span>
                       </div>
-                      <p className="text-xs leading-snug">{v.hook}</p>
-                      <div className="flex items-center justify-between mono text-[10px] text-muted-foreground pt-1 border-t border-ink/30">
-                        <span>Flight: {v.days}d · First seen {firstSeenLabel}</span>
-                        <button onClick={() => toast(`${v.brand} · creative opened`)} className="underline font-semibold">Inspect →</button>
+                      <p className="text-xs leading-snug line-clamp-2 min-h-[2.25rem]">{v.hook}</p>
+                      <div className="mt-auto flex items-center justify-between gap-2 mono text-[10px] text-muted-foreground pt-1 border-t border-ink/30">
+                        <span className="truncate">Flight: {v.days}d · First seen {firstSeenLabel}</span>
+                        <button onClick={() => toast(`${v.brand} · creative opened`)} className="underline font-semibold shrink-0">Inspect →</button>
                       </div>
+
                     </div>
                     );
                   })}
