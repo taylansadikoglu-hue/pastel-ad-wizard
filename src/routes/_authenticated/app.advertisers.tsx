@@ -1126,6 +1126,37 @@ function AdvertisersPage() {
                                 </section>
                               );
                             })()}
+
+                            {/* Audience Sentiment Matrix */}
+                            <section className="rounded-[6px] border border-ink/10 bg-paper p-5 space-y-4" style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -18px rgba(35,37,29,0.3)" }}>
+                              <div className="flex items-center justify-between">
+                                <h4 className="mono text-[11px] uppercase font-semibold tracking-[0.18em] text-muted-foreground">
+                                  Audience Sentiment Matrix
+                                </h4>
+                                <span className="mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                                  Parsed comment stream · n≈{120 + (e.id % 380)}
+                                </span>
+                              </div>
+                              {([
+                                { key: "fav", label: "Favourable Intent", range: "0.60 – 1.00", value: sent.fav, sub: "Organic brand advocacy & purchase signals", bar: "bg-emerald-500", text: "text-emerald-800" },
+                                { key: "neu", label: "Neutral Engagement", range: "~0.50", value: sent.neu, sub: "Community tags & generic inquiries", bar: "bg-amber-400", text: "text-amber-800" },
+                                { key: "fric", label: "Brand Friction", range: "0.00 – 0.40", value: sent.fric, sub: "Consumer pushback & messaging objections", bar: "bg-rose-500", text: "text-rose-800" },
+                              ] as const).map((row) => (
+                                <div key={row.key} className="space-y-1.5">
+                                  <div className="flex items-baseline justify-between gap-3">
+                                    <div className="flex items-baseline gap-2 min-w-0">
+                                      <span className={cn("text-[13px] font-semibold", row.text)}>{row.label}</span>
+                                      <span className="mono text-[10px] text-muted-foreground">{row.range}</span>
+                                    </div>
+                                    <span className="tabular-nums text-[13px] font-bold text-ink">{(row.value * 100).toFixed(1)}%</span>
+                                  </div>
+                                  <div className="h-2 rounded-full bg-ink/5 overflow-hidden">
+                                    <div className={cn("h-full rounded-full", row.bar)} style={{ width: `${row.value * 100}%` }} />
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground">{row.sub}</p>
+                                </div>
+                              ))}
+                            </section>
                           </div>
                         );
                       })()}
