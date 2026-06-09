@@ -275,9 +275,31 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
 
 
-  const visible = rows.filter((r) => selected[r.name]);
+  // Derive spend from live placements: Google Search × $150 + Digital Video × $450.
+  // Falls back to baseline synthetic spend only when zero placements exist for a brand.
+  const placementSpend = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of livePlacements) {
+      let inc = 0;
+      if (p.channelNorm === "Google" && p.adType === "Video") inc = 450;
+      else if (p.channelNorm === "Google") inc = 150;
+      else if (p.channelNorm === "Meta") inc = p.adType === "Video" ? 450 : 150;
+      // Programmatic Display fallback uses search-tier proxy
+      else inc = 150;
+      map.set(p.brand, (map.get(p.brand) ?? 0) + inc);
+    }
+    return map;
+  }, [livePlacements]);
+
+  const displayRows = useMemo(
+    () => rows.map((r) => ({ ...r, spend: placementSpend.get(r.name) ?? r.spend })),
+    [rows, placementSpend],
+  );
+  const visible = displayRows.filter((r) => selected[r.name]);
   const colors = theme === "dark" ? CHANNEL_COLORS_PASTEL : CHANNEL_COLORS_STD;
   const totalSpend = useMemo(() => visible.reduce((a, b) => a + b.spend, 0), [visible]);
+  const focusedBrand = visible[0]?.name ?? displayRows[0]?.name ?? "";
+  const sentimentScores = useMemo(() => sentimentForBrand(focusedBrand), [focusedBrand]);
 
   const toggleRow = (n: string) => setSelected((s) => ({ ...s, [n]: !s[n] }));
   const setSpend = (name: string, value: number) =>
