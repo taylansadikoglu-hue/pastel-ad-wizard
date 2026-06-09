@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter, Search } from "lucide-react";
+import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter, MoreHorizontal, ThumbsUp, MessageCircle, Share2 } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
 import { startScan } from "@/lib/scan.functions";
@@ -132,18 +132,129 @@ function adType(p: Placement, mediaType: MediaKind): "Video" | "Image" | "Other"
   return "Other";
 }
 
-function PaidTextAdPlaceholder({ brand }: { brand: string }) {
+function extractRawCopy(raw: unknown): string {
+  const out: string[] = [];
+  const walk = (v: unknown, depth = 0) => {
+    if (!v || depth > 5) return;
+    if (typeof v === "string") {
+      const s = v.trim();
+      if (s && !/^https?:\/\//i.test(s) && s.length > 2) out.push(s);
+    } else if (Array.isArray(v)) {
+      v.forEach((x) => walk(x, depth + 1));
+    } else if (typeof v === "object") {
+      Object.values(v as Record<string, unknown>).forEach((x) => walk(x, depth + 1));
+    }
+  };
+  walk(raw);
+  const uniq = Array.from(new Set(out));
+  // Drop boilerplate fluff
+  return uniq
+    .filter((s) => !/social media placement content optimized/i.test(s))
+    .join("\n\n");
+}
+
+function GoogleSearchAdMockup({
+  domain,
+  hook,
+  body,
+  size = "card",
+}: {
+  domain: string;
+  hook: string;
+  body: string;
+  size?: "card" | "modal";
+}) {
+  const isModal = size === "modal";
+  const displayUrl = domain.replace(/^https?:\/\//, "").replace(/^www\./, "");
   return (
-    <div className="aspect-video w-full border-b-2 border-ink bg-gradient-to-br from-secondary to-paper flex flex-col items-center justify-center gap-2 px-4 text-center">
-      <div className="w-12 h-12 rounded-full border-2 border-ink bg-paper flex items-center justify-center shadow-flat-sm">
-        <Search size={22} strokeWidth={2.25} />
+    <div
+      className={`w-full bg-white text-left flex flex-col justify-center ${
+        isModal
+          ? "p-7 rounded-[3px] border-2 border-ink shadow-flat-sm"
+          : "aspect-video p-4 border-b-2 border-ink"
+      }`}
+    >
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-[10px] font-bold px-1.5 py-px border border-gray-400 text-gray-800 rounded-sm tracking-wide bg-white">
+          Ad
+        </span>
+        <span className={`text-gray-700 truncate ${isModal ? "text-sm" : "text-[11px]"}`}>
+          {displayUrl}
+        </span>
       </div>
-      <div className="mono text-[10px] tracking-[0.2em] uppercase text-muted-foreground">
-        Google Search
+      <div
+        className={`font-medium leading-snug text-[#1a0dab] hover:underline cursor-pointer ${
+          isModal ? "text-2xl line-clamp-3" : "text-sm line-clamp-2"
+        }`}
+        style={{ fontFamily: "arial, sans-serif" }}
+      >
+        {hook}
       </div>
-      <div className="mono text-[10px] px-2 py-0.5 border-2 border-ink rounded-[3px] bg-primary text-primary-foreground font-semibold">
-        Paid Text Ad
+      <div
+        className={`text-gray-700 ${
+          isModal ? "text-[15px] mt-2 leading-relaxed whitespace-pre-wrap" : "text-[11px] mt-1 line-clamp-2"
+        }`}
+        style={{ fontFamily: "arial, sans-serif" }}
+      >
+        {body || `Discover what ${displayUrl} has to offer — official site.`}
       </div>
+    </div>
+  );
+}
+
+function MetaFeedAdMockup({
+  brand,
+  body,
+  size = "card",
+}: {
+  brand: string;
+  body: string;
+  size?: "card" | "modal";
+}) {
+  const isModal = size === "modal";
+  const initial = brand.charAt(0).toUpperCase();
+  return (
+    <div
+      className={`w-full bg-white text-left flex flex-col ${
+        isModal
+          ? "rounded-[3px] border-2 border-ink shadow-flat-sm overflow-hidden"
+          : "aspect-video border-b-2 border-ink overflow-hidden"
+      }`}
+    >
+      <div className={`flex items-center gap-2 ${isModal ? "px-4 pt-4 pb-3" : "px-3 pt-3 pb-2"}`}>
+        <div
+          className={`${
+            isModal ? "w-10 h-10 text-base" : "w-8 h-8 text-sm"
+          } rounded-full bg-gradient-to-br from-[#1877f2] to-[#4267B2] text-white font-bold flex items-center justify-center shrink-0`}
+        >
+          {initial}
+        </div>
+        <div className="flex flex-col leading-tight min-w-0 flex-1">
+          <span className={`font-semibold text-gray-900 truncate ${isModal ? "text-sm" : "text-xs"}`}>
+            {brand}
+          </span>
+          <span className="text-[10px] text-gray-500 flex items-center gap-1">
+            Sponsored · <span className="inline-block w-2 h-2 rounded-full border border-gray-400" />
+          </span>
+        </div>
+        <MoreHorizontal size={16} className="text-gray-500 shrink-0" />
+      </div>
+      <div className={`${isModal ? "px-4 pb-4" : "px-3 pb-3"} flex-1 overflow-hidden`}>
+        <p
+          className={`text-gray-900 ${
+            isModal ? "text-sm leading-relaxed whitespace-pre-wrap" : "text-[11px] leading-snug line-clamp-3"
+          }`}
+        >
+          {body || `Discover the latest from ${brand}.`}
+        </p>
+      </div>
+      {isModal && (
+        <div className="border-t border-gray-200 px-4 py-2 flex items-center gap-5 text-gray-500 text-xs">
+          <span className="inline-flex items-center gap-1.5"><ThumbsUp size={14} /> Like</span>
+          <span className="inline-flex items-center gap-1.5"><MessageCircle size={14} /> Comment</span>
+          <span className="inline-flex items-center gap-1.5"><Share2 size={14} /> Share</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -155,6 +266,9 @@ function MediaEmbed({
   title,
   channel,
   brand,
+  domain,
+  hook,
+  body,
 }: {
   creativeUrl: string | null;
   url: string | null;
@@ -162,17 +276,17 @@ function MediaEmbed({
   title: string;
   channel: "Meta" | "Google";
   brand: string;
+  domain: string;
+  hook: string;
+  body: string;
 }) {
-  // Google paid text ads or genuinely empty media → premium placeholder
   const directImg =
     typeof creativeUrl === "string" && /^https?:\/\//.test(creativeUrl) ? creativeUrl : null;
 
   if (channel === "Google" && !directImg) {
-    return <PaidTextAdPlaceholder brand={brand} />;
+    return <GoogleSearchAdMockup domain={domain} hook={hook} body={body} />;
   }
 
-  // Prefer the raw creative_url as a direct <img> — Meta CDN URLs often lack
-  // a recognizable image extension but are valid images.
   if (directImg) {
     return (
       <img
@@ -207,7 +321,9 @@ function MediaEmbed({
       />
     );
   }
-  return <PaidTextAdPlaceholder brand={brand} />;
+
+  // Meta with no creative → social feed mockup
+  return <MetaFeedAdMockup brand={brand} body={body} />;
 }
 
 function AdvertisersPage() {
@@ -350,6 +466,7 @@ function AdvertisersPage() {
           media,
           adType: adType(p, media.type),
           days: p.days_running ?? 0,
+          body: extractRawCopy(p.raw),
         };
       });
   }, [placements, country]);
@@ -586,6 +703,9 @@ function AdvertisersPage() {
                           title={e.hook ?? e.brand}
                           channel={e.channelNorm}
                           brand={e.brand}
+                          domain={e.domain}
+                          hook={e.hook ?? e.brand}
+                          body={e.body}
                         />
                         <div className="p-3 space-y-2 flex-1 flex flex-col">
                           <div className="flex items-center justify-between gap-2">
@@ -637,92 +757,52 @@ function AdvertisersPage() {
                         const isStaticImage =
                           typeof e.creative_url === "string" &&
                           /\.(jpe?g|png|gif|webp|avif)(\?|$)/i.test(e.creative_url);
+                        const directImg =
+                          typeof e.creative_url === "string" &&
+                          /^https?:\/\//.test(e.creative_url)
+                            ? e.creative_url
+                            : null;
                         const isGoogle = e.channelNorm === "Google";
-                        const allowEmbed = !isGoogle && isStaticImage;
-                        const rawCopy = (() => {
-                          const out: string[] = [];
-                          const walk = (v: unknown, depth = 0) => {
-                            if (!v || depth > 5) return;
-                            if (typeof v === "string") {
-                              const s = v.trim();
-                              if (s && !/^https?:\/\//i.test(s) && s.length > 2) out.push(s);
-                            } else if (Array.isArray(v)) {
-                              v.forEach((x) => walk(x, depth + 1));
-                            } else if (typeof v === "object") {
-                              Object.values(v as Record<string, unknown>).forEach((x) =>
-                                walk(x, depth + 1),
-                              );
-                            }
-                          };
-                          walk(e.raw);
-                          return Array.from(new Set(out)).join("\n\n");
-                        })();
+                        const allowVideoEmbed =
+                          !isGoogle && e.media.url && e.media.type === "video" && isStaticImage;
+                        const hook = e.hook ?? e.brand;
+                        const body = e.body;
+
                         return (
                           <div className="space-y-4">
-                            {allowEmbed && e.media.url && e.media.type === "video" ? (
+                            {allowVideoEmbed ? (
                               <video
                                 controls
                                 autoPlay
                                 preload="metadata"
                                 className="w-full max-h-[60vh] bg-black border-2 border-ink object-contain rounded-[3px]"
-                                src={e.media.url}
+                                src={e.media.url ?? undefined}
                               />
-                            ) : allowEmbed && e.media.url && e.media.type === "image" ? (
+                            ) : isGoogle ? (
+                              <GoogleSearchAdMockup
+                                domain={e.domain}
+                                hook={hook}
+                                body={body}
+                                size="modal"
+                              />
+                            ) : directImg ? (
                               <img
-                                src={e.media.url}
-                                alt={e.hook ?? e.brand}
+                                src={directImg}
+                                alt={hook}
                                 className="w-full max-h-[60vh] object-contain border-2 border-ink bg-secondary rounded-[3px]"
                               />
                             ) : (
-                              <article className="card-flat p-5 space-y-4 bg-paper">
-                                <h3 className="font-serif text-2xl font-bold leading-tight text-ink">
-                                  {e.hook ?? e.brand}
-                                </h3>
-                                {(() => {
-                                  const generic =
-                                    !rawCopy ||
-                                    /social media placement content optimized\.?/i.test(rawCopy) ||
-                                    rawCopy.trim().length < 12;
-                                  if (generic) {
-                                    return (
-                                      <div className="rounded-[3px] border-2 border-ink bg-secondary p-5 text-center">
-                                        <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
-                                          {e.brand}
-                                        </div>
-                                        <div className="font-serif text-xl font-bold text-ink">
-                                          Active {e.channelNorm} Creative Campaign
-                                        </div>
-                                        <div className="mono text-[10px] text-muted-foreground mt-2">
-                                          Live placement · {e.days}d flight
-                                        </div>
-                                      </div>
-                                    );
-                                  }
-                                  return (
-                                    <div>
-                                      <h4 className="mono text-[10px] uppercase font-bold mb-2 text-muted-foreground">
-                                        Ad copy
-                                      </h4>
-                                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-ink">
-                                        {rawCopy}
-                                      </p>
-                                    </div>
-                                  );
-                                })()}
-                                {isGoogle && (
-                                  <div className="pt-2">
-                                    <span className="mono text-[10px] uppercase font-bold inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-ink rounded-[3px] bg-secondary">
-                                      <span className="inline-flex h-2 w-2 rounded-full bg-ink" />
-                                      Google Search Ad
-                                    </span>
-                                  </div>
-                                )}
-                              </article>
+                              <MetaFeedAdMockup brand={e.brand} body={body || hook} size="modal" />
                             )}
-                            {allowEmbed && e.hook && (
-                              <section>
-                                <h4 className="mono text-[10px] uppercase font-bold mb-1">Ad copy</h4>
-                                <p className="text-sm whitespace-pre-wrap">{e.hook}</p>
+
+                            {(body || hook) && (
+                              <section className="card-flat p-4 space-y-2">
+                                <h4 className="mono text-[10px] uppercase font-bold text-muted-foreground">
+                                  Ad copy
+                                </h4>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap text-ink">
+                                  {body || hook}
+                                </p>
                               </section>
                             )}
                           </div>
