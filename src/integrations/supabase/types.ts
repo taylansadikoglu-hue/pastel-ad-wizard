@@ -108,24 +108,33 @@ export type Database = {
       }
       domain_scans: {
         Row: {
+          average_cpc: number | null
           created_at: string | null
           domain: string
+          estimated_monthly_spend: number | null
           id: number
           status: string
+          total_paid_keywords: number | null
           user_id: string | null
         }
         Insert: {
+          average_cpc?: number | null
           created_at?: string | null
           domain: string
+          estimated_monthly_spend?: number | null
           id?: number
           status?: string
+          total_paid_keywords?: number | null
           user_id?: string | null
         }
         Update: {
+          average_cpc?: number | null
           created_at?: string | null
           domain?: string
+          estimated_monthly_spend?: number | null
           id?: number
           status?: string
+          total_paid_keywords?: number | null
           user_id?: string | null
         }
         Relationships: []
