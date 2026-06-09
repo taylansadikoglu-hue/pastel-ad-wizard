@@ -774,6 +774,66 @@ function AdvertisersPage() {
           </div>
         )}
 
+        {/* Executive Intelligence Ribbon */}
+        <section
+          className="rounded-[6px] bg-paper border border-ink/10 p-5 grid grid-cols-1 md:grid-cols-3 gap-5"
+          style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 10px 30px -22px rgba(35,37,29,0.25)" }}
+        >
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
+              <TrendingUp size={12} className="text-primary" /> Estimated Monthly Spend
+            </div>
+            <div className="text-[28px] font-bold tracking-tight leading-none text-ink tabular-nums">
+              {AUD.format(Math.round(ribbon.spend))}
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              Aggregated en-AU search acquisition envelope across {activeAdvertiser === "__all" ? `${visibleRows.length} tracked` : "this"} advertiser{activeAdvertiser === "__all" && visibleRows.length === 1 ? "" : "s"}.
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 md:border-l md:border-ink/10 md:pl-5">
+            <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
+              <Activity size={12} className="text-primary" /> Placement Volume Index
+            </div>
+            <div className="flex items-end gap-3">
+              <div className="text-[28px] font-bold tracking-tight leading-none text-ink tabular-nums">{ribbon.total}</div>
+              <div className="flex items-center gap-2 pb-1">
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-ink/80">
+                  <span className="h-2 w-2 rounded-full bg-[#1877f2]" /> Meta {ribbon.meta}
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-ink/80">
+                  <span className="h-2 w-2 rounded-full bg-[#1a73e8]" /> Google {ribbon.google}
+                </span>
+              </div>
+            </div>
+            <div className="h-1.5 rounded-full bg-ink/5 overflow-hidden flex">
+              <div className="h-full bg-[#1877f2]" style={{ width: ribbon.total ? `${(ribbon.meta / ribbon.total) * 100}%` : "0%" }} />
+              <div className="h-full bg-[#1a73e8]" style={{ width: ribbon.total ? `${(ribbon.google / ribbon.total) * 100}%` : "0%" }} />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 md:border-l md:border-ink/10 md:pl-5">
+            <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
+              <Globe size={12} className="text-primary" /> Net Public Resonance
+            </div>
+            <div className="flex items-center gap-3">
+              <span
+                className={cn(
+                  "inline-flex items-center justify-center min-w-[68px] h-9 px-3 rounded-full text-[15px] font-bold tabular-nums border",
+                  ribbon.resonance >= 60
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                    : ribbon.resonance >= 45
+                      ? "bg-amber-50 text-amber-800 border-amber-200"
+                      : "bg-rose-50 text-rose-800 border-rose-200",
+                )}
+              >
+                {ribbon.resonance}%
+              </span>
+              <span className="text-[11px] text-muted-foreground leading-snug">
+                Weighted audience sentiment index synthesised from parsed comment streams.
+              </span>
+            </div>
+          </div>
+        </section>
+
         {/* Advertiser tabs */}
         <Tabs value={activeAdvertiser} onValueChange={setActiveAdvertiser}>
           <div className="card-flat p-3">
