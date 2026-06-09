@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as ApiBarbsRouteImport } from './routes/api/barbs'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSentimentRouteImport } from './routes/_authenticated/app.sentiment'
 import { Route as AuthenticatedAppPcrRouteImport } from './routes/_authenticated/app.pcr'
@@ -21,6 +23,8 @@ import { Route as AuthenticatedAppDashboardRouteImport } from './routes/_authent
 import { Route as AuthenticatedAppCreativeRouteImport } from './routes/_authenticated/app.creative'
 import { Route as AuthenticatedAppBenchmarksRouteImport } from './routes/_authenticated/app.benchmarks'
 import { Route as AuthenticatedAppAdvertisersRouteImport } from './routes/_authenticated/app.advertisers'
+import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -36,6 +40,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBarbsRoute = ApiBarbsRouteImport.update({
   id: '/api/barbs',
   path: '/api/barbs',
@@ -45,6 +54,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
+  id: '/lovable/email/suppression',
+  path: '/lovable/email/suppression',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppSettingsRoute =
   AuthenticatedAppSettingsRouteImport.update({
@@ -87,12 +101,25 @@ const AuthenticatedAppAdvertisersRoute =
     path: '/advertisers',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const LovableEmailTransactionalSendRoute =
+  LovableEmailTransactionalSendRouteImport.update({
+    id: '/lovable/email/transactional/send',
+    path: '/lovable/email/transactional/send',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/barbs': typeof ApiBarbsRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/app/creative': typeof AuthenticatedAppCreativeRoute
@@ -100,12 +127,16 @@ export interface FileRoutesByFullPath {
   '/app/pcr': typeof AuthenticatedAppPcrRoute
   '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/barbs': typeof ApiBarbsRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/app/creative': typeof AuthenticatedAppCreativeRoute
@@ -113,6 +144,9 @@ export interface FileRoutesByTo {
   '/app/pcr': typeof AuthenticatedAppPcrRoute
   '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -121,6 +155,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/api/barbs': typeof ApiBarbsRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/_authenticated/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/_authenticated/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/_authenticated/app/creative': typeof AuthenticatedAppCreativeRoute
@@ -128,6 +163,9 @@ export interface FileRoutesById {
   '/_authenticated/app/pcr': typeof AuthenticatedAppPcrRoute
   '/_authenticated/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -136,6 +174,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/app'
     | '/api/barbs'
+    | '/email/unsubscribe'
     | '/app/advertisers'
     | '/app/benchmarks'
     | '/app/creative'
@@ -143,12 +182,16 @@ export interface FileRouteTypes {
     | '/app/pcr'
     | '/app/sentiment'
     | '/app/settings'
+    | '/lovable/email/suppression'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/app'
     | '/api/barbs'
+    | '/email/unsubscribe'
     | '/app/advertisers'
     | '/app/benchmarks'
     | '/app/creative'
@@ -156,6 +199,9 @@ export interface FileRouteTypes {
     | '/app/pcr'
     | '/app/sentiment'
     | '/app/settings'
+    | '/lovable/email/suppression'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   id:
     | '__root__'
     | '/'
@@ -163,6 +209,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/app'
     | '/api/barbs'
+    | '/email/unsubscribe'
     | '/_authenticated/app/advertisers'
     | '/_authenticated/app/benchmarks'
     | '/_authenticated/app/creative'
@@ -170,6 +217,9 @@ export interface FileRouteTypes {
     | '/_authenticated/app/pcr'
     | '/_authenticated/app/sentiment'
     | '/_authenticated/app/settings'
+    | '/lovable/email/suppression'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -177,6 +227,10 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiBarbsRoute: typeof ApiBarbsRoute
+  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
+  LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -202,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/barbs': {
       id: '/api/barbs'
       path: '/api/barbs'
@@ -215,6 +276,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/lovable/email/suppression': {
+      id: '/lovable/email/suppression'
+      path: '/lovable/email/suppression'
+      fullPath: '/lovable/email/suppression'
+      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/settings': {
       id: '/_authenticated/app/settings'
@@ -265,6 +333,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdvertisersRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/lovable/email/transactional/send': {
+      id: '/lovable/email/transactional/send'
+      path: '/lovable/email/transactional/send'
+      fullPath: '/lovable/email/transactional/send'
+      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -307,7 +389,21 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiBarbsRoute: ApiBarbsRoute,
+  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
+  LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
