@@ -780,15 +780,33 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
 
 
-          {/* Continuous Inspiration Loop — video creative feed */}
+          {/* Continuous Inspiration Loop — only visible on-demand */}
+          {(creativeViewActive || channelFocus) && (
           <div className="card-flat overflow-hidden">
-            <div className="px-4 py-3 border-b-2 border-ink bg-secondary">
-              <div className="flex items-center gap-2 font-bold text-sm">
-                <Film size={14} /> The Continuous Inspiration Loop
+            <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2 font-bold text-sm">
+                  <Film size={14} /> The Continuous Inspiration Loop
+                  {channelFocus && (
+                    <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-primary">{channelFocus}</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {channelFocus
+                    ? `Showing creative captured on the ${channelFocus} network.`
+                    : "Filter by ad flight length to inspect which hooks are running across the tracked market."}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Filter by ad flight length to instantly inspect which video hooks are actively converting market share across YouTube, Meta, and TikTok.
-              </p>
+              <div className="flex items-center gap-2">
+                {channelFocus && (
+                  <button onClick={() => setChannelFocus(null)} className="btn-flat text-[11px] px-2 py-1">
+                    Clear channel
+                  </button>
+                )}
+                <button onClick={() => { setCreativeViewActive(false); setChannelFocus(null); }} className="btn-flat text-[11px] px-2 py-1">
+                  <X size={12} /> Close
+                </button>
+              </div>
             </div>
             <div className="px-4 py-2 border-b-2 border-ink flex flex-wrap items-center gap-2 bg-paper">
               <span className="mono text-[10px] uppercase font-bold mr-1">Flight length:</span>
@@ -825,9 +843,17 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               const selectedBrands = new Set(
                 Object.entries(selected).filter(([, v]) => v).map(([k]) => k),
               );
+              const matchesChannel = (v: typeof livePlacements[number]) => {
+                if (!channelFocus) return true;
+                if (channelFocus === "Meta") return v.channelNorm === "Meta";
+                if (channelFocus === "Digital Video") return v.channelNorm === "Google" && v.adType === "Video";
+                if (channelFocus === "Google Search") return v.channelNorm === "Google" && v.adType !== "Video";
+                return v.channelNorm !== "Meta" && v.channelNorm !== "Google";
+              };
               const q = searchQuery.trim().toLowerCase();
               const items = livePlacements
                 .filter((v) => selectedBrands.has(v.brand))
+                .filter(matchesChannel)
                 .filter((v) =>
                   videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14,
                 )
@@ -848,7 +874,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               if (items.length === 0) {
                 return (
                   <div className="p-8 text-center text-sm text-muted-foreground">
-                    No creative for the selected advertisers. Tick more advertisers in the matrix above or add a domain under the Advertiser Hub.
+                    No creative matches the current channel + advertiser selection.
                   </div>
                 );
               }
@@ -890,6 +916,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             })()}
 
           </div>
+          )}
 
           {/* Sentiment Radar — mock-fallback sentiment web tied to focused advertiser */}
           <div className="card-flat overflow-hidden">
