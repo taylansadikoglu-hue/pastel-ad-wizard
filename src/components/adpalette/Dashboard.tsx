@@ -2,12 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
-import { getIntegrations, getProfile, saveIntegrations } from "@/lib/integrations.functions";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
   TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
-  Grid3x3, Radio, Plug, ThumbsUp, AlertTriangle, PenTool, KeyRound, Save,
+  Grid3x3, Radio,
   BarChart3, PieChart as PieIcon, Loader2,
 } from "lucide-react";
 
@@ -122,15 +121,10 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [dateMenuOpen, setDateMenuOpen] = useState(false);
   const [upsellOpen, setUpsellOpen] = useState(false);
   const [videoFilter, setVideoFilter] = useState<"all" | "short" | "long">("all");
-  const [activeTab, setActiveTab] = useState<"gallery" | "integrations">("gallery");
+  const [adTypeFilter, setAdTypeFilter] = useState<"All" | "Video" | "Image">("All");
+  const [channelFilter, setChannelFilter] = useState<"All" | "Meta" | "Google">("All");
   const [chartView, setChartView] = useState<"bar" | "pie" | "table">("bar");
-  const [apifyToken, setApifyToken] = useState("");
-  const [dfsLogin, setDfsLogin] = useState("");
-  const [dfsPassword, setDfsPassword] = useState("");
-  const [resendKey, setResendKey] = useState("");
-  const [integSaving, setIntegSaving] = useState(false);
-  const [liveSentiment, setLiveSentiment] = useState<{ domain: string; good: string | null; friction: string | null; blueprint: string | null }[]>([]);
-  const [livePlacements, setLivePlacements] = useState<{ brand: string; hook: string; channel: string; days: number; length: string; aiTag: string; mediaUrl: string | null; mediaType: "video" | "image" | "iframe" | "none" }[]>([]);
+  const [livePlacements, setLivePlacements] = useState<{ brand: string; hook: string; channel: string; channelNorm: "Meta" | "Google"; adType: "Video" | "Image" | "Other"; days: number; length: string; aiTag: string; mediaUrl: string | null; mediaType: "video" | "image" | "iframe" | "none" }[]>([]);
   const [runningScans, setRunningScans] = useState<string[]>([]);
   const [userName, setUserName] = useState<string>("");
   const [userInitials, setUserInitials] = useState<string>("YOU");
@@ -159,10 +153,6 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       const initials = (parts[0]?.[0] ?? "Y") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "");
       setUserInitials(initials.toUpperCase().slice(0, 2));
       setChatLog([{ role: "ai", text: `Hi ${display.split(" ")[0]} — ask me anything about the tracked advertisers' creative.` }]);
-      try {
-        const p = await getProfile();
-        if (active && p?.agency_domain) setAgencyDomain(p.agency_domain);
-      } catch {}
     })();
     return () => { active = false; };
   }, []);
@@ -216,16 +206,32 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     };
   }, []);
 
-  // Continuous Inspiration Loop → ad_placements (any channel: Meta, Google, etc.)
+  // Continuous Inspiration Loop → ad_placements (channel = Meta/Google, ad_type = Image/Video)
   useEffect(() => {
     let active = true;
-    const mapRow = (p: { domain: string; channel: string | null; hook: string | null; days_running: number | null; creative_url: string | null; raw: unknown }) => {
+    const normalizeChan = (c: string | null): "Meta" | "Google" => {
+      const k = (c ?? "").toLowerCase();
+      if (k.includes("google") || k.includes("youtube") || k.includes("search")) return "Google";
+      return "Meta";
+    };
+    const normalizeType = (t: string | null, mt: "video" | "image" | "iframe" | "none"): "Video" | "Image" | "Other" => {
+      const k = (t ?? "").toLowerCase();
+      if (k.includes("video")) return "Video";
+      if (k.includes("image") || k.includes("photo")) return "Image";
+      if (mt === "video") return "Video";
+      if (mt === "image") return "Image";
+      return "Other";
+    };
+    const mapRow = (p: { domain: string; channel: string | null; ad_type: string | null; hook: string | null; days_running: number | null; creative_url: string | null; raw: unknown }) => {
       const extracted = extractMediaUrl(p.creative_url, p.raw);
       const hookText = safeText(p.hook, "").trim() || "Live creative — hook pending AI extraction.";
+      const chan = normalizeChan(p.channel);
       return {
         brand: brandFromDomain(safeText(p.domain)),
         hook: hookText,
-        channel: safeText(p.channel, "Live"),
+        channel: safeText(p.channel, chan),
+        channelNorm: chan,
+        adType: normalizeType(p.ad_type, extracted.type),
         days: typeof p.days_running === "number" ? p.days_running : 1,
         length: "0:--",
         aiTag: "Live",
@@ -234,27 +240,17 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       };
     };
     const load = async () => {
-      const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string) || "(unset)";
-      console.info("[ad_placements] query → from('ad_placements').select(*).order(created_at desc).limit(24) on", supabaseUrl);
       const { data, error } = await supabase
         .from("ad_placements")
-        .select("domain, channel, hook, days_running, creative_url, raw, created_at")
+        .select("domain, channel, ad_type, hook, days_running, creative_url, raw, created_at")
         .order("created_at", { ascending: false })
         .limit(24);
       if (error) {
         console.error("[ad_placements] query failed", error);
         return;
       }
-      console.info("[ad_placements] rows returned:", data?.length ?? 0);
-      if (data?.length) {
-        const byChannel: Record<string, number> = {};
-        for (const r of data) byChannel[r.channel ?? "(null)"] = (byChannel[r.channel ?? "(null)"] ?? 0) + 1;
-        console.info("[ad_placements] channel breakdown:", byChannel);
-      }
       if (!active || !data) return;
-      const mapped = data.map(mapRow);
-      console.info("[ad_placements] rows after mapping (rendered):", mapped.length);
-      setLivePlacements(mapped);
+      setLivePlacements(data.map(mapRow));
     };
     load();
 
@@ -275,69 +271,6 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     };
   }, []);
 
-
-  // Load saved integrations once
-  useEffect(() => {
-    getIntegrations()
-      .then((d) => {
-        if (!d) return;
-        if (d.apify_token) setApifyToken(d.apify_token);
-        if (d.dataforseo_login) setDfsLogin(d.dataforseo_login);
-        if (d.dataforseo_password) setDfsPassword(d.dataforseo_password);
-        if (d.resend_api_key) setResendKey(d.resend_api_key);
-      })
-      .catch(() => {});
-  }, []);
-
-
-  // Subscribe to live sentiment_insights for this user
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      const { data } = await supabase
-        .from("sentiment_insights")
-        .select("domain, good, friction, blueprint, created_at")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (active && data) setLiveSentiment(data);
-    };
-    load();
-    const channel = supabase
-      .channel("sentiment-live")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "sentiment_insights" },
-        (payload) => {
-          const r = payload.new as { domain: string; good: string | null; friction: string | null; blueprint: string | null };
-          setLiveSentiment((prev) => [r, ...prev].slice(0, 20));
-          toast.success(`New sentiment radar reading: ${r.domain}`);
-        }
-      )
-      .subscribe();
-    return () => {
-      active = false;
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const saveAllIntegrations = async () => {
-    setIntegSaving(true);
-    try {
-      await saveIntegrations({
-        data: {
-          apify_token: apifyToken || null,
-          dataforseo_login: dfsLogin || null,
-          dataforseo_password: dfsPassword || null,
-          resend_api_key: resendKey || null,
-        },
-      });
-      toast.success("Integrations saved");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setIntegSaving(false);
-    }
-  };
 
 
   const visible = rows.filter((r) => selected[r.name]);
@@ -366,17 +299,6 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
   const isAdmin = userEmail === ADMIN_EMAIL;
 
-  // Force non-admins off the integrations tab
-  useEffect(() => {
-    if (!isAdmin && activeTab === "integrations") setActiveTab("gallery");
-  }, [isAdmin, activeTab]);
-
-  // Honor ?tab=integrations from sidebar nav link
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("tab") === "integrations" && isAdmin) setActiveTab("integrations");
-  }, [isAdmin]);
 
   const exportCSV = () => {
     const esc = (v: unknown) => {
@@ -555,7 +477,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
         </header>
 
         <main className="flex-1 overflow-auto p-6 space-y-6">
-          {runningScans.length > 0 && (apifyToken || dfsLogin || dfsPassword) && (
+          {runningScans.length > 0 && (
             <div className="card-flat p-4 bg-secondary flex items-center gap-4">
               <div className="w-9 h-9 border-2 border-ink rounded-[4px] bg-primary grid place-items-center shrink-0">
                 <Loader2 size={16} className="animate-spin" />
@@ -580,9 +502,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               <div className="mono text-[10px] text-muted-foreground">WORKSPACE / MEDIA MIX</div>
               <h1 className="text-2xl font-bold mt-1">Media mix & share of voice matrix</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {liveSentiment.length > 0
-                  ? <>Tracking {new Set(liveSentiment.map((s) => s.domain)).size} live advertiser{new Set(liveSentiment.map((s) => s.domain)).size === 1 ? "" : "s"} · {visible.length} of {rows.length} selected for the matrix below.</>
-                  : <>Channel allocation pulled from {visible.length} of {rows.length} tracked advertisers. Recalibrate any total below.</>}
+                Channel allocation pulled from {visible.length} of {rows.length} tracked advertisers. Recalibrate any total below.
               </p>
             </div>
             <div className="flex gap-2">
@@ -598,25 +518,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
 
-          {/* Primary tabs */}
-          <div className="border-2 border-ink rounded-[4px] bg-paper flex overflow-hidden">
-            {([
-              { k: "gallery", label: "Cross-Channel Ad Gallery", icon: Grid3x3, adminOnly: false },
-              { k: "integrations", label: "Developer Integrations", icon: Plug, adminOnly: true },
-            ] as const)
-              .filter((t) => !t.adminOnly || isAdmin)
-              .map((t, i) => (
-                <button
-                  key={t.k}
-                  onClick={() => setActiveTab(t.k)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold ${i > 0 ? "border-l-2 border-ink" : ""} ${activeTab === t.k ? "bg-primary" : "hover:bg-secondary"}`}
-                >
-                  <t.icon size={14} /> {t.label}
-                </button>
-              ))}
-          </div>
-
-          {activeTab === "gallery" && <><div ref={exportRef} className="space-y-6">
+          <div ref={exportRef} className="space-y-6">
           {/* Matrix + Chart */}
           <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
             <div className="card-flat overflow-hidden">
@@ -873,97 +775,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             )}
           </div>
 
-          {/* 3-Second Rule Insight Cards — bound to sentiment_insights */}
-          <div>
-            <div className="mono text-[10px] text-muted-foreground mb-2">
-              SENTIMENT RADAR · {liveSentiment.length} reading{liveSentiment.length === 1 ? "" : "s"}
-              {liveSentiment[0] ? ` · latest: ${brandFromDomain(liveSentiment[0].domain)}` : ""}
-            </div>
-            {liveSentiment.length === 0 ? (
-              <div className="card-flat p-6 text-sm text-muted-foreground text-center">
-                No data found, please add a domain under the Advertisers tab.
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-3 gap-4">
-                {liveSentiment.slice(0, 3).map((s, i) => (
-                  <div key={`${s.domain}-${i}`} className="space-y-3">
-                    <div className="mono text-[10px] uppercase font-bold">{brandFromDomain(s.domain)}</div>
-                    <InsightCard
-                      icon={ThumbsUp}
-                      tag="The Good"
-                      tone="primary"
-                      text={s.good ?? "No value propositions captured yet."}
-                      metric={s.domain}
-                    />
-                    <InsightCard
-                      icon={AlertTriangle}
-                      tag="The Friction"
-                      tone="ink"
-                      text={s.friction ?? "No pain points captured yet."}
-                      metric={s.domain}
-                    />
-                    <InsightCard
-                      icon={PenTool}
-                      tag="Ad Angle Blueprint"
-                      tone="secondary"
-                      text={s.blueprint ?? "No blueprint yet."}
-                      metric={s.domain}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-          </div></>}
 
-
-
-
-          {activeTab === "integrations" && isAdmin && (
-            <div className="max-w-3xl space-y-5">
-              <div>
-                <div className="mono text-[10px] text-muted-foreground">WORKSPACE / DEVELOPER</div>
-                <h2 className="text-2xl font-bold mt-1">Developer Integrations</h2>
-                <p className="text-sm text-muted-foreground mt-1">Your API keys live encrypted in your workspace and are used to run live ad-library scrapes and outbound notifications.</p>
-              </div>
-
-              <div className="card-flat p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> Apify API Token</div>
-                  <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">SCRAPING</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Powers Facebook Ads Library + cross-channel creative scraping per tracked brand fingerprint.</p>
-                <input type="password" value={apifyToken} onChange={(e) => setApifyToken(e.target.value)} onBlur={() => apifyToken && saveAllIntegrations()} placeholder="apify_api_xxxxxxxxxxxxxxxxxxxx" className="input-flat mono" />
-              </div>
-
-              <div className="card-flat p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> DataForSEO Credentials</div>
-                  <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">SEARCH + VIDEO</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Powers Google Ads Transparency and YouTube ad placement indexing.</p>
-                <input type="text" value={dfsLogin} onChange={(e) => setDfsLogin(e.target.value)} onBlur={() => dfsLogin && saveAllIntegrations()} placeholder="DataForSEO login (email)" className="input-flat mono" />
-                <input type="password" value={dfsPassword} onChange={(e) => setDfsPassword(e.target.value)} onBlur={() => dfsPassword && saveAllIntegrations()} placeholder="DataForSEO password" className="input-flat mono" />
-              </div>
-
-              <div className="card-flat p-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-bold"><KeyRound size={16} /> Resend API Key</div>
-                  <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">EMAIL</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Delivers creative diff alerts and pitch-ready briefs to your inbox or client distribution lists.</p>
-                <input type="password" value={resendKey} onChange={(e) => setResendKey(e.target.value)} onBlur={() => resendKey && saveAllIntegrations()} placeholder="re_xxxxxxxxxxxxxxxxxxxx" className="input-flat mono" />
-              </div>
-
-              <button onClick={saveAllIntegrations} disabled={integSaving} className="btn-flat btn-primary">
-                <Save size={13} /> {integSaving ? "Saving…" : "Save all integrations"}
-              </button>
-
-              <div className="mono text-[11px] text-muted-foreground border-2 border-dashed border-ink rounded-[4px] p-3">
-                ► Keys are encrypted at rest and used only for your workspace scans.
-              </div>
-            </div>
-          )}
         </main>
       </div>
 

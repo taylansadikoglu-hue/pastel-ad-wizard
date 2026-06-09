@@ -13,7 +13,7 @@ const PLANS: { key: PlanKey; name: string; price: number; advertisers: string; i
 ];
 
 export function Paywall({ email, onSignOut }: { email: string; onSignOut: () => void }) {
-  const [plan, setPlan] = useState<PlanKey>("agency");
+  const [plan, setPlan] = useState<PlanKey>("solo");
   const [busy, setBusy] = useState(false);
 
   const checkout = async () => {
@@ -58,7 +58,13 @@ export function Paywall({ email, onSignOut }: { email: string; onSignOut: () => 
             const active = plan === p.key;
             return (
               <button key={p.key} type="button" onClick={() => setPlan(p.key)}
-                className={`relative card-flat p-5 text-left transition ${active ? "bg-primary" : ""}`}>
+                className={`relative card-flat p-5 text-left transition ${active ? "bg-primary ring-2 ring-ink ring-offset-2 ring-offset-canvas" : "hover:bg-secondary/50"}`}
+                aria-pressed={active}>
+                {active && (
+                  <div className="absolute top-3 right-3 mono text-[10px] font-bold px-2 py-0.5 border-2 border-ink rounded-[3px] bg-ink text-paper">
+                    SELECTED
+                  </div>
+                )}
                 {p.badge && (
                   <div className="absolute -top-3 left-3 mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-ink text-paper">
                     {p.badge}

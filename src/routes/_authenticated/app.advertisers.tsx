@@ -40,55 +40,13 @@ type Placement = {
   id: number;
   domain: string;
   channel: string | null;
+  ad_type: string | null;
   hook: string | null;
   days_running: number | null;
   creative_url: string | null;
   raw: unknown;
   created_at: string | null;
 };
-
-type Sentiment = {
-  domain: string;
-  good: string | null;
-  friction: string | null;
-  blueprint: string | null;
-};
-
-/**
- * sentiment_insights columns are TEXT but may have been written as a stringified
- * JSON blob (e.g. when the AI returned `{"good":"...","friction":"..."}` as a
- * single string). Try to parse and pull a readable string out so the UI never
- * renders "[object Object]".
- */
-function readableSentiment(value: unknown): string {
-  if (value == null) return "";
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return "";
-    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-      try {
-        return readableSentiment(JSON.parse(trimmed));
-      } catch {
-        return trimmed;
-      }
-    }
-    return trimmed;
-  }
-  if (Array.isArray(value)) return value.map(readableSentiment).filter(Boolean).join("\n\n");
-  if (typeof value === "object") {
-    const o = value as Record<string, unknown>;
-    const preferred = ["text", "summary", "content", "message", "value"];
-    for (const k of preferred) if (typeof o[k] === "string") return o[k] as string;
-    return Object.entries(o)
-      .map(([k, v]) => {
-        const r = readableSentiment(v);
-        return r ? `${k}: ${r}` : "";
-      })
-      .filter(Boolean)
-      .join("\n\n");
-  }
-  return String(value);
-}
 
 type MediaKind = "video" | "image" | "iframe" | "none";
 
@@ -98,12 +56,10 @@ function brandFromDomain(domain: string) {
   return root.charAt(0).toUpperCase() + root.slice(1);
 }
 
-function normalizeChannel(c: string): "Meta" | "Google" | "TikTok" | "Programmatic" {
+function normalizeChannel(c: string): "Meta" | "Google" {
   const k = (c || "").toLowerCase();
-  if (k.includes("meta") || k.includes("facebook") || k.includes("instagram")) return "Meta";
   if (k.includes("google") || k.includes("youtube") || k.includes("search")) return "Google";
-  if (k.includes("tiktok")) return "TikTok";
-  return "Programmatic";
+  return "Meta";
 }
 
 function extractMediaUrl(
@@ -159,18 +115,10 @@ function extractMediaUrl(
   return direct ?? fallback ?? { url: null, type: "none" };
 }
 
-function adType(p: Placement, mediaType: MediaKind): "Video" | "Image" | "Carousel" | "Other" {
-  const r = p.raw as Record<string, unknown> | null;
-  if (r && typeof r === "object") {
-    const t = String(
-      (r as Record<string, unknown>).ad_type ??
-        (r as Record<string, unknown>).type ??
-        "",
-    ).toLowerCase();
-    if (t.includes("carousel")) return "Carousel";
-    if (t.includes("video")) return "Video";
-    if (t.includes("image") || t.includes("photo")) return "Image";
-  }
+function adType(p: Placement, mediaType: MediaKind): "Video" | "Image" | "Other" {
+  const t = (p.ad_type ?? "").toLowerCase();
+  if (t.includes("video")) return "Video";
+  if (t.includes("image") || t.includes("photo")) return "Image";
   if (mediaType === "video") return "Video";
   if (mediaType === "image") return "Image";
   return "Other";
@@ -226,7 +174,6 @@ function MediaEmbed({
 function AdvertisersPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
-  const [sentimentByDomain, setSentimentByDomain] = useState<Record<string, Sentiment>>({});
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const [country, setCountry] = useState<Country>("United States");
@@ -243,20 +190,16 @@ function AdvertisersPage() {
   const load = async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    const [{ data: scans }, { data: pls }, { data: sents }] = await Promise.all([
+    const [{ data: scans }, { data: pls }] = await Promise.all([
       supabase
         .from("domain_scans")
         .select("id, domain, status, created_at")
         .order("created_at", { ascending: false }),
       supabase
         .from("ad_placements")
-        .select("id, domain, channel, hook, days_running, creative_url, raw, created_at")
+        .select("id, domain, channel, ad_type, hook, days_running, creative_url, raw, created_at")
         .order("created_at", { ascending: false })
         .limit(500),
-      supabase
-        .from("sentiment_insights")
-        .select("domain, good, friction, blueprint, created_at")
-        .order("created_at", { ascending: false }),
     ]);
     const seen = new Set<string>();
     const unique: Row[] = [];
@@ -266,11 +209,6 @@ function AdvertisersPage() {
         unique.push(r as Row);
       }
     }
-    const sentimentMap: Record<string, Sentiment> = {};
-    for (const s of (sents ?? []) as Array<Sentiment & { created_at: string }>) {
-      if (!sentimentMap[s.domain]) sentimentMap[s.domain] = { domain: s.domain, good: s.good, friction: s.friction, blueprint: s.blueprint };
-    }
-    setSentimentByDomain(sentimentMap);
     setRows(unique);
     setPlacements((pls ?? []) as Placement[]);
     setLoading(false);
@@ -394,7 +332,7 @@ function AdvertisersPage() {
   }, [enriched, activeAdvertiser, channelFilter, adTypeFilter, flightFilter, sortBy]);
 
   const channelCounts = useMemo(() => {
-    const base = { Meta: 0, Google: 0, TikTok: 0, Programmatic: 0 } as Record<string, number>;
+    const base = { Meta: 0, Google: 0 } as Record<string, number>;
     for (const e of enriched) {
       if (activeAdvertiser !== "__all" && e.domain !== activeAdvertiser) continue;
       base[e.channelNorm] = (base[e.channelNorm] ?? 0) + 1;
@@ -504,7 +442,7 @@ function AdvertisersPage() {
             </div>
 
             <div className="flex items-center gap-1">
-              {(["All", "Meta", "Google", "TikTok", "Programmatic"] as const).map((c) => (
+              {(["All", "Meta", "Google"] as const).map((c) => (
                 <button
                   key={c}
                   onClick={() => setChannelFilter(c)}
@@ -530,8 +468,6 @@ function AdvertisersPage() {
               <option value="All">All ad types</option>
               <option value="Video">Video</option>
               <option value="Image">Image</option>
-              <option value="Carousel">Carousel</option>
-              <option value="Other">Other</option>
             </select>
 
             <div className="flex items-center gap-1">
@@ -577,10 +513,6 @@ function AdvertisersPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {filtered.map((e) => {
-                  const sentiment = sentimentByDomain[e.domain];
-                  const goodText = readableSentiment(sentiment?.good);
-                  const frictionText = readableSentiment(sentiment?.friction);
-                  const blueprintText = readableSentiment(sentiment?.blueprint);
                   return (
                   <Dialog key={e.id}>
                     <DialogTrigger asChild>
@@ -668,27 +600,6 @@ function AdvertisersPage() {
                             <h4 className="mono text-[10px] uppercase font-bold mb-1">Ad copy</h4>
                             <p className="text-sm whitespace-pre-wrap">{e.hook}</p>
                           </section>
-                        )}
-                        {blueprintText && (
-                          <section>
-                            <h4 className="mono text-[10px] uppercase font-bold mb-1">Blueprint</h4>
-                            <p className="text-sm whitespace-pre-wrap">{blueprintText}</p>
-                          </section>
-                        )}
-                        {goodText && (
-                          <section>
-                            <h4 className="mono text-[10px] uppercase font-bold mb-1">What audiences love</h4>
-                            <p className="text-sm whitespace-pre-wrap">{goodText}</p>
-                          </section>
-                        )}
-                        {frictionText && (
-                          <section>
-                            <h4 className="mono text-[10px] uppercase font-bold mb-1">Friction</h4>
-                            <p className="text-sm whitespace-pre-wrap">{frictionText}</p>
-                          </section>
-                        )}
-                        {!goodText && !frictionText && !blueprintText && (
-                          <p className="text-xs text-muted-foreground">No sentiment analysis available yet for {e.brand}.</p>
                         )}
                       </div>
                     </DialogContent>
