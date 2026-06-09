@@ -2,12 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
-import { getIntegrations, getProfile, saveIntegrations } from "@/lib/integrations.functions";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
   TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
-  Grid3x3, Radio, Plug, ThumbsUp, AlertTriangle, PenTool, KeyRound, Save,
+  Grid3x3, Radio,
   BarChart3, PieChart as PieIcon, Loader2,
 } from "lucide-react";
 
