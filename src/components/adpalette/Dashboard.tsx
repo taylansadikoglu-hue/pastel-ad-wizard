@@ -518,25 +518,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
 
-          {/* Primary tabs */}
-          <div className="border-2 border-ink rounded-[4px] bg-paper flex overflow-hidden">
-            {([
-              { k: "gallery", label: "Cross-Channel Ad Gallery", icon: Grid3x3, adminOnly: false },
-              { k: "integrations", label: "Developer Integrations", icon: Plug, adminOnly: true },
-            ] as const)
-              .filter((t) => !t.adminOnly || isAdmin)
-              .map((t, i) => (
-                <button
-                  key={t.k}
-                  onClick={() => setActiveTab(t.k)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold ${i > 0 ? "border-l-2 border-ink" : ""} ${activeTab === t.k ? "bg-primary" : "hover:bg-secondary"}`}
-                >
-                  <t.icon size={14} /> {t.label}
-                </button>
-              ))}
-          </div>
-
-          {activeTab === "gallery" && <><div ref={exportRef} className="space-y-6">
+          <div ref={exportRef} className="space-y-6">
           {/* Matrix + Chart */}
           <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
             <div className="card-flat overflow-hidden">
