@@ -832,16 +832,34 @@ function AdvertisersPage() {
           </div>
           <div className="flex flex-col gap-2 md:border-l md:border-ink/10 md:pl-5">
             <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
-              <Globe size={12} className="text-primary" /> Net Public Resonance
+              <Globe size={12} className="text-primary" /> Strategy AI Coverage
             </div>
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center justify-center h-9 px-3 rounded-full text-[12px] font-semibold border bg-ink/5 text-muted-foreground border-ink/10">
-                Data unavailable
-              </span>
-              <span className="text-[11px] text-muted-foreground leading-snug">
-                Awaiting live sentiment ingestion pipeline.
-              </span>
-            </div>
+            {ribbon.strategy > 0 ? (
+              <>
+                <div className="flex items-end gap-3">
+                  <div className="text-[28px] font-bold tracking-tight leading-none text-ink tabular-nums">
+                    {ribbon.strategy}
+                    <span className="text-[14px] font-semibold text-muted-foreground"> / {ribbon.total}</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold pb-1" style={{ color: "#9a7c3e" }}>
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#c8a96a" }} />
+                    {ribbon.total ? Math.round((ribbon.strategy / ribbon.total) * 100) : 0}% analysed
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-ink/5 overflow-hidden">
+                  <div className="h-full" style={{ width: ribbon.total ? `${(ribbon.strategy / ribbon.total) * 100}%` : "0%", background: "#c8a96a" }} />
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center justify-center h-9 px-3 rounded-full text-[12px] font-semibold border bg-ink/5 text-muted-foreground border-ink/10">
+                  Strategy AI pending
+                </span>
+                <span className="text-[11px] text-muted-foreground leading-snug">
+                  Strategist analysis will appear here once placements are processed.
+                </span>
+              </div>
+            )}
           </div>
         </section>
 
