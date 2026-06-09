@@ -18,65 +18,122 @@ export type Database = {
         Row: {
           ad_title: string | null
           ad_type: string | null
+          advertiser_name: string | null
           buyer_stage: string | null
+          campaign_cluster: string | null
+          category: string | null
           channel: string | null
           channel_platform: string | null
+          confidence_score: number | null
           created_at: string | null
+          creative_hash: string | null
           creative_url: string | null
           days_running: number | null
+          description: string | null
+          detected_cta: string | null
           domain: string
           emotional_driver: string | null
+          extracted_offer: string | null
+          first_seen: string | null
+          headline: string | null
           hook: string | null
           hook_analysis: string | null
           id: number
+          landing_url: string | null
+          last_seen: string | null
           media_url: string | null
+          offer_theme: string | null
           offer_type: string | null
+          page_description: string | null
+          page_title: string | null
+          product_category: string | null
           raw: Json | null
           raw_copy: string | null
           scan_id: number | null
+          source_archive_url: string | null
+          source_platform: string | null
           strategist_takeaway: string | null
+          times_seen: number | null
         }
         Insert: {
           ad_title?: string | null
           ad_type?: string | null
+          advertiser_name?: string | null
           buyer_stage?: string | null
+          campaign_cluster?: string | null
+          category?: string | null
           channel?: string | null
           channel_platform?: string | null
+          confidence_score?: number | null
           created_at?: string | null
+          creative_hash?: string | null
           creative_url?: string | null
           days_running?: number | null
+          description?: string | null
+          detected_cta?: string | null
           domain: string
           emotional_driver?: string | null
+          extracted_offer?: string | null
+          first_seen?: string | null
+          headline?: string | null
           hook?: string | null
           hook_analysis?: string | null
           id?: number
+          landing_url?: string | null
+          last_seen?: string | null
           media_url?: string | null
+          offer_theme?: string | null
           offer_type?: string | null
+          page_description?: string | null
+          page_title?: string | null
+          product_category?: string | null
           raw?: Json | null
           raw_copy?: string | null
           scan_id?: number | null
+          source_archive_url?: string | null
+          source_platform?: string | null
           strategist_takeaway?: string | null
+          times_seen?: number | null
         }
         Update: {
           ad_title?: string | null
           ad_type?: string | null
+          advertiser_name?: string | null
           buyer_stage?: string | null
+          campaign_cluster?: string | null
+          category?: string | null
           channel?: string | null
           channel_platform?: string | null
+          confidence_score?: number | null
           created_at?: string | null
+          creative_hash?: string | null
           creative_url?: string | null
           days_running?: number | null
+          description?: string | null
+          detected_cta?: string | null
           domain?: string
           emotional_driver?: string | null
+          extracted_offer?: string | null
+          first_seen?: string | null
+          headline?: string | null
           hook?: string | null
           hook_analysis?: string | null
           id?: number
+          landing_url?: string | null
+          last_seen?: string | null
           media_url?: string | null
+          offer_theme?: string | null
           offer_type?: string | null
+          page_description?: string | null
+          page_title?: string | null
+          product_category?: string | null
           raw?: Json | null
           raw_copy?: string | null
           scan_id?: number | null
+          source_archive_url?: string | null
+          source_platform?: string | null
           strategist_takeaway?: string | null
+          times_seen?: number | null
         }
         Relationships: [
           {
