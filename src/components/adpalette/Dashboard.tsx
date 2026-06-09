@@ -918,7 +918,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
           )}
 
-          {/* Sentiment Radar — mock-fallback sentiment web tied to focused advertiser */}
+          {/* Sentiment Radar — hidden until live sentiment ingestion pipeline lands */}
           <div className="card-flat overflow-hidden">
             <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between gap-3 flex-wrap">
               <div>
@@ -926,24 +926,13 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <Radio size={14} /> Sentiment Radar
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Audience perception web for <span className="font-semibold">{focusedBrand || "—"}</span> across feedback, product, support, and ad-engagement axes.
+                  Audience perception web for <span className="font-semibold">{focusedBrand || "—"}</span>.
                 </p>
               </div>
-              <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper">MOCK · falls back to deterministic blend</span>
+              <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper text-muted-foreground">Data unavailable</span>
             </div>
-            <div className="p-5 grid md:grid-cols-[1fr_1.1fr] gap-5 items-center">
-              <SentimentRadar scores={sentimentScores} />
-              <div className="grid grid-cols-2 gap-2">
-                {SENTIMENT_AXES.map((a, i) => (
-                  <div key={a} className="card-flat-sm p-3">
-                    <div className="mono text-[10px] uppercase text-muted-foreground">{a}</div>
-                    <div className="mono text-2xl font-bold">{sentimentScores[i]}</div>
-                    <div className="h-1.5 mt-1 border border-ink bg-paper rounded-[2px] overflow-hidden">
-                      <div className="h-full bg-primary" style={{ width: `${sentimentScores[i]}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="p-5 text-xs text-muted-foreground">
+              Live sentiment ingestion is not yet connected. Radar will populate automatically once the pipeline lands.
             </div>
           </div>
 
