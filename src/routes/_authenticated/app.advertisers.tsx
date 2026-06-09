@@ -40,55 +40,13 @@ type Placement = {
   id: number;
   domain: string;
   channel: string | null;
+  ad_type: string | null;
   hook: string | null;
   days_running: number | null;
   creative_url: string | null;
   raw: unknown;
   created_at: string | null;
 };
-
-type Sentiment = {
-  domain: string;
-  good: string | null;
-  friction: string | null;
-  blueprint: string | null;
-};
-
-/**
- * sentiment_insights columns are TEXT but may have been written as a stringified
- * JSON blob (e.g. when the AI returned `{"good":"...","friction":"..."}` as a
- * single string). Try to parse and pull a readable string out so the UI never
- * renders "[object Object]".
- */
-function readableSentiment(value: unknown): string {
-  if (value == null) return "";
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return "";
-    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-      try {
-        return readableSentiment(JSON.parse(trimmed));
-      } catch {
-        return trimmed;
-      }
-    }
-    return trimmed;
-  }
-  if (Array.isArray(value)) return value.map(readableSentiment).filter(Boolean).join("\n\n");
-  if (typeof value === "object") {
-    const o = value as Record<string, unknown>;
-    const preferred = ["text", "summary", "content", "message", "value"];
-    for (const k of preferred) if (typeof o[k] === "string") return o[k] as string;
-    return Object.entries(o)
-      .map(([k, v]) => {
-        const r = readableSentiment(v);
-        return r ? `${k}: ${r}` : "";
-      })
-      .filter(Boolean)
-      .join("\n\n");
-  }
-  return String(value);
-}
 
 type MediaKind = "video" | "image" | "iframe" | "none";
 
