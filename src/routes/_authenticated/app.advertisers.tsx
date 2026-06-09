@@ -517,10 +517,6 @@ function AdvertisersPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {filtered.map((e) => {
-                  const sentiment = sentimentByDomain[e.domain];
-                  const goodText = readableSentiment(sentiment?.good);
-                  const frictionText = readableSentiment(sentiment?.friction);
-                  const blueprintText = readableSentiment(sentiment?.blueprint);
                   return (
                   <Dialog key={e.id}>
                     <DialogTrigger asChild>
