@@ -571,15 +571,11 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               </div>
             </div>
 
-            {/* Chart — real channel mix grouped by channel + ad_type from ad_placements */}
+            {/* Chart — aggregate market footprint grouped by channel + ad_type */}
             <div className="card-flat p-4">
               {(() => {
-                const selectedBrands = new Set(
-                  Object.entries(selected).filter(([, v]) => v).map(([k]) => k),
-                );
-                const scoped = livePlacements.filter((p) => selectedBrands.has(p.brand));
                 const groups = { Meta: 0, "Google Search": 0, "Digital Video": 0, "Programmatic Display": 0 } as Record<string, number>;
-                for (const p of scoped) {
+                for (const p of livePlacements) {
                   if (p.channelNorm === "Meta") groups.Meta += 1;
                   else if (p.channelNorm === "Google" && p.adType === "Video") groups["Digital Video"] += 1;
                   else if (p.channelNorm === "Google") groups["Google Search"] += 1;
@@ -587,22 +583,26 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 }
                 const total = Object.values(groups).reduce((a, b) => a + b, 0);
                 const segs = (Object.keys(groups) as Array<keyof typeof groups>).map((k, i) => ({
-                  label: k as string,
+                  label: k as "Meta" | "Google Search" | "Digital Video" | "Programmatic Display",
                   count: groups[k],
                   pct: total ? Math.round((groups[k] / total) * 100) : 0,
                   color: ["var(--primary)", "#23251D", "#A1A39A", "var(--pastel-peach)"][i],
                 }));
+                const focusSector = (label: typeof segs[number]["label"]) => {
+                  setChannelFocus((cur) => (cur === label ? null : label));
+                  setCreativeViewActive(true);
+                };
                 return (
                   <>
                     <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
                       <div>
-                        <div className="font-bold text-sm">Channel mix by spend</div>
-                        <div className="mono text-[10px] text-muted-foreground">{total} live placements · {selectedBrands.size} advertiser{selectedBrands.size === 1 ? "" : "s"}</div>
+                        <div className="font-bold text-sm">Channel allocation · market footprint</div>
+                        <div className="mono text-[10px] text-muted-foreground">{total} live placements across all tracked advertisers · click a sector to drill in</div>
                       </div>
                       <div className="flex items-center border-2 border-ink rounded-[3px] overflow-hidden">
                         {([
-                          { k: "bar", label: "Bars", icon: BarChart3 },
                           { k: "pie", label: "Pie", icon: PieIcon },
+                          { k: "bar", label: "Bars", icon: BarChart3 },
                           { k: "table", label: "Table", icon: TableIcon },
                         ] as const).map((v, i) => (
                           <button
@@ -618,27 +618,31 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mono text-[10px] mb-3">
                       {segs.map((s) => (
-                        <span key={s.label} className="flex items-center gap-1">
+                        <button
+                          key={s.label}
+                          onClick={() => focusSector(s.label)}
+                          className={`flex items-center gap-1 px-1.5 py-0.5 border-2 rounded-[3px] ${channelFocus === s.label ? "border-ink bg-secondary" : "border-transparent hover:border-ink"}`}
+                        >
                           <span className="w-3 h-3 border-2 border-ink" style={{ background: s.color }} />{s.label}
-                        </span>
+                        </button>
                       ))}
                     </div>
                     {total === 0 ? (
                       <div className="h-64 grid place-items-center mono text-xs text-muted-foreground border-2 border-dashed border-ink rounded-[4px]">
-                        No live placements for selected advertisers
+                        No live placements ingested yet
                       </div>
                     ) : chartView === "bar" ? (
                       <div className="space-y-3">
                         {segs.map((s) => (
-                          <div key={s.label}>
+                          <button key={s.label} onClick={() => focusSector(s.label)} className="w-full text-left">
                             <div className="flex items-center justify-between text-xs mb-1">
                               <span className="font-semibold">{s.label}</span>
                               <span className="mono text-muted-foreground">{s.count} · {s.pct}%</span>
                             </div>
-                            <div className="h-7 border-2 border-ink rounded-[3px] overflow-hidden bg-paper">
+                            <div className={`h-7 border-2 rounded-[3px] overflow-hidden bg-paper ${channelFocus === s.label ? "border-primary" : "border-ink"}`}>
                               <div style={{ width: `${s.pct}%`, background: s.color }} className="h-full" />
                             </div>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     ) : chartView === "pie" ? (
@@ -659,15 +663,27 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                           <div className="flex flex-col items-center gap-3">
                             <svg viewBox="0 0 220 220" className="w-full max-w-[240px]">
                               {arcs.map((a) => (
-                                <path key={a.label} d={a.d} fill={a.color} stroke="var(--ink)" strokeWidth={2} />
+                                <path
+                                  key={a.label}
+                                  d={a.d}
+                                  fill={a.color}
+                                  stroke="var(--ink)"
+                                  strokeWidth={channelFocus === a.label ? 4 : 2}
+                                  style={{ cursor: "pointer", opacity: channelFocus && channelFocus !== a.label ? 0.45 : 1 }}
+                                  onClick={() => focusSector(a.label)}
+                                />
                               ))}
                             </svg>
                             <div className="grid grid-cols-2 gap-2 w-full">
                               {segs.map((a) => (
-                                <div key={a.label} className="card-flat-sm p-2 text-center">
+                                <button
+                                  key={a.label}
+                                  onClick={() => focusSector(a.label)}
+                                  className={`card-flat-sm p-2 text-center hover:bg-secondary ${channelFocus === a.label ? "bg-primary" : ""}`}
+                                >
                                   <div className="mono text-[10px] uppercase">{a.label}</div>
                                   <div className="mono text-lg font-bold">{a.pct}%</div>
-                                </div>
+                                </button>
                               ))}
                             </div>
                           </div>
@@ -684,7 +700,11 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                         </thead>
                         <tbody>
                           {segs.map((s) => (
-                            <tr key={s.label} className="border-b border-ink/30 last:border-0">
+                            <tr
+                              key={s.label}
+                              onClick={() => focusSector(s.label)}
+                              className={`border-b border-ink/30 last:border-0 cursor-pointer hover:bg-secondary ${channelFocus === s.label ? "bg-primary/30" : ""}`}
+                            >
                               <td className="px-2 py-1.5 font-semibold">{s.label}</td>
                               <td className="px-2 py-1.5 mono">{s.count}</td>
                               <td className="px-2 py-1.5 mono font-bold">{s.pct}%</td>
@@ -698,6 +718,64 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               })()}
             </div>
           </div>
+
+          {/* Placement Network Breakdown + Creative drawer toggle */}
+          {(() => {
+            const groups: Record<"Meta" | "Google Search" | "Digital Video" | "Programmatic Display", typeof livePlacements> = {
+              Meta: [], "Google Search": [], "Digital Video": [], "Programmatic Display": [],
+            };
+            for (const p of livePlacements) {
+              if (p.channelNorm === "Meta") groups.Meta.push(p);
+              else if (p.channelNorm === "Google" && p.adType === "Video") groups["Digital Video"].push(p);
+              else if (p.channelNorm === "Google") groups["Google Search"].push(p);
+              else groups["Programmatic Display"].push(p);
+            }
+            const rowsData = (Object.keys(groups) as Array<keyof typeof groups>).map((label) => ({
+              label,
+              ads: groups[label].length,
+              uniqueCreatives: new Set(groups[label].map((p) => p.mediaUrl ?? p.hook)).size,
+              brands: new Set(groups[label].map((p) => p.brand)).size,
+            }));
+            return (
+              <div className="card-flat overflow-hidden">
+                <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="font-bold text-sm">Placement network breakdown</div>
+                    <p className="text-xs text-muted-foreground mt-0.5">Where ads are running across the tracked market — click a row to inspect the creative.</p>
+                  </div>
+                  <label className="flex items-center gap-2 mono text-[10px] uppercase font-bold cursor-pointer select-none">
+                    <span>Activate creative view</span>
+                    <input
+                      type="checkbox"
+                      checked={creativeViewActive}
+                      onChange={(e) => { setCreativeViewActive(e.target.checked); if (!e.target.checked) setChannelFocus(null); }}
+                      className="w-4 h-4 accent-[var(--ink)] cursor-pointer"
+                    />
+                  </label>
+                </div>
+                <ul className="divide-y-2 divide-ink">
+                  {rowsData.map((r) => (
+                    <li key={r.label}>
+                      <button
+                        onClick={() => { setChannelFocus((cur) => (cur === r.label ? null : r.label)); setCreativeViewActive(true); }}
+                        className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-secondary ${channelFocus === r.label ? "bg-primary/30" : ""}`}
+                      >
+                        <div className="min-w-0">
+                          <div className="font-semibold text-sm truncate">{r.label} Network: {r.ads} ad{r.ads === 1 ? "" : "s"} found</div>
+                          <div className="mono text-[10px] text-muted-foreground truncate">
+                            {r.uniqueCreatives} unique creative{r.uniqueCreatives === 1 ? "" : "s"} · {r.brands} advertiser{r.brands === 1 ? "" : "s"}
+                          </div>
+                        </div>
+                        <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper shrink-0">
+                          {channelFocus === r.label ? "Hide creative" : "Inspect →"}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
 
 
 
