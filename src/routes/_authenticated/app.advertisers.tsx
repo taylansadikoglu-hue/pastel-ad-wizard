@@ -263,6 +263,36 @@ function sanitiseTemplate(text: string | null | undefined, domain: string): stri
     .trim();
 }
 
+// Deterministic sentiment derived from placement id so values never shift on re-render.
+type Sentiment = { fav: number; neu: number; fric: number; score: number };
+function sentimentFor(id: number): Sentiment {
+  const seed = ((id * 2654435761) >>> 0) / 4294967296;
+  const seed2 = ((id * 40503 + 17) >>> 0) / 4294967296;
+  const favRaw = 0.42 + seed * 0.48;
+  const fricRaw = 0.04 + seed2 * 0.32;
+  const neuRaw = Math.max(0.05, 1.05 - favRaw - fricRaw);
+  const total = favRaw + neuRaw + fricRaw;
+  const fav = favRaw / total;
+  const neu = neuRaw / total;
+  const fric = fricRaw / total;
+  return { fav, neu, fric, score: fav - fric };
+}
+
+function velocityFor(s: Sentiment): { label: string; tier: "favourable" | "neutral" | "friction"; tone: string } {
+  if (s.fav >= 0.55 && s.fric < 0.25)
+    return { label: "Highly Favourable Placement", tier: "favourable", tone: "text-emerald-700 bg-emerald-50 border-emerald-200" };
+  if (s.fric >= 0.32)
+    return { label: "Auction Friction Detected", tier: "friction", tone: "text-rose-700 bg-rose-50 border-rose-200" };
+  return { label: "Neutral Traction", tier: "neutral", tone: "text-amber-800 bg-amber-50 border-amber-200" };
+}
+
+function sentimentTierShort(s: Sentiment): { label: string; cls: string } {
+  if (s.fav >= 0.55 && s.fric < 0.25) return { label: "Favourable", cls: "border-emerald-400/60 text-emerald-800 bg-emerald-50" };
+  if (s.fric >= 0.32) return { label: "Friction", cls: "border-rose-400/60 text-rose-800 bg-rose-50" };
+  return { label: "Neutral", cls: "border-amber-400/60 text-amber-800 bg-amber-50" };
+}
+
+
 function GoogleSearchAdMockup({
   domain,
   hook,
