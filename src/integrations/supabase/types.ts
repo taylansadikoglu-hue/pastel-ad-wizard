@@ -187,6 +187,38 @@ export type Database = {
         }
         Relationships: []
       }
+      scan_email_log: {
+        Row: {
+          created_at: string
+          provider_id: string | null
+          recipient: string
+          scan_id: number
+          sent_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          provider_id?: string | null
+          recipient: string
+          scan_id: number
+          sent_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          provider_id?: string | null
+          recipient?: string
+          scan_id?: number
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_email_log_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: true
+            referencedRelation: "domain_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sentiment_insights: {
         Row: {
           blueprint: string | null
@@ -239,6 +271,24 @@ export type Database = {
         }
         Update: {
           key?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      webhook_secrets: {
+        Row: {
+          created_at: string
+          name: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
           value?: string
         }
         Relationships: []
