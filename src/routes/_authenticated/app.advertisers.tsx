@@ -690,13 +690,7 @@ function AdvertisersPage() {
     const meta = scopedPl.filter((e) => e.channelNorm === "Meta").length;
     const google = scopedPl.filter((e) => e.channelNorm === "Google").length;
     const total = scopedPl.length;
-    let resonance = 0;
-    if (total > 0) {
-      const sum = scopedPl.reduce((s, e) => s + sentimentFor(e.id).score, 0);
-      // Map score (-1..1) → 0..100 around a 50 baseline
-      resonance = Math.round(((sum / total) + 1) * 50);
-    }
-    return { spend, meta, google, total, resonance };
+    return { spend, meta, google, total };
   }, [visibleRows, enriched, activeAdvertiser]);
 
   return (
@@ -815,20 +809,11 @@ function AdvertisersPage() {
               <Globe size={12} className="text-primary" /> Net Public Resonance
             </div>
             <div className="flex items-center gap-3">
-              <span
-                className={cn(
-                  "inline-flex items-center justify-center min-w-[68px] h-9 px-3 rounded-full text-[15px] font-bold tabular-nums border",
-                  ribbon.resonance >= 60
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                    : ribbon.resonance >= 45
-                      ? "bg-amber-50 text-amber-800 border-amber-200"
-                      : "bg-rose-50 text-rose-800 border-rose-200",
-                )}
-              >
-                {ribbon.resonance}%
+              <span className="inline-flex items-center justify-center h-9 px-3 rounded-full text-[12px] font-semibold border bg-ink/5 text-muted-foreground border-ink/10">
+                Data unavailable
               </span>
               <span className="text-[11px] text-muted-foreground leading-snug">
-                Weighted audience sentiment index synthesised from parsed comment streams.
+                Awaiting live sentiment ingestion pipeline.
               </span>
             </div>
           </div>
@@ -993,8 +978,6 @@ function AdvertisersPage() {
                             {e.hook ?? "—"}
                           </p>
                           {(() => {
-                            const s = sentimentFor(e.id);
-                            const tier = sentimentTierShort(s);
                             const variants = enriched.filter((x) => x.domain === e.domain).length;
                             return (
                               <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-2 border-t border-ink/10">
@@ -1005,9 +988,6 @@ function AdvertisersPage() {
                                 <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px] inline-flex items-center gap-1">
                                   <span className={`h-1.5 w-1.5 rounded-full ${e.channelNorm === "Meta" ? "bg-[#1877f2]" : "bg-[#1a73e8]"}`} />
                                   ×{variants}
-                                </span>
-                                <span className={cn("mono text-[10px] px-1.5 py-0.5 border rounded-[3px]", tier.cls)}>
-                                  {tier.label}
                                 </span>
                                 <span className="mono text-[10px] text-muted-foreground ml-auto">
                                   {format(new Date(e.created_at ?? Date.now()), "d MMM")}
@@ -1056,18 +1036,11 @@ function AdvertisersPage() {
                         const hook = e.hook ?? e.brand;
                         const body = e.body;
 
-                        const sent = sentimentFor(e.id);
-                        const velocity = velocityFor(sent);
                         const crawler = e.channelNorm === "Google" ? "DataForSEO Labs Index" : "Apify Orchestration Engine";
 
                         return (
                           <div className="space-y-4">
-                            {/* Sentiment velocity label */}
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <span className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[12px] font-semibold", velocity.tone)}>
-                                <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                                {velocity.label}
-                              </span>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                               <span className="inline-flex items-center gap-1.5 mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground border border-ink/15 bg-paper px-2.5 py-1 rounded-full">
                                 <Database size={11} /> {crawler}
                               </span>
@@ -1246,35 +1219,19 @@ function AdvertisersPage() {
                             })()}
 
 
-                            {/* Audience Sentiment Matrix */}
-                            <section className="rounded-[6px] border border-ink/10 bg-paper p-5 space-y-4" style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -18px rgba(35,37,29,0.3)" }}>
-                              <div className="flex items-center justify-between">
+                            {/* Audience Sentiment Matrix — hidden until live sentiment pipeline lands */}
+                            <section className="rounded-[6px] border border-ink/10 bg-paper p-5 space-y-2" style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -18px rgba(35,37,29,0.3)" }}>
+                              <div className="flex items-center justify-between gap-3">
                                 <h4 className="mono text-[11px] uppercase font-semibold tracking-[0.18em] text-muted-foreground">
                                   Audience Sentiment Matrix
                                 </h4>
-                                <span className="mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                                  Parsed comment stream · n≈{120 + (e.id % 380)}
+                                <span className="mono text-[10px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full border border-ink/10 bg-ink/5 text-muted-foreground">
+                                  Data unavailable
                                 </span>
                               </div>
-                              {([
-                                { key: "fav", label: "Favourable Intent", range: "0.60 – 1.00", value: sent.fav, sub: "Organic brand advocacy & purchase signals", bar: "bg-emerald-500", text: "text-emerald-800" },
-                                { key: "neu", label: "Neutral Engagement", range: "~0.50", value: sent.neu, sub: "Community tags & generic inquiries", bar: "bg-amber-400", text: "text-amber-800" },
-                                { key: "fric", label: "Brand Friction", range: "0.00 – 0.40", value: sent.fric, sub: "Consumer pushback & messaging objections", bar: "bg-rose-500", text: "text-rose-800" },
-                              ] as const).map((row) => (
-                                <div key={row.key} className="space-y-1.5">
-                                  <div className="flex items-baseline justify-between gap-3">
-                                    <div className="flex items-baseline gap-2 min-w-0">
-                                      <span className={cn("text-[13px] font-semibold", row.text)}>{row.label}</span>
-                                      <span className="mono text-[10px] text-muted-foreground">{row.range}</span>
-                                    </div>
-                                    <span className="tabular-nums text-[13px] font-bold text-ink">{(row.value * 100).toFixed(1)}%</span>
-                                  </div>
-                                  <div className="h-2 rounded-full bg-ink/5 overflow-hidden">
-                                    <div className={cn("h-full rounded-full", row.bar)} style={{ width: `${row.value * 100}%` }} />
-                                  </div>
-                                  <p className="text-[11px] text-muted-foreground">{row.sub}</p>
-                                </div>
-                              ))}
+                              <p className="text-[12px] text-muted-foreground">
+                                Favourable Intent, Neutral Engagement and Brand Friction will appear once the live sentiment ingestion pipeline is connected.
+                              </p>
                             </section>
                           </div>
                         );

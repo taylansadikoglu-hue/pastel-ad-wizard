@@ -269,14 +269,13 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   }, [livePlacements]);
 
   const displayRows = useMemo(
-    () => rows.map((r) => ({ ...r, spend: placementSpend.get(r.name) ?? r.spend })),
+    () => rows.map((r) => ({ ...r, spend: placementSpend.get(r.name) ?? 0 })),
     [rows, placementSpend],
   );
   const visible = displayRows.filter((r) => selected[r.name]);
   const colors = theme === "dark" ? CHANNEL_COLORS_PASTEL : CHANNEL_COLORS_STD;
   const totalSpend = useMemo(() => visible.reduce((a, b) => a + b.spend, 0), [visible]);
   const focusedBrand = visible[0]?.name ?? displayRows[0]?.name ?? "";
-  const sentimentScores = useMemo(() => sentimentForBrand(focusedBrand), [focusedBrand]);
 
   const toggleRow = (n: string) => setSelected((s) => ({ ...s, [n]: !s[n] }));
   const setSpend = (name: string, value: number) =>
@@ -540,8 +539,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   </thead>
                   <tbody>
                     {displayRows.map((r) => {
-                      const primary = r.meta >= r.google && r.meta >= r.programmatic
-                        ? "Meta" : r.google >= r.programmatic ? "Google" : "Programmatic";
+                      const liveSpend = placementSpend.get(r.name);
                       return (
                         <tr key={r.name} className="border-b border-ink/30 last:border-0">
                           <td className="px-3 py-2.5">
@@ -549,12 +547,9 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                               className="w-4 h-4 accent-[var(--ink)] cursor-pointer" />
                           </td>
                           <td className="px-3 py-2.5 font-semibold">{r.name}</td>
-                          <td className="px-3 py-2.5 mono">{fmt(r.spend)}</td>
-                          <td className="px-3 py-2.5 mono">{r.meta}%</td>
-                          <td className="px-3 py-2.5 mono">{r.google}%</td>
-                          <td className="px-3 py-2.5 mono">{r.programmatic}%</td>
-                          <td className="px-3 py-2.5">
-                            <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">{primary}</span>
+                          <td className="px-3 py-2.5 mono">{typeof liveSpend === "number" && liveSpend > 0 ? fmt(liveSpend) : <span className="text-muted-foreground">Data unavailable</span>}</td>
+                          <td className="px-3 py-2.5 mono text-muted-foreground" colSpan={4}>
+                            Channel mix unavailable — awaiting live media-mix feed.
                           </td>
                         </tr>
                       );
@@ -563,7 +558,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <tfoot className="bg-secondary border-t-2 border-ink">
                     <tr>
                       <td colSpan={2} className="px-3 py-2 mono text-[11px] font-bold">SELECTED TOTAL</td>
-                      <td className="px-3 py-2 mono font-bold">{fmt(totalSpend)}</td>
+                      <td className="px-3 py-2 mono font-bold">{totalSpend > 0 ? fmt(totalSpend) : <span className="text-muted-foreground font-normal">Data unavailable</span>}</td>
                       <td colSpan={4} className="px-3 py-2 mono text-[10px] text-muted-foreground">{visible.length} of {rows.length} active</td>
                     </tr>
                   </tfoot>
@@ -918,7 +913,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
           )}
 
-          {/* Sentiment Radar — mock-fallback sentiment web tied to focused advertiser */}
+          {/* Sentiment Radar — hidden until live sentiment ingestion pipeline lands */}
           <div className="card-flat overflow-hidden">
             <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between gap-3 flex-wrap">
               <div>
@@ -926,24 +921,13 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <Radio size={14} /> Sentiment Radar
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Audience perception web for <span className="font-semibold">{focusedBrand || "—"}</span> across feedback, product, support, and ad-engagement axes.
+                  Audience perception web for <span className="font-semibold">{focusedBrand || "—"}</span>.
                 </p>
               </div>
-              <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper">MOCK · falls back to deterministic blend</span>
+              <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper text-muted-foreground">Data unavailable</span>
             </div>
-            <div className="p-5 grid md:grid-cols-[1fr_1.1fr] gap-5 items-center">
-              <SentimentRadar scores={sentimentScores} />
-              <div className="grid grid-cols-2 gap-2">
-                {SENTIMENT_AXES.map((a, i) => (
-                  <div key={a} className="card-flat-sm p-3">
-                    <div className="mono text-[10px] uppercase text-muted-foreground">{a}</div>
-                    <div className="mono text-2xl font-bold">{sentimentScores[i]}</div>
-                    <div className="h-1.5 mt-1 border border-ink bg-paper rounded-[2px] overflow-hidden">
-                      <div className="h-full bg-primary" style={{ width: `${sentimentScores[i]}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="p-5 text-xs text-muted-foreground">
+              Live sentiment ingestion is not yet connected. Radar will populate automatically once the pipeline lands.
             </div>
           </div>
 
