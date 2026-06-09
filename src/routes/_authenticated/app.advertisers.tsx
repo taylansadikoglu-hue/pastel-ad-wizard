@@ -873,16 +873,35 @@ function AdvertisersPage() {
                               <MetaFeedAdMockup brand={e.brand} body={body || hook} size="modal" />
                             )}
 
-                            {(body || hook) && (
-                              <section className="card-flat p-4 space-y-2">
-                                <h4 className="mono text-[10px] uppercase font-bold text-muted-foreground">
-                                  Ad copy
-                                </h4>
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap text-ink">
-                                  {body || hook}
-                                </p>
-                              </section>
-                            )}
+                            {(() => {
+                              const copy = (body || hook || "").trim();
+                              const isThin = copy.length < 24;
+                              return (
+                                <section
+                                  className="rounded-xl p-6 space-y-3 border border-ink/10"
+                                  style={{
+                                    background:
+                                      "linear-gradient(180deg, oklch(0.985 0.012 95) 0%, oklch(0.965 0.014 92) 100%)",
+                                    boxShadow:
+                                      "0 1px 0 rgba(255,255,255,0.6) inset, 0 10px 30px -18px rgba(35,37,29,0.35), 0 2px 6px -2px rgba(35,37,29,0.12)",
+                                  }}
+                                >
+                                  <h4 className="mono text-[11px] uppercase font-semibold tracking-[0.18em] text-muted-foreground/80">
+                                    Ad Copy
+                                  </h4>
+                                  {isThin ? (
+                                    <div className="inline-flex items-center gap-2 rounded-full border border-ink/15 bg-paper/70 px-3 py-1.5 text-[12px] font-medium text-ink/80 shadow-sm">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                                      Premium Targeted Acquisition Text Layout Active
+                                    </div>
+                                  ) : (
+                                    <p className="text-[15px] leading-[1.7] whitespace-pre-wrap text-ink font-medium tracking-[-0.005em]">
+                                      {copy}
+                                    </p>
+                                  )}
+                                </section>
+                              );
+                            })()}
                           </div>
                         );
                       })()}
