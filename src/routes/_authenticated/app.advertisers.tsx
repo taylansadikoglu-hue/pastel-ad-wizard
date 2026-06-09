@@ -120,6 +120,7 @@ type Placement = {
   id: number;
   domain: string;
   channel: string | null;
+  channel_platform: string | null;
   ad_type: string | null;
   hook: string | null;
   days_running: number | null;
@@ -131,7 +132,11 @@ type Placement = {
   emotional_driver: string | null;
   hook_analysis: string | null;
   strategist_takeaway: string | null;
+  category: string | null;
+  campaign_cluster: string | null;
+  scan_id: number | null;
 };
+
 
 // Pull a strategist field from a placement (top-level column or nested in `raw`).
 function strategyField(p: Placement, key: "buyer_stage" | "offer_type" | "emotional_driver" | "hook_analysis" | "strategist_takeaway"): string {
