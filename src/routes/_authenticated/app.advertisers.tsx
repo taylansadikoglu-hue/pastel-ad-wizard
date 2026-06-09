@@ -332,7 +332,7 @@ function AdvertisersPage() {
   }, [enriched, activeAdvertiser, channelFilter, adTypeFilter, flightFilter, sortBy]);
 
   const channelCounts = useMemo(() => {
-    const base = { Meta: 0, Google: 0, TikTok: 0, Programmatic: 0 } as Record<string, number>;
+    const base = { Meta: 0, Google: 0 } as Record<string, number>;
     for (const e of enriched) {
       if (activeAdvertiser !== "__all" && e.domain !== activeAdvertiser) continue;
       base[e.channelNorm] = (base[e.channelNorm] ?? 0) + 1;
