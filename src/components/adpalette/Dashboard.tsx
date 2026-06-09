@@ -834,6 +834,36 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
           </div>
 
+          {/* Sentiment Radar — mock-fallback sentiment web tied to focused advertiser */}
+          <div className="card-flat overflow-hidden">
+            <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2 font-bold text-sm">
+                  <Radio size={14} /> Sentiment Radar
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Audience perception web for <span className="font-semibold">{focusedBrand || "—"}</span> across feedback, product, support, and ad-engagement axes.
+                </p>
+              </div>
+              <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper">MOCK · falls back to deterministic blend</span>
+            </div>
+            <div className="p-5 grid md:grid-cols-[1fr_1.1fr] gap-5 items-center">
+              <SentimentRadar scores={sentimentScores} />
+              <div className="grid grid-cols-2 gap-2">
+                {SENTIMENT_AXES.map((a, i) => (
+                  <div key={a} className="card-flat-sm p-3">
+                    <div className="mono text-[10px] uppercase text-muted-foreground">{a}</div>
+                    <div className="mono text-2xl font-bold">{sentimentScores[i]}</div>
+                    <div className="h-1.5 mt-1 border border-ink bg-paper rounded-[2px] overflow-hidden">
+                      <div className="h-full bg-primary" style={{ width: `${sentimentScores[i]}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+
           </div>
 
         </main>
