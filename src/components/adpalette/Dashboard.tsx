@@ -477,7 +477,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
         </header>
 
         <main className="flex-1 overflow-auto p-6 space-y-6">
-          {runningScans.length > 0 && (apifyToken || dfsLogin || dfsPassword) && (
+          {runningScans.length > 0 && (
             <div className="card-flat p-4 bg-secondary flex items-center gap-4">
               <div className="w-9 h-9 border-2 border-ink rounded-[4px] bg-primary grid place-items-center shrink-0">
                 <Loader2 size={16} className="animate-spin" />
