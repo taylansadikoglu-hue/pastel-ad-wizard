@@ -703,6 +703,9 @@ function AdvertisersPage() {
                           title={e.hook ?? e.brand}
                           channel={e.channelNorm}
                           brand={e.brand}
+                          domain={e.domain}
+                          hook={e.hook ?? e.brand}
+                          body={e.body}
                         />
                         <div className="p-3 space-y-2 flex-1 flex flex-col">
                           <div className="flex items-center justify-between gap-2">
