@@ -1030,7 +1030,15 @@ function AdvertisersPage() {
                           </span>
                         </DialogTitle>
                         <DialogDescription className="mono text-[10px]">
-                          {e.domain} · {e.days}d flight · {new Date(e.created_at ?? 0).toLocaleDateString()}
+                          {(() => {
+                            const start = new Date(e.created_at ?? Date.now());
+                            const end = new Date();
+                            return (
+                              <>
+                                {e.domain} · Auction Flight: {format(start, "d MMM yyyy")} → Present · Recency Delta Index {e.days}d live
+                              </>
+                            );
+                          })()}
                         </DialogDescription>
                       </DialogHeader>
                       {(() => {
