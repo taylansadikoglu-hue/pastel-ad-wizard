@@ -1042,18 +1042,11 @@ function AdvertisersPage() {
                         const hook = e.hook ?? e.brand;
                         const body = e.body;
 
-                        const sent = sentimentFor(e.id);
-                        const velocity = velocityFor(sent);
                         const crawler = e.channelNorm === "Google" ? "DataForSEO Labs Index" : "Apify Orchestration Engine";
 
                         return (
                           <div className="space-y-4">
-                            {/* Sentiment velocity label */}
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <span className={cn("inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[12px] font-semibold", velocity.tone)}>
-                                <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                                {velocity.label}
-                              </span>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                               <span className="inline-flex items-center gap-1.5 mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground border border-ink/15 bg-paper px-2.5 py-1 rounded-full">
                                 <Database size={11} /> {crawler}
                               </span>
