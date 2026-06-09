@@ -223,7 +223,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       if (mt === "image") return "Image";
       return "Other";
     };
-    const mapRow = (p: { domain: string; channel: string | null; ad_type: string | null; hook: string | null; days_running: number | null; creative_url: string | null; raw: unknown }) => {
+    const mapRow = (p: { domain: string; channel: string | null; ad_type: string | null; hook: string | null; days_running: number | null; creative_url: string | null; raw: unknown; created_at?: string | null }) => {
       const extracted = extractMediaUrl(p.creative_url, p.raw);
       const hookText = safeText(p.hook, "").trim() || "Live creative — hook pending AI extraction.";
       const chan = normalizeChan(p.channel);
@@ -238,6 +238,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
         aiTag: "Live",
         mediaUrl: extracted.url,
         mediaType: extracted.type,
+        createdAt: p.created_at ?? null,
       };
     };
     const load = async () => {
