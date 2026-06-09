@@ -652,15 +652,21 @@ function AdvertisersPage() {
     if (activeAdvertiser !== "__all") list = list.filter((e) => e.domain === activeAdvertiser);
     if (channelFilter !== "All") list = list.filter((e) => e.channelNorm === channelFilter);
     if (adTypeFilter !== "All") list = list.filter((e) => e.adType === adTypeFilter);
-    if (flightFilter === "short") list = list.filter((e) => e.days < 14);
-    if (flightFilter === "long") list = list.filter((e) => e.days >= 14);
+    if (dateRange.from) {
+      const fromMs = dateRange.from.getTime();
+      list = list.filter((e) => new Date(e.created_at ?? 0).getTime() >= fromMs);
+    }
+    if (dateRange.to) {
+      const toMs = dateRange.to.getTime() + 24 * 60 * 60 * 1000 - 1;
+      list = list.filter((e) => new Date(e.created_at ?? 0).getTime() <= toMs);
+    }
     list = [...list].sort((a, b) => {
       if (sortBy === "longest") return b.days - a.days;
       if (sortBy === "shortest") return a.days - b.days;
       return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime();
     });
     return list;
-  }, [enriched, activeAdvertiser, channelFilter, adTypeFilter, flightFilter, sortBy]);
+  }, [enriched, activeAdvertiser, channelFilter, adTypeFilter, dateRange, sortBy]);
 
 
   const channelCounts = useMemo(() => {
