@@ -580,9 +580,12 @@ function AdvertisersPage() {
                         tabIndex={0}
                       >
                         <MediaEmbed
+                          creativeUrl={e.creative_url}
                           url={e.media.url}
                           type={e.media.type}
                           title={e.hook ?? e.brand}
+                          channel={e.channelNorm}
+                          brand={e.brand}
                         />
                         <div className="p-3 space-y-2 flex-1 flex flex-col">
                           <div className="flex items-center justify-between gap-2">
