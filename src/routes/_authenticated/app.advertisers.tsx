@@ -525,8 +525,13 @@ function AdvertisersPage() {
         .from("domain_scans")
         .select("id, domain, status, created_at, estimated_monthly_spend, total_paid_keywords, average_cpc")
         .order("created_at", { ascending: false }),
-      supabase
-        .from("ad_placements")
+      (supabase.from("ad_placements") as unknown as {
+        select: (cols: string) => {
+          order: (c: string, o: { ascending: boolean }) => {
+            limit: (n: number) => Promise<{ data: Placement[] | null }>;
+          };
+        };
+      })
         .select("id, domain, channel, channel_platform, ad_type, hook, days_running, creative_url, raw, created_at, buyer_stage, offer_type, emotional_driver, hook_analysis, strategist_takeaway, category, campaign_cluster, scan_id")
         .order("created_at", { ascending: false })
         .limit(500),
