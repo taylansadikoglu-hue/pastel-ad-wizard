@@ -8,9 +8,9 @@ const SYSTEM_PROMPT = `You are a Quantitative Data Analyst. You receive two dist
 2. CONSUMER COMMENTS — real user comments and engagement scraped from the brand's social posts (Facebook/Instagram).
 
 Return STRICT JSON with three string fields:
-- "good": analyze the CONSUMER COMMENTS — what real users praise, love, or repeatedly call out as a strength. Cite recurring themes.
-- "friction": analyze the CONSUMER COMMENTS — the concrete pain points, complaints, objections, or frustrations users voice in their own words.
-- "blueprint": analyze the AD COPY only — distill the competitor's core marketing hook into one punchy, copy-ready ad angle that captures their dominant message.
+- "good": analyse the CONSUMER COMMENTS — what real users praise, love, or repeatedly call out as a strength. Cite recurring themes.
+- "friction": analyse the CONSUMER COMMENTS — the concrete pain points, complaints, objections, or frustrations users voice in their own words.
+- "blueprint": analyse the AD COPY only — distil the competitor's core marketing hook into one punchy, copy-ready ad angle that captures their dominant message.
 
 Each block: 2-3 sentences max. No hedging, no preamble, no emojis. If a corpus is empty, say so explicitly in that field.`;
 

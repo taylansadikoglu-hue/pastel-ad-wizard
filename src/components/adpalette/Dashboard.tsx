@@ -403,8 +403,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 ))}
               </div>
               <div className="px-2 pt-1 pb-2 grid grid-cols-2 gap-1">
-                <button onClick={() => quickPrompt("Summarize channel mix")} className="btn-flat text-[10px] px-2 py-1">Summarize mix</button>
-                <button onClick={() => quickPrompt("Analyze ad hooks")} className="btn-flat text-[10px] px-2 py-1">Analyze hooks</button>
+                <button onClick={() => quickPrompt("Summarise channel mix")} className="btn-flat text-[10px] px-2 py-1">Summarise mix</button>
+                <button onClick={() => quickPrompt("Analyse ad hooks")} className="btn-flat text-[10px] px-2 py-1">Analyse hooks</button>
               </div>
               <div className="flex border-t-2 border-ink">
                 <input value={chatInput} onChange={(e) => setChatInput(e.target.value)}
