@@ -989,67 +989,77 @@ function AdvertisersPage() {
             ) : null;
           })()}
 
-          {/* Category Intelligence — grouped from live ad_placements fields */}
+          {/* Campaign IQ — live ad_placements rollup */}
           {(() => {
             const scoped = activeAdvertiser === "__all"
               ? enriched
               : enriched.filter((e) => e.domain === activeAdvertiser);
             if (scoped.length === 0) return null;
-            type Bucket = { name: string; count: number; meta: number; google: number; clusters: Record<string, number> };
+            type Bucket = { name: string; count: number; meta: number; google: number; clusters: Set<string> };
             const groups = new Map<string, Bucket>();
+            const allClusters = new Set<string>();
             for (const p of scoped) {
               const raw = (p.category ?? "").trim();
               const name = !raw || raw.toLowerCase() === "other" ? "Unclassified" : raw;
               let b = groups.get(name);
-              if (!b) { b = { name, count: 0, meta: 0, google: 0, clusters: {} }; groups.set(name, b); }
+              if (!b) { b = { name, count: 0, meta: 0, google: 0, clusters: new Set() }; groups.set(name, b); }
               b.count++;
               const platform = `${p.channel ?? ""} ${p.channel_platform ?? ""}`.toLowerCase();
               if (/(meta|facebook|instagram)/.test(platform)) b.meta++;
               else if (/google/.test(platform)) b.google++;
               const cluster = (p.campaign_cluster ?? "").trim();
-              if (cluster) b.clusters[cluster] = (b.clusters[cluster] ?? 0) + 1;
+              if (cluster) { b.clusters.add(cluster); allClusters.add(cluster); }
             }
             const buckets = Array.from(groups.values()).sort((a, b) => b.count - a.count);
             return (
-              <div className="mt-3 card-flat p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Category Intelligence</div>
-                  <div className="text-[11px] text-muted-foreground">{buckets.length} {buckets.length === 1 ? "category" : "categories"} · {scoped.length} placements</div>
+              <div className="mt-3 card-flat overflow-hidden">
+                {/* Summary ribbon */}
+                <div className="px-4 py-3 border-b border-ink/10 bg-paper/60 flex flex-wrap items-center gap-x-6 gap-y-2">
+                  <div className="text-[11px] uppercase tracking-[0.14em] font-semibold text-foreground">Campaign IQ</div>
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1 ml-auto">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-base font-semibold tabular-nums">{buckets.length}</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Categories</span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-base font-semibold tabular-nums">{allClusters.size}</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Campaign Clusters</span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-base font-semibold tabular-nums">{scoped.length}</span>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Placements</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {buckets.map((b) => {
-                    const topCluster = Object.entries(b.clusters).sort((x, y) => y[1] - x[1])[0]?.[0];
-                    return (
-                      <div key={b.name} className="rounded-md border border-ink/10 bg-paper p-3 flex flex-col gap-1.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-sm font-semibold truncate" title={b.name}>{b.name}</div>
-                          <div className="text-xs tabular-nums text-muted-foreground shrink-0">{b.count}</div>
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {b.meta > 0 && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300 font-medium">Meta {b.meta}</span>
-                          )}
-                          {b.google > 0 && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 font-medium">Google {b.google}</span>
-                          )}
-                          {b.meta === 0 && b.google === 0 && (
-                            <span className="text-[10px] text-muted-foreground">Channel unattributed</span>
-                          )}
-                        </div>
-                        {topCluster ? (
-                          <div className="text-[11px] text-muted-foreground truncate" title={topCluster}>
-                            <span className="opacity-70">Top cluster:</span> <span className="text-foreground">{topCluster}</span>
-                          </div>
-                        ) : (
-                          <div className="text-[11px] text-muted-foreground/60">No cluster data</div>
-                        )}
-                      </div>
-                    );
-                  })}
+                {/* Category table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-ink/10">
+                        <th className="text-left font-medium px-4 py-2">Category</th>
+                        <th className="text-right font-medium px-3 py-2">Placements</th>
+                        <th className="text-right font-medium px-3 py-2">Clusters</th>
+                        <th className="text-right font-medium px-3 py-2">Meta</th>
+                        <th className="text-right font-medium px-4 py-2">Google</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {buckets.map((b, i) => (
+                        <tr key={b.name} className={i % 2 === 0 ? "bg-paper/40" : ""}>
+                          <td className="px-4 py-2 font-medium truncate max-w-[220px]" title={b.name}>{b.name}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{b.count}</td>
+                          <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{b.clusters.size}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{b.meta > 0 ? b.meta : <span className="text-muted-foreground/50">—</span>}</td>
+                          <td className="px-4 py-2 text-right tabular-nums">{b.google > 0 ? b.google : <span className="text-muted-foreground/50">—</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             );
           })()}
+
 
           {/* Grid */}
           <TabsContent value={activeAdvertiser} className="mt-3">
