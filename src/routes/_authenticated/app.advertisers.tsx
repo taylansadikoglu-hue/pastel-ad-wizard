@@ -1277,20 +1277,30 @@ function AdvertisersPage() {
                             })()}
 
 
-                            {/* Audience Sentiment Matrix — hidden until live sentiment pipeline lands */}
-                            <section className="rounded-[6px] border border-ink/10 bg-paper p-5 space-y-2" style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -18px rgba(35,37,29,0.3)" }}>
-                              <div className="flex items-center justify-between gap-3">
-                                <h4 className="mono text-[11px] uppercase font-semibold tracking-[0.18em] text-muted-foreground">
-                                  Audience Sentiment Matrix
-                                </h4>
-                                <span className="mono text-[10px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full border border-ink/10 bg-ink/5 text-muted-foreground">
-                                  Data unavailable
-                                </span>
-                              </div>
-                              <p className="text-[12px] text-muted-foreground">
-                                Favourable Intent, Neutral Engagement and Brand Friction will appear once the live sentiment ingestion pipeline is connected.
-                              </p>
-                            </section>
+                            {/* Strategy AI pending fallback — only when no strategist fields are present */}
+                            {!hasAnyStrategy(e) && (
+                              <section className="rounded-[6px] border border-ink/10 bg-paper p-5 space-y-2" style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -18px rgba(35,37,29,0.3)" }}>
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+                                      style={{ background: "#ece4cf", color: "#7a5f24" }}
+                                    >
+                                      AI
+                                    </span>
+                                    <h4 className="mono text-[11px] uppercase font-semibold tracking-[0.18em] text-muted-foreground">
+                                      Strategy AI
+                                    </h4>
+                                  </div>
+                                  <span className="mono text-[10px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full border border-ink/10 bg-ink/5 text-muted-foreground">
+                                    Strategy AI pending
+                                  </span>
+                                </div>
+                                <p className="text-[12px] text-muted-foreground">
+                                  Buyer stage, offer type, emotional driver, hook analysis and strategist takeaway will appear here once this placement is processed.
+                                </p>
+                              </section>
+                            )}
                           </div>
                         );
                       })()}
