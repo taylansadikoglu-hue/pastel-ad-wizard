@@ -792,15 +792,16 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                         )}
                         <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.adType}</span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm">{v.brand}</span>
-                        <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{v.channel}</span>
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="font-semibold text-sm truncate">{v.brand}</span>
+                        <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] shrink-0 truncate max-w-[120px]">{v.channel}</span>
                       </div>
-                      <p className="text-xs leading-snug">{v.hook}</p>
-                      <div className="flex items-center justify-between mono text-[10px] text-muted-foreground pt-1 border-t border-ink/30">
-                        <span>Flight: {v.days}d · First seen {firstSeenLabel}</span>
-                        <button onClick={() => toast(`${v.brand} · creative opened`)} className="underline font-semibold">Inspect →</button>
+                      <p className="text-xs leading-snug line-clamp-2 min-h-[2.25rem]">{v.hook}</p>
+                      <div className="mt-auto flex items-center justify-between gap-2 mono text-[10px] text-muted-foreground pt-1 border-t border-ink/30">
+                        <span className="truncate">Flight: {v.days}d · First seen {firstSeenLabel}</span>
+                        <button onClick={() => toast(`${v.brand} · creative opened`)} className="underline font-semibold shrink-0">Inspect →</button>
                       </div>
+
                     </div>
                     );
                   })}
