@@ -442,7 +442,7 @@ function AdvertisersPage() {
             </div>
 
             <div className="flex items-center gap-1">
-              {(["All", "Meta", "Google", "TikTok", "Programmatic"] as const).map((c) => (
+              {(["All", "Meta", "Google"] as const).map((c) => (
                 <button
                   key={c}
                   onClick={() => setChannelFilter(c)}
@@ -468,8 +468,6 @@ function AdvertisersPage() {
               <option value="All">All ad types</option>
               <option value="Video">Video</option>
               <option value="Image">Image</option>
-              <option value="Carousel">Carousel</option>
-              <option value="Other">Other</option>
             </select>
 
             <div className="flex items-center gap-1">
