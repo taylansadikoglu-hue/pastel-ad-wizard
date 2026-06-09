@@ -1135,19 +1135,32 @@ function AdvertisersPage() {
                                 const v = (typeof top === "string" && top.trim()) ? top : (typeof r[k] === "string" ? (r[k] as string) : "");
                                 return (v ?? "").toString().trim();
                               };
-                              const buyerStage = pick("buyer_stage") || "Unclassified";
-                              const offerType = pick("offer_type") || "Unclassified";
-                              const emotionalDriver = pick("emotional_driver") || "Unclassified";
-                              const hookAnalysis = pick("hook_analysis") || "No hook analysis available yet.";
-                              const takeaway = pick("strategist_takeaway") || "No strategist takeaway available yet.";
-                              const chips: Array<{ label: string; value: string }> = [
+                              const buyerStage = pick("buyer_stage");
+                              const offerType = pick("offer_type");
+                              const emotionalDriver = pick("emotional_driver");
+                              const hookAnalysis = pick("hook_analysis");
+                              const takeaway = pick("strategist_takeaway");
+
+                              const chips = [
                                 { label: "Buyer Stage", value: buyerStage },
                                 { label: "Offer Type", value: offerType },
                                 { label: "Emotional Driver", value: emotionalDriver },
-                              ];
+                              ].filter((c) => c.value);
+
+                              if (!chips.length && !hookAnalysis && !takeaway) return null;
+
+                              const badgeClass = (v: string): string => {
+                                const k = v.toLowerCase();
+                                if (k.includes("aware")) return "bg-blue-100 text-blue-800 ring-blue-200";
+                                if (k.includes("consider")) return "bg-amber-100 text-amber-900 ring-amber-200";
+                                if (k.includes("convert") || k.includes("conversion") || k.includes("purchase") || k.includes("decision")) return "bg-emerald-100 text-emerald-800 ring-emerald-200";
+                                if (k.includes("retain") || k.includes("loyal") || k.includes("retention")) return "bg-purple-100 text-purple-800 ring-purple-200";
+                                return "bg-ink/5 text-ink ring-ink/10";
+                              };
+
                               return (
                                 <section
-                                  className="rounded-[6px] border border-ink/10 p-5 space-y-4"
+                                  className="rounded-[6px] border border-ink/10 p-4 sm:p-5 space-y-3.5"
                                   style={{
                                     background: "linear-gradient(180deg, #fbf6ea 0%, #f6efdc 100%)",
                                     boxShadow: "0 1px 0 rgba(255,255,255,0.7) inset, 0 10px 28px -20px rgba(35,37,29,0.35)",
@@ -1170,42 +1183,68 @@ function AdvertisersPage() {
                                     </span>
                                   </div>
 
-                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                    {chips.map((c) => (
-                                      <div
-                                        key={c.label}
-                                        className="rounded-[4px] border border-ink/10 bg-paper/70 px-3 py-2"
-                                      >
-                                        <div className="mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
-                                          {c.label}
-                                        </div>
-                                        <div className="text-[13px] font-semibold text-ink mt-0.5 leading-snug">
-                                          {c.value}
+                                  {chips.length > 0 && (
+                                    <div className="space-y-2">
+                                      <div className="mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+                                        AI Strategy Layer
+                                      </div>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {chips.map((c) => (
+                                          <span
+                                            key={c.label}
+                                            className={cn(
+                                              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-medium ring-1 ring-inset",
+                                              badgeClass(c.value),
+                                            )}
+                                          >
+                                            <span className="mono text-[9px] uppercase tracking-[0.14em] opacity-70">
+                                              {c.label}
+                                            </span>
+                                            <span className="font-semibold">{c.value}</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {hookAnalysis && (
+                                    <div className="space-y-1">
+                                      <div className="mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                                        Hook Analysis
+                                      </div>
+                                      <p className="text-[13px] leading-[1.6] text-ink/90 whitespace-pre-wrap">
+                                        {hookAnalysis}
+                                      </p>
+                                    </div>
+                                  )}
+
+                                  {takeaway && (
+                                    <div
+                                      className="rounded-[5px] border p-3 sm:p-3.5 space-y-1"
+                                      style={{
+                                        background: "linear-gradient(180deg, #fffaee 0%, #fbf1d4 100%)",
+                                        borderColor: "rgba(200,169,106,0.55)",
+                                        boxShadow: "0 6px 18px -14px rgba(154,124,62,0.55)",
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-1.5">
+                                        <span
+                                          className="inline-block h-1.5 w-1.5 rounded-full"
+                                          style={{ background: "#c8a96a" }}
+                                        />
+                                        <div className="mono text-[10px] uppercase tracking-[0.18em] font-semibold" style={{ color: "#7a5f24" }}>
+                                          Strategist Takeaway · Primary Insight
                                         </div>
                                       </div>
-                                    ))}
-                                  </div>
-
-                                  <div className="space-y-1.5">
-                                    <div className="mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-                                      Hook Analysis
+                                      <p className="text-[13.5px] leading-[1.6] text-ink font-medium whitespace-pre-wrap">
+                                        {takeaway}
+                                      </p>
                                     </div>
-                                    <p className="text-[13.5px] leading-[1.65] text-ink/90 whitespace-pre-wrap">
-                                      {hookAnalysis}
-                                    </p>
-                                  </div>
-
-                                  <div className="space-y-1.5 border-t border-ink/10 pt-3">
-                                    <div className="mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "#9a7c3e" }}>
-                                      Strategist Takeaway
-                                    </div>
-                                    <p className="text-[13.5px] leading-[1.65] text-ink font-medium whitespace-pre-wrap italic">
-                                      {takeaway}
-                                    </p>
-                                  </div>
+                                  )}
                                 </section>
                               );
                             })()}
+
 
                             {/* Audience Sentiment Matrix */}
                             <section className="rounded-[6px] border border-ink/10 bg-paper p-5 space-y-4" style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -18px rgba(35,37,29,0.3)" }}>
