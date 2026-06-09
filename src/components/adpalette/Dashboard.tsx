@@ -713,7 +713,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                 Filter by ad flight length to instantly inspect which video hooks are actively converting market share across YouTube, Meta, and TikTok.
               </p>
             </div>
-            <div className="px-4 py-2 border-b-2 border-ink flex items-center gap-2 bg-paper">
+            <div className="px-4 py-2 border-b-2 border-ink flex flex-wrap items-center gap-2 bg-paper">
               <span className="mono text-[10px] uppercase font-bold mr-1">Flight length:</span>
               {([
                 { k: "all", label: "All flights" },
@@ -728,48 +728,71 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                   {f.label}
                 </button>
               ))}
+              <div className="mx-2 h-5 w-px bg-ink/30" />
+              <span className="mono text-[10px] uppercase font-bold mr-1">Sort:</span>
+              {([
+                { k: "recent", label: "Date first seen" },
+                { k: "longest", label: "Flight duration" },
+                { k: "format", label: "Format" },
+              ] as const).map((s) => (
+                <button
+                  key={s.k}
+                  onClick={() => setCreativeSort(s.k)}
+                  className={`btn-flat text-[11px] px-2 py-1 ${creativeSort === s.k ? "btn-primary" : ""}`}
+                >
+                  {s.label}
+                </button>
+              ))}
             </div>
-            {livePlacements.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">
-                No live creative data found. Please add an active domain under the Advertisers tab.
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-0">
-                {livePlacements
-                  .filter((v) =>
-                    videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14
-                  )
-                  .filter((v) => {
-                    const q = searchQuery.trim().toLowerCase();
-                    if (!q) return true;
-                    return v.brand.toLowerCase().includes(q) || v.hook.toLowerCase().includes(q) || v.channel.toLowerCase().includes(q);
-                  })
-                  .map((v, idx) => (
+            {(() => {
+              const selectedBrands = new Set(
+                Object.entries(selected).filter(([, v]) => v).map(([k]) => k),
+              );
+              const q = searchQuery.trim().toLowerCase();
+              const items = livePlacements
+                .filter((v) => selectedBrands.has(v.brand))
+                .filter((v) =>
+                  videoFilter === "all" ? true : videoFilter === "short" ? v.days < 14 : v.days >= 14,
+                )
+                .filter((v) =>
+                  !q
+                    ? true
+                    : v.brand.toLowerCase().includes(q) ||
+                      v.hook.toLowerCase().includes(q) ||
+                      v.channel.toLowerCase().includes(q),
+                )
+                .slice()
+                .sort((a, b) => {
+                  if (creativeSort === "longest") return b.days - a.days;
+                  if (creativeSort === "format") return a.adType.localeCompare(b.adType);
+                  return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+                });
+
+              if (items.length === 0) {
+                return (
+                  <div className="p-8 text-center text-sm text-muted-foreground">
+                    No creative for the selected advertisers. Tick more advertisers in the matrix above or add a domain under the Advertiser Hub.
+                  </div>
+                );
+              }
+              return (
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-0">
+                  {items.map((v, idx) => {
+                    const firstSeen = v.createdAt ? new Date(v.createdAt) : null;
+                    const firstSeenLabel = firstSeen ? firstSeen.toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—";
+                    return (
                     <div key={`${v.brand}-${idx}`} className="border-r-2 last:border-r-0 border-b-2 lg:border-b-0 border-ink p-3 space-y-2">
                       <div className="aspect-video border-2 border-ink rounded-[3px] bg-secondary grid place-items-center relative overflow-hidden">
                         {v.mediaType === "video" && v.mediaUrl ? (
-                          <video
-                            src={v.mediaUrl}
-                            className="w-full h-full object-cover"
-                            controls
-                            muted
-                            playsInline
-                            preload="metadata"
-                          />
+                          <video src={v.mediaUrl} className="w-full h-full object-cover" controls muted playsInline preload="metadata" />
                         ) : v.mediaType === "image" && v.mediaUrl ? (
                           <img src={v.mediaUrl} alt={`${v.brand} creative`} className="w-full h-full object-cover" loading="lazy" />
                         ) : v.mediaUrl ? (
-                          <iframe
-                            src={v.mediaUrl}
-                            title={`${v.brand} creative`}
-                            className="w-full h-full border-0 bg-paper"
-                            loading="lazy"
-                            sandbox="allow-scripts allow-same-origin allow-popups"
-                          />
+                          <iframe src={v.mediaUrl} title={`${v.brand} creative`} className="w-full h-full border-0 bg-paper" loading="lazy" sandbox="allow-scripts allow-same-origin allow-popups" />
                         ) : (
                           <Play size={22} />
                         )}
-                        <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.length}</span>
+                        <span className="absolute bottom-1 right-1 mono text-[10px] px-1 py-0.5 border border-ink bg-paper rounded-[2px]">{v.adType}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-sm">{v.brand}</span>
@@ -777,13 +800,16 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                       </div>
                       <p className="text-xs leading-snug">{v.hook}</p>
                       <div className="flex items-center justify-between mono text-[10px] text-muted-foreground pt-1 border-t border-ink/30">
-                        <span>Flight: {v.days}d</span>
+                        <span>Flight: {v.days}d · First seen {firstSeenLabel}</span>
                         <button onClick={() => toast(`${v.brand} · creative opened`)} className="underline font-semibold">Inspect →</button>
                       </div>
                     </div>
-                  ))}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
           </div>
 
           </div>
