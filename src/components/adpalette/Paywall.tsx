@@ -13,7 +13,7 @@ const PLANS: { key: PlanKey; name: string; price: number; advertisers: string; i
 ];
 
 export function Paywall({ email, onSignOut }: { email: string; onSignOut: () => void }) {
-  const [plan, setPlan] = useState<PlanKey>("agency");
+  const [plan, setPlan] = useState<PlanKey>("solo");
   const [busy, setBusy] = useState(false);
 
   const checkout = async () => {
