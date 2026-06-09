@@ -678,16 +678,37 @@ function AdvertisersPage() {
                                 <h3 className="font-serif text-2xl font-bold leading-tight text-ink">
                                   {e.hook ?? e.brand}
                                 </h3>
-                                {rawCopy && (
-                                  <div>
-                                    <h4 className="mono text-[10px] uppercase font-bold mb-2 text-muted-foreground">
-                                      Ad copy
-                                    </h4>
-                                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-ink">
-                                      {rawCopy}
-                                    </p>
-                                  </div>
-                                )}
+                                {(() => {
+                                  const generic =
+                                    !rawCopy ||
+                                    /social media placement content optimized\.?/i.test(rawCopy) ||
+                                    rawCopy.trim().length < 12;
+                                  if (generic) {
+                                    return (
+                                      <div className="rounded-[3px] border-2 border-ink bg-secondary p-5 text-center">
+                                        <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+                                          {e.brand}
+                                        </div>
+                                        <div className="font-serif text-xl font-bold text-ink">
+                                          Active {e.channelNorm} Creative Campaign
+                                        </div>
+                                        <div className="mono text-[10px] text-muted-foreground mt-2">
+                                          Live placement · {e.days}d flight
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div>
+                                      <h4 className="mono text-[10px] uppercase font-bold mb-2 text-muted-foreground">
+                                        Ad copy
+                                      </h4>
+                                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-ink">
+                                        {rawCopy}
+                                      </p>
+                                    </div>
+                                  );
+                                })()}
                                 {isGoogle && (
                                   <div className="pt-2">
                                     <span className="mono text-[10px] uppercase font-bold inline-flex items-center gap-1.5 px-2.5 py-1 border-2 border-ink rounded-[3px] bg-secondary">
