@@ -126,7 +126,32 @@ type Placement = {
   creative_url: string | null;
   raw: unknown;
   created_at: string | null;
+  buyer_stage: string | null;
+  offer_type: string | null;
+  emotional_driver: string | null;
+  hook_analysis: string | null;
+  strategist_takeaway: string | null;
 };
+
+// Pull a strategist field from a placement (top-level column or nested in `raw`).
+function strategyField(p: Placement, key: "buyer_stage" | "offer_type" | "emotional_driver" | "hook_analysis" | "strategist_takeaway"): string {
+  const top = (p as unknown as Record<string, unknown>)[key];
+  if (typeof top === "string" && top.trim()) return top.trim();
+  const raw = p.raw && typeof p.raw === "object" ? (p.raw as Record<string, unknown>) : null;
+  const nested = raw ? raw[key] : null;
+  if (typeof nested === "string" && nested.trim()) return nested.trim();
+  return "";
+}
+
+function hasAnyStrategy(p: Placement): boolean {
+  return Boolean(
+    strategyField(p, "buyer_stage") ||
+      strategyField(p, "offer_type") ||
+      strategyField(p, "emotional_driver") ||
+      strategyField(p, "hook_analysis") ||
+      strategyField(p, "strategist_takeaway"),
+  );
+}
 
 type MediaKind = "video" | "image" | "iframe" | "none";
 
