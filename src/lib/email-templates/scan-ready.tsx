@@ -41,7 +41,7 @@ const ScanReadyEmail = ({
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>
-      Your competitor scan for {domain} is ready — {advertiserCount ?? 0} advertisers uncovered
+      {`Your competitor scan for ${domain} is ready — ${advertiserCount ?? 0} advertisers uncovered`}
     </Preview>
     <Body style={main}>
       <Container style={container}>
