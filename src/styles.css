@@ -55,8 +55,8 @@
   --card-foreground: var(--ink);
   --popover: var(--paper);
   --popover-foreground: var(--ink);
-  --primary: var(--ink);
-  --primary-foreground: oklch(0.98 0.005 95);
+  --primary: var(--accent-gold);
+  --primary-foreground: var(--ink);
   --secondary: oklch(0.945 0.008 95);
   --secondary-foreground: var(--ink);
   --muted: oklch(0.945 0.008 95);
