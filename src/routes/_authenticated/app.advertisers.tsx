@@ -1027,10 +1027,12 @@ function AdvertisersPage() {
             }
             const buckets = Array.from(groups.values()).sort((a, b) => b.count - a.count);
             return (
-              <div className="mt-3 card-flat overflow-hidden">
+              <div className="mt-4 space-y-2">
+                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">03 · Category Leaders</div>
+                <div className="card-flat overflow-hidden">
                 {/* Summary ribbon */}
                 <div className="px-4 py-3 border-b border-ink/10 bg-paper/60 flex flex-wrap items-center gap-x-6 gap-y-2">
-                  <div className="text-[11px] uppercase tracking-[0.14em] font-semibold text-foreground">Campaign IQ</div>
+                  <div className="text-[11px] uppercase tracking-[0.14em] font-semibold text-foreground">Category Leaders</div>
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-1 ml-auto">
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-base font-semibold tabular-nums">{buckets.length}</span>
