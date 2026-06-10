@@ -6,7 +6,7 @@ import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
   TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
-  Grid3x3, Radio,
+  Grid3x3, Radio, Lightbulb,
   BarChart3, PieChart as PieIcon, Loader2,
 } from "lucide-react";
 
