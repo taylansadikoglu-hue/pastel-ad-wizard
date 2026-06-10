@@ -85,18 +85,27 @@ export function Paywall({ email, onSignOut }: { email: string; onSignOut: () => 
           })}
         </div>
 
-        <div className="flex items-center justify-center gap-3">
-          <button onClick={checkout} disabled={busy} className="btn-flat btn-primary">
-            {busy ? "Opening Stripe…" : `Continue to Stripe · $${PLANS.find((p) => p.key === plan)!.price}/mo`}
+        <div className="flex flex-col items-center gap-3">
+          <button
+            onClick={() => navigate({ to: "/app/dashboard" })}
+            className="btn-flat btn-primary w-full sm:w-auto"
+          >
+            Continue to demo <ArrowRight size={14} />
           </button>
-          <button onClick={async () => { await supabase.auth.signOut(); onSignOut(); }} className="btn-flat">
-            <LogOut size={14} /> Sign out
-          </button>
+          <div className="flex items-center justify-center gap-3">
+            <button onClick={checkout} disabled={busy} className="btn-flat opacity-80">
+              {busy ? "Opening Stripe…" : `Continue to Stripe · $${PLANS.find((p) => p.key === plan)!.price}/mo`}
+            </button>
+            <button onClick={async () => { await supabase.auth.signOut(); onSignOut(); }} className="btn-flat">
+              <LogOut size={14} /> Sign out
+            </button>
+          </div>
         </div>
 
         <p className="text-center mono text-[10px] text-muted-foreground">
-          Access unlocks instantly when Stripe confirms checkout. Cancel anytime.
+          Checkout coming online — demo available now.
         </p>
+
       </div>
     </div>
   );
