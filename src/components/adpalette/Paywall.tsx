@@ -87,7 +87,10 @@ export function Paywall({ email, onSignOut }: { email: string; onSignOut: () => 
 
         <div className="flex flex-col items-center gap-3">
           <button
-            onClick={() => navigate({ to: "/app/dashboard" })}
+            onClick={() => {
+              localStorage.setItem("revenuead_demo_unlocked", "1");
+              navigate({ to: "/app/dashboard" });
+            }}
             className="btn-flat btn-primary w-full sm:w-auto"
           >
             Continue to demo <ArrowRight size={14} />
