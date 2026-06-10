@@ -1261,6 +1261,162 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_advisor: {
+        Row: {
+          category: string | null
+          emotion: string | null
+          market_density: string | null
+          opportunity_score: number | null
+          recommendation: string | null
+          strategic_priority: string | null
+        }
+        Relationships: []
+      }
+      ra_audience_signals: {
+        Row: {
+          brand: string | null
+          emotion: string | null
+          placements: number | null
+          share_percent: number | null
+        }
+        Relationships: []
+      }
+      ra_brand_intelligence: {
+        Row: {
+          brand: string | null
+          creative_volume: number | null
+          customer_stage: string | null
+          dominant_emotion: string | null
+          emotion_mix: string | null
+          primary_category: string | null
+          primary_cta: string | null
+        }
+        Relationships: []
+      }
+      ra_dashboard: {
+        Row: {
+          ads_collected: number | null
+          brands_tracked: number | null
+          intelligence_coverage: number | null
+          live_brands: number | null
+          open_opportunities: number | null
+          pending_brands: number | null
+        }
+        Relationships: []
+      }
+      ra_emotion_ownership: {
+        Row: {
+          brand: string | null
+          emotion: string | null
+          share_percent: number | null
+        }
+        Relationships: []
+      }
+      ra_executive_summary: {
+        Row: {
+          dominant_emotion: string | null
+          dominant_market: string | null
+          strongest_brand: string | null
+          top_opportunity_category: string | null
+          top_opportunity_emotion: string | null
+        }
+        Relationships: []
+      }
+      ra_market_intelligence: {
+        Row: {
+          avg_creatives_per_brand: number | null
+          brand: string | null
+          category: string | null
+          competitors: number | null
+          placements: number | null
+          share_of_voice: number | null
+          top_buyer_stage: string | null
+          top_emotion: string | null
+          total_creatives: number | null
+          x_axis: number | null
+          y_axis: number | null
+        }
+        Relationships: []
+      }
+      ra_market_opportunities: {
+        Row: {
+          category: string | null
+          emotion: string | null
+          market_density: string | null
+          recommendation: string | null
+          strategic_priority: string | null
+        }
+        Relationships: []
+      }
+      ra_market_snapshot: {
+        Row: {
+          snapshot: string | null
+        }
+        Relationships: []
+      }
+      ra_market_summary: {
+        Row: {
+          ads: number | null
+          category: string | null
+          share_of_market: number | null
+        }
+        Relationships: []
+      }
+      ra_pitch_brief: {
+        Row: {
+          action: string | null
+          category: string | null
+          category_leader: string | null
+          dominant_emotion: string | null
+          recommendation: string | null
+          whitespace_emotion: string | null
+        }
+        Relationships: []
+      }
+      ra_product_normalization: {
+        Row: {
+          id: number | null
+          normalized_product: string | null
+        }
+        Insert: {
+          id?: number | null
+          normalized_product?: never
+        }
+        Update: {
+          id?: number | null
+          normalized_product?: never
+        }
+        Relationships: []
+      }
+      ra_strategic_territories: {
+        Row: {
+          avg_share: number | null
+          brands_using: number | null
+          emotion: string | null
+          territory_status: string | null
+        }
+        Relationships: []
+      }
+      ra_strategy_narratives: {
+        Row: {
+          ads: number | null
+          category: string | null
+          category_narrative: string | null
+          share_of_market: number | null
+        }
+        Relationships: []
+      }
+      ra_top_opportunities: {
+        Row: {
+          category: string | null
+          emotion: string | null
+          market_density: string | null
+          opportunity_score: number | null
+          recommendation: string | null
+          strategic_priority: string | null
+        }
+        Relationships: []
+      }
       revenuead_health: {
         Row: {
           active_advertisers: number | null
