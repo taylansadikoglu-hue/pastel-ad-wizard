@@ -385,12 +385,12 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           <LogOut size={14} /> Sign out
         </button>
 
-        {/* Strategy AI dock */}
+        {/* Strategic Advisor dock */}
         <div className="m-3 mt-0">
           {chatOpen ? (
             <div className="card-flat overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2 border-b-2 border-ink bg-primary">
-                <div className="flex items-center gap-1.5 font-bold text-sm"><Sparkles size={14} /> Strategy AI</div>
+                <div className="flex items-center gap-1.5 font-bold text-sm"><Sparkles size={14} /> Strategic Advisor</div>
                 <button onClick={() => setChatOpen(false)} className="hover:opacity-70"><X size={14} /></button>
               </div>
               <div className="p-2 max-h-44 overflow-auto space-y-1.5 text-xs">
@@ -415,7 +415,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           ) : (
             <button onClick={() => setChatOpen(true)} className="btn-flat w-full btn-primary">
-              <MessageSquare size={14} /> Strategy AI
+              <MessageSquare size={14} /> Strategic Advisor
             </button>
           )}
         </div>
@@ -913,21 +913,21 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
           )}
 
-          {/* Strategy AI panel — populated per placement in Advertiser Hub */}
+          {/* Strategic Advisor panel — populated per placement in Brand Intelligence */}
           <div className="card-flat overflow-hidden">
             <div className="px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <div className="flex items-center gap-2 font-bold text-sm">
-                  <Radio size={14} /> Strategy AI
+                  <Radio size={14} /> Strategic Advisor
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Strategist analysis for <span className="font-semibold">{focusedBrand || "—"}</span> — buyer stage, offer type, hook analysis and takeaway.
                 </p>
               </div>
-              <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper text-muted-foreground">Strategy AI pending</span>
+              <span className="mono text-[10px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper text-muted-foreground">Strategic Advisor pending</span>
             </div>
             <div className="p-5 text-xs text-muted-foreground">
-              Open the Advertiser Hub and tap any placement to view the Strategy AI breakdown when it has been processed.
+              Open the Brand Intelligence and tap any placement to view the Strategic Advisor breakdown when it has been processed.
             </div>
           </div>
 
