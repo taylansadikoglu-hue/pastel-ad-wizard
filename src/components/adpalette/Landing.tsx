@@ -1,39 +1,88 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
-import { BarbsChat } from "./BarbsChat";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  ArrowRight, Palette, Check, Sparkles, BarChart3, Film, FileDown, PlayCircle, X as XIcon, Lock,
-  LogIn, LogOut,
+  ArrowRight, Palette, Check, Sparkles, ArrowUpRight, ShieldCheck, Flame, Compass,
+  X as XIcon, Lock, LogIn, LogOut,
 } from "lucide-react";
 
-
-type Brand = { name: string; visible: boolean; budget: number; mix: { search: number; social: number; video: number; programmatic: number } };
-
-const SEED: Brand[] = [
-  { name: "Sephora",   visible: true, budget: 70, mix: { search: 30, social: 35, video: 20, programmatic: 15 } },
-  { name: "Lululemon", visible: true, budget: 55, mix: { search: 20, social: 45, video: 25, programmatic: 10 } },
-];
-
-const CHANNEL_COLORS: Record<string, string> = {
-  search: "var(--pastel-peach)",
-  social: "var(--pastel-lilac)",
-  video: "var(--pastel-sage)",
-  programmatic: "var(--pastel-blush)",
+type Brief = {
+  client_name: string | null;
+  category: string | null;
+  headline: string | null;
+  summary: string | null;
+  strategic_opening: string | null;
+  recommended_action: string | null;
+  strongest_threat: string | null;
+  emerging_challenger: string | null;
+  whitespace_emotion: string | null;
+  whitespace_score: number | null;
 };
+
+type Confidence = {
+  ads_analysed: number | null;
+  brands_tracked: number | null;
+  trend_points: number | null;
+  classification_coverage: number | null;
+};
+
+function compactNumber(n: number | null | undefined): string {
+  if (n == null) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`;
+  return String(n);
+}
+
+function IntelCard({
+  icon: Icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="card-flat p-6 flex flex-col gap-3 min-h-[150px]">
+      <div className="flex items-center justify-between">
+        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
+        <Icon size={14} className="text-muted-foreground" />
+      </div>
+      <div className="text-2xl md:text-[28px] font-semibold tracking-tight leading-tight truncate" title={value}>
+        {value}
+      </div>
+      {hint && <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mt-auto">{hint}</div>}
+    </div>
+  );
+}
 
 export function Landing({ onEnter }: { onEnter: () => void }) {
   const { theme, toggle } = useTheme();
-  const [brands, setBrands] = useState<Brand[]>(SEED);
   const [signedIn, setSignedIn] = useState(false);
+  const [brief, setBrief] = useState<Brief | null>(null);
+  const [confidence, setConfidence] = useState<Confidence | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setSignedIn(!!session);
-    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setSignedIn(!!session));
     return () => sub.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const [b, c] = await Promise.all([
+        supabase.from("ra_barbs_client_brief").select("*").limit(1).maybeSingle(),
+        supabase.from("ra_barbs_confidence").select("*").limit(1).maybeSingle(),
+      ]);
+      if (!active) return;
+      setBrief((b.data ?? null) as Brief | null);
+      setConfidence((c.data ?? null) as Confidence | null);
+    })();
+    return () => { active = false; };
   }, []);
 
   const signOut = async () => {
@@ -41,62 +90,50 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
     toast("Signed out");
   };
 
-  const totals = useMemo(() => {
-    const visible = brands.filter((b) => b.visible);
-    const sum = (k: keyof Brand["mix"]) =>
-      visible.reduce((acc, b) => acc + (b.mix[k] * b.budget) / 100, 0);
-    return {
-      search: sum("search"), social: sum("social"), video: sum("video"), programmatic: sum("programmatic"),
-    };
-  }, [brands]);
-
-  const total = totals.search + totals.social + totals.video + totals.programmatic || 1;
-
-  const updateBudget = (i: number, v: number) => {
-    const next = [...brands]; next[i] = { ...next[i], budget: v }; setBrands(next);
-  };
-  const toggleBrand = (i: number) => {
-    const next = [...brands]; next[i] = { ...next[i], visible: !next[i].visible }; setBrands(next);
-    toast.success(`${next[i].name} ${next[i].visible ? "added to" : "removed from"} mix`);
-  };
+  const confidenceValue =
+    confidence?.classification_coverage != null
+      ? `${Number(confidence.classification_coverage).toFixed(0)}%`
+      : "High";
+  const confidenceHint = confidence
+    ? `${compactNumber(confidence.ads_analysed)} creatives · ${compactNumber(confidence.brands_tracked)} brands`
+    : "Live signal coverage";
 
   return (
     <div className="min-h-screen bg-canvas text-ink">
       {/* Header */}
-      <header className="border-b-2 border-ink bg-paper sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="px-1.5 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
+      <header className="border-b border-ink bg-paper/70 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-[10px] bg-primary grid place-items-center">
               <span className="mono text-[10px] font-bold">R-AD</span>
             </div>
-            <span className="font-bold tracking-tight">RevenueAd</span>
-            <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] ml-1">v2.6</span>
+            <span className="font-semibold tracking-tight">RevenueAd</span>
           </div>
-          <nav className="hidden md:flex items-center gap-5 text-sm font-semibold">
-            <a href="#demo" className="hover:underline">Live demo</a>
-            <a href="#benefits" className="hover:underline">Why RevenueAd</a>
-            <a href="#pricing" className="hover:underline">Pricing</a>
+          <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
+            <a href="#briefing" className="hover:text-ink transition-colors">Briefing</a>
+            <a href="#capabilities" className="hover:text-ink transition-colors">Capabilities</a>
+            <a href="#pricing" className="hover:text-ink transition-colors">Pricing</a>
           </nav>
           <div className="flex items-center gap-2">
-            <button onClick={toggle} className="btn-flat">
-              <Palette size={14} /> {theme === "dark" ? "Warm Canvas" : "Dark Workstation"}
+            <button onClick={toggle} className="btn-flat" aria-label="Toggle theme">
+              <Palette size={14} />
             </button>
             {signedIn ? (
               <>
-                <button onClick={onEnter} className="btn-flat">
+                <button onClick={onEnter} className="btn-flat btn-primary">
                   Open workspace <ArrowRight size={14} />
                 </button>
-                <button onClick={signOut} className="btn-flat">
-                  <LogOut size={14} /> Log out
+                <button onClick={signOut} className="btn-flat" aria-label="Sign out">
+                  <LogOut size={14} />
                 </button>
               </>
             ) : (
               <>
                 <button onClick={onEnter} className="btn-flat">
-                  <LogIn size={14} /> Log in
+                  <LogIn size={14} /> Sign in
                 </button>
                 <button onClick={onEnter} className="btn-flat btn-primary">
-                  Start tracking <ArrowRight size={14} />
+                  Get briefing <ArrowRight size={14} />
                 </button>
               </>
             )}
@@ -104,258 +141,208 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="max-w-7xl mx-auto px-6 pt-14 pb-10 grid lg:grid-cols-[1.05fr_1fr] gap-10 items-start">
-        <div>
-          <div className="inline-flex items-center gap-2 mono text-[11px] px-2 py-1 border-2 border-ink rounded-[3px] bg-paper shadow-flat-sm">
-            <Sparkles size={12} /> CROSS-CHANNEL AD INTELLIGENCE
-          </div>
-          <h1 className="mt-5 text-4xl md:text-6xl font-bold leading-[1.05] tracking-tight">
-            See exactly where competitors are spending — and outpace them.
-          </h1>
-          <p className="mt-5 text-lg text-muted-foreground max-w-xl">
-            RevenueAd tracks every advertising placement across Search, YouTube, Meta, TikTok, and Programmatic — built for <span className="font-semibold text-ink">independent e-commerce brands scaling solo</span> and <span className="font-semibold text-ink">performance agencies running competitive audits, client retention, and multi-channel scaling</span> across rosters.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <a href="#demo" className="btn-flat">
-
-              <PlayCircle size={14} /> Try interactive demo
-            </a>
-            <button onClick={onEnter} className="btn-flat btn-primary">
-              Start tracking — from $199/mo <ArrowRight size={14} />
-            </button>
-          </div>
-          <div className="mt-6 flex items-center gap-4 mono text-[11px] text-muted-foreground">
-            <span>► 14 channels indexed daily</span>
-            <span>► SOC2 · GDPR</span>
-            <span>► No contracts · Cancel anytime</span>
-
-          </div>
+      {/* HERO */}
+      <section className="max-w-6xl mx-auto px-8 pt-24 pb-20">
+        <div className="inline-flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-muted-foreground mb-8">
+          <Sparkles size={12} /> AI Strategy Platform
+        </div>
+        <h1 className="text-5xl md:text-7xl font-semibold tracking-tight leading-[1.02] max-w-5xl">
+          The AI strategist that<br />
+          watches your market <span className="text-muted-foreground">24/7.</span>
+        </h1>
+        <p className="mt-8 text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-3xl font-light">
+          RevenueAd reads every competitive move, surfaces the open territory, and tells your team
+          exactly what to do next — before the morning meeting.
+        </p>
+        <div className="mt-10 flex flex-wrap items-center gap-3">
+          <button onClick={onEnter} className="btn-flat btn-primary text-base px-5 py-3">
+            Read this morning's briefing <ArrowRight size={14} />
+          </button>
+          <a href="#briefing" className="btn-flat text-base px-5 py-3">
+            See it in action <ArrowUpRight size={14} />
+          </a>
         </div>
 
-        {/* Live Demo Workbench */}
-        <div id="demo" className="card-flat p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                <span className="w-2.5 h-2.5 rounded-full border border-ink bg-destructive" />
-                <span className="w-2.5 h-2.5 rounded-full border border-ink bg-primary" />
-                <span className="w-2.5 h-2.5 rounded-full border border-ink bg-pastel-sage" />
-              </div>
-              <span className="mono text-[11px] font-bold">LIVE DEMO · MEDIA MIX MATRIX</span>
-            </div>
-            <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">CLICK ME</span>
-          </div>
+        {/* Strategic intelligence cards */}
+        <div className="mt-20 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <IntelCard
+            icon={Flame}
+            label="Strongest Threat"
+            value={brief?.strongest_threat ?? "Tracking competitive pressure"}
+            hint="Highest creative + demand index"
+          />
+          <IntelCard
+            icon={ArrowUpRight}
+            label="Emerging Challenger"
+            value={brief?.emerging_challenger ?? "Detecting accelerating brands"}
+            hint="Fastest momentum this week"
+          />
+          <IntelCard
+            icon={Compass}
+            label="Strategic Opening"
+            value={brief?.whitespace_emotion ?? "Mapping open territory"}
+            hint={brief?.whitespace_score != null ? `Opportunity score ${brief.whitespace_score}` : "Underclaimed positioning"}
+          />
+          <IntelCard
+            icon={ShieldCheck}
+            label="BARBS Confidence"
+            value={confidenceValue}
+            hint={confidenceHint}
+          />
+        </div>
+      </section>
 
-          {/* Matrix table */}
-          <div className="border-2 border-ink rounded-[4px] overflow-hidden">
-            <div className="grid grid-cols-[auto_1fr_auto] gap-3 px-3 py-2 bg-secondary border-b-2 border-ink mono text-[10px] font-bold">
-              <span>TRACK</span><span>ADVERTISER</span><span>BUDGET INDEX</span>
+      {/* BARBS Briefing */}
+      <section id="briefing" className="border-t border-ink bg-paper/40">
+        <div className="max-w-6xl mx-auto px-8 py-24 md:py-32">
+          <div className="grid lg:grid-cols-[auto_1fr] gap-12 items-start">
+            <div className="space-y-2">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">BARBS · Morning Brief</div>
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                {brief?.client_name ?? "Your brand"} · {brief?.category ?? "Category"}
+              </div>
             </div>
-            {brands.map((b, i) => (
-              <div key={b.name} className={`grid grid-cols-[auto_1fr_auto] gap-3 px-3 py-3 items-center ${i ? "border-t-2 border-ink" : ""}`}>
-                <button
-                  onClick={() => toggleBrand(i)}
-                  className={`w-5 h-5 border-2 border-ink rounded-[3px] grid place-items-center ${b.visible ? "bg-primary" : "bg-paper"}`}
-                  aria-label={`toggle ${b.name}`}
-                >
-                  {b.visible && <Check size={13} />}
-                </button>
+            <div>
+              <h2 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] max-w-4xl">
+                {brief?.headline ??
+                  "Your category leader is widening the gap on emotional positioning. There is a window to take it back."}
+              </h2>
+              <p className="mt-8 text-lg md:text-xl text-ink/75 leading-relaxed max-w-3xl font-light">
+                {brief?.summary ??
+                  "BARBS reads every competitor placement, every search signal, and every emotional cue in the market — then writes the briefing your strategy director would write, every morning, without fail."}
+              </p>
+
+              <div className="mt-12 grid md:grid-cols-2 gap-10 pt-10 border-t border-ink">
                 <div>
-                  <div className="font-semibold text-sm">{b.name}</div>
-                  <div className="mono text-[10px] text-muted-foreground">{b.name.toLowerCase()}.com</div>
+                  <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Strategic Opening</div>
+                  <p className="text-lg leading-relaxed">
+                    {brief?.strategic_opening ??
+                      "Underclaimed emotional territory in your category. The leader owns rational benefits; the room is open on belonging."}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2 w-44">
-                  <input
-                    type="range" min={10} max={100} value={b.budget}
-                    onChange={(e) => updateBudget(i, Number(e.target.value))}
-                    className="w-full accent-[color:var(--primary)]"
-                  />
-                  <span className="mono text-xs font-bold w-10 text-right">${b.budget}k</span>
+                <div>
+                  <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Recommended Action</div>
+                  <p className="text-lg leading-relaxed font-medium">
+                    {brief?.recommended_action ??
+                      "Test a 7-day creative push leading with belonging cues. Hold spend flat; let positioning do the work."}
+                  </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Capabilities */}
+      <section id="capabilities" className="max-w-6xl mx-auto px-8 py-24 md:py-32">
+        <div className="max-w-2xl mb-16">
+          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-4">What it does</div>
+          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
+            Five questions, answered before you ask them.
+          </h2>
+        </div>
+        <div className="grid md:grid-cols-2 gap-x-12 gap-y-12">
+          {[
+            { n: "01", t: "What is happening?", b: "Live read of every competitor placement, search trend, and emotional cue across your category." },
+            { n: "02", t: "Who is winning?", b: "Category leaders ranked by creative volume, demand capture, and momentum." },
+            { n: "03", t: "What territory is open?", b: "Whitespace mapped by emotion, buyer stage, and offer strategy — scored for opportunity." },
+            { n: "04", t: "What should I do next?", b: "Recommended actions written like a senior strategy director would write them." },
+          ].map((row) => (
+            <div key={row.n} className="border-t border-ink pt-6">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">{row.n}</div>
+              <h3 className="text-2xl font-semibold tracking-tight">{row.t}</h3>
+              <p className="mt-3 text-base text-muted-foreground leading-relaxed">{row.b}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="border-t border-ink bg-paper/40">
+        <div className="max-w-6xl mx-auto px-8 py-24 md:py-32">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-4">Pricing</div>
+            <h2 className="text-4xl md:text-5xl font-semibold tracking-tight leading-[1.05]">
+              Two plans. No contracts.
+            </h2>
+            <p className="mt-5 text-base text-muted-foreground">Founding member pricing locked in forever for the first 100 operators.</p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {[
+              {
+                name: "Solo Sniper",
+                price: 199,
+                sub: "1 tracked brand",
+                perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports"],
+                locked: ["BARBS Morning Brief", "Strategic Advisor"],
+              },
+              {
+                name: "Agency 7-Pack",
+                price: 799,
+                sub: "Up to 7 tracked brands",
+                badge: "Most popular",
+                perks: [
+                  "Everything in Solo Sniper",
+                  "BARBS Morning Brief (live)",
+                  "Strategic Advisor recommendations",
+                  "Side-by-side advertiser benchmarks",
+                  "White-label pitch decks",
+                ],
+              },
+            ].map((p) => (
+              <div key={p.name} className="card-flat p-8 relative">
+                {p.badge && (
+                  <div className="absolute -top-3 left-8 mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-ink text-paper">
+                    {p.badge}
+                  </div>
+                )}
+                <div className="font-semibold text-lg tracking-tight">{p.name}</div>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-5xl font-semibold tracking-tight">${p.price}</span>
+                  <span className="text-base text-muted-foreground">/mo</span>
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">{p.sub}</div>
+                <ul className="mt-8 space-y-3 text-[15px]">
+                  {p.perks.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <Check size={16} className="mt-0.5 shrink-0 text-muted-foreground" /> {f}
+                    </li>
+                  ))}
+                  {p.locked?.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5 text-muted-foreground">
+                      <XIcon size={16} className="mt-0.5 shrink-0" />
+                      <span>{f} <Lock size={11} className="inline ml-0.5" /></span>
+                    </li>
+                  ))}
+                </ul>
+                <button onClick={onEnter} className="btn-flat btn-primary w-full mt-8 py-3">
+                  Claim seat <ArrowRight size={14} />
+                </button>
               </div>
             ))}
           </div>
-
-          {/* Stacked bar chart */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="mono text-[11px] font-bold">CROSS-CHANNEL MIX</span>
-              <span className="mono text-[10px] text-muted-foreground">{Math.round(total)}k modeled spend</span>
-            </div>
-            <div className="h-10 border-2 border-ink rounded-[4px] overflow-hidden flex">
-              {(["search", "social", "video", "programmatic"] as const).map((k) => {
-                const w = (totals[k] / total) * 100;
-                return (
-                  <div
-                    key={k}
-                    className="h-full border-r-2 border-ink last:border-r-0 transition-all duration-500 grid place-items-center mono text-[10px] font-bold"
-                    style={{ width: `${w}%`, backgroundColor: CHANNEL_COLORS[k] }}
-                  >
-                    {w > 10 && `${Math.round(w)}%`}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex flex-wrap gap-3 mt-2 mono text-[10px]">
-              {(["search", "social", "video", "programmatic"] as const).map((k) => (
-                <span key={k} className="inline-flex items-center gap-1.5">
-                  <span className="w-3 h-3 border-2 border-ink rounded-[2px]" style={{ backgroundColor: CHANNEL_COLORS[k] }} />
-                  {k.toUpperCase()}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="mono text-[11px] text-muted-foreground border-t-2 border-ink pt-3">
-            ► Toggle advertisers or drag sliders — the mix recalculates in real time.
-          </div>
         </div>
       </section>
-
-      {/* Flat-line minimalist divider */}
-      <div className="bg-ink text-paper border-y-2 border-ink">
-        <div className="max-w-7xl mx-auto px-6 py-20 md:py-28 text-center">
-          <div className="inline-flex items-center gap-2 mono text-[11px] px-2 py-1 border-2 border-paper rounded-[3px] bg-ink mb-5">
-            <Sparkles size={12} /> THE STACK BEHIND THE EDGE
-          </div>
-          <h2 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.05]">
-            AI-Powered Cross-Channel<br />Intelligence Engine
-          </h2>
-          <p className="mt-5 max-w-2xl mx-auto text-base md:text-lg opacity-80">
-            Real-time ad library ingestion. Sentiment radar across thousands of raw consumer comments. Auto-generated ad-angle blueprints. One operating system for solo e-commerce operators and full-roster agencies alike.
-          </p>
-          <div className="mt-10 mx-auto h-[2px] w-40 bg-paper/60" aria-hidden />
-        </div>
-      </div>
-
-      {/* Benefits */}
-      <section id="benefits" className="max-w-7xl mx-auto px-6 py-14">
-        <div className="flex items-end justify-between flex-wrap gap-3 mb-6">
-          <h2 className="text-3xl md:text-4xl font-bold">Three reasons operators switch to RevenueAd</h2>
-          <span className="mono text-[11px] text-muted-foreground">NO JARGON · JUST RESULTS</span>
-        </div>
-        <div className="grid md:grid-cols-3 gap-5">
-          {[
-            { Icon: BarChart3, tag: "MEDIA MIX MATRIX", title: "Stop Guessing Budgets.", body: "Our proprietary engine reverse-engineers cross-channel spends. See their exact percentage splits across Search, Social, and Video instantly." },
-            { Icon: Film,      tag: "CONTINUOUS INSPIRATION LOOP", title: "Steal Winning Video Hooks.", body: "Watch active video creatives from YouTube, Meta, and TikTok in a unified feed. Filter by ad flight duration to copy the concepts that are driving real market return." },
-            { Icon: FileDown,  tag: "1-CLICK PITCH EXPORTER", title: "Win the Retainer.", body: "Convert competitor data profiles into stunning, client-ready pitch decks or CSV sheets in 5 seconds flat." },
-          ].map(({ Icon, tag, title, body }) => (
-            <div key={tag} className="card-flat p-5">
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 border-2 border-ink rounded-[4px] grid place-items-center bg-primary">
-                  <Icon size={16} />
-                </div>
-                <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{tag}</span>
-              </div>
-              <h3 className="mt-4 text-xl font-bold">{title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-
-      {/* Pricing teaser */}
-      <section id="pricing" className="max-w-7xl mx-auto px-6 py-14">
-        <div className="text-center max-w-2xl mx-auto">
-          <div className="inline-block mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-primary mb-3">
-            ★ FOUNDING MEMBER LAUNCH · FIRST 100 OPERATORS ONLY
-          </div>
-          <h2 className="text-3xl md:text-4xl font-bold">Two tiers. No contracts. Locked in forever.</h2>
-          <p className="text-sm text-muted-foreground mt-2">
-            <span className="font-semibold text-ink">No contracts. No minimum durations. Cancel anytime.</span> Stripe billed monthly.
-          </p>
-        </div>
-        <div className="grid md:grid-cols-2 gap-5 mt-8 max-w-4xl mx-auto">
-          {[
-            {
-              name: "Solo Sniper",
-              price: 199,
-              sub: "1 tracked brand · Raw Data Tracking Only",
-              perks: ["Daily creative refresh", "Full ad library indexing (Meta, TikTok, YouTube, Search)", "CSV + PDF exports"],
-              locked: ["AI Audience Sentiment Radar", "Barbs AI Assistant"],
-            },
-            {
-              name: "Agency 7-Pack",
-              price: 799,
-              sub: "Up to 7 tracked brands · Full AI Stack",
-              badge: "BEST VALUE",
-              perks: [
-                "Everything in Solo Sniper",
-                "AI Audience Sentiment Radar (live)",
-                "Autonomous Ad-Angle Copy Blueprints",
-                "Barbs AI Assistant (priority access)",
-                "High-priority processing layer",
-                "Side-by-side advertiser benchmarks",
-                "White-label pitch decks",
-              ],
-            },
-          ].map((p) => (
-            <div key={p.name} className={`relative card-flat p-5 ${p.badge ? "bg-primary" : ""}`}>
-              {p.badge && (
-                <div className="absolute -top-3 left-3 mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-ink text-paper">
-                  {p.badge}
-                </div>
-              )}
-              <div className="flex flex-wrap gap-1.5">
-                <span className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
-                  LIFETIME GRANDFATHERED
-                </span>
-                <span className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
-                  NO CONTRACTS
-                </span>
-              </div>
-              <div className="font-bold mt-3 text-lg">{p.name}</div>
-              <div className="mt-2 mono text-3xl font-bold">
-                ${p.price.toLocaleString()}<span className="text-sm font-normal">/mo</span>
-              </div>
-              <div className="text-xs font-semibold mt-1">{p.sub}</div>
-              <ul className="mt-3 space-y-1.5 text-sm">
-                {p.perks.map((f) => <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>)}
-                {p.locked?.map((f) => (
-                  <li key={f} className="flex items-start gap-1.5 text-muted-foreground line-through decoration-2">
-                    <XIcon size={14} className="mt-0.5 shrink-0 no-underline" /> <span>{f} <Lock size={10} className="inline ml-0.5" /></span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-3 mono text-[10px] leading-snug border-t-2 border-ink pt-2">
-                Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Operators.
-              </div>
-              <button onClick={onEnter} className="btn-flat w-full mt-3">
-                Claim founding seat <ArrowRight size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
-        <div className="mt-6 max-w-4xl mx-auto card-flat-sm p-3 text-center mono text-[11px] font-bold uppercase tracking-wide bg-paper">
-          ✓ Lifetime Grandfathered Founding Member Pricing · ✓ No Contracts · ✓ Cancel Anytime
-        </div>
-      </section>
-
 
       {/* Final CTA */}
-      <section className="max-w-7xl mx-auto px-6 pb-20">
-        <div className="card-flat p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-          <div>
-            <h3 className="text-2xl md:text-3xl font-bold">Ready to x-ray every competitor?</h3>
-            <p className="text-sm text-muted-foreground mt-1">Backtrack their history. Compile their networks. Future-save the archive.</p>
-          </div>
-          <button onClick={onEnter} className="btn-flat btn-primary">
-            Start tracking now <ArrowRight size={14} />
+      <section className="max-w-6xl mx-auto px-8 py-24 md:py-32 text-center">
+        <h2 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05] max-w-4xl mx-auto">
+          The market doesn't sleep.<br />
+          <span className="text-muted-foreground">Your strategist shouldn't either.</span>
+        </h2>
+        <div className="mt-10">
+          <button onClick={onEnter} className="btn-flat btn-primary text-base px-6 py-3">
+            Start your briefing <ArrowRight size={14} />
           </button>
         </div>
       </section>
 
-      <footer className="border-t-2 border-ink bg-paper">
-        <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap items-center justify-between gap-3 mono text-[11px]">
-          <span>© RevenueAd · Cross-channel ad intelligence</span>
-          <span>SOC2 type II · GDPR · PCI DSS via Stripe</span>
+      <footer className="border-t border-ink">
+        <div className="max-w-6xl mx-auto px-8 py-8 flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+          <span>© RevenueAd · AI strategy platform</span>
+          <span className="mono text-[10px] uppercase tracking-widest">SOC2 · GDPR</span>
         </div>
       </footer>
-
-      <BarbsChat />
     </div>
-
   );
 }
