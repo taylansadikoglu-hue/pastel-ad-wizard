@@ -170,7 +170,7 @@ function StepSignup({ data, setData }: any) {
       <div>
         <h1 className="text-3xl font-bold">Create your operator account</h1>
         <p className="text-sm text-muted-foreground mt-2">
-          RevenueAd gives ad agencies x-ray vision into every advertiser creative running on Meta, Google, and programmatic networks.
+          RevenueAd helps agencies understand who is winning, why they're winning, and what to do next.
         </p>
         <ul className="mt-6 space-y-2 text-sm">
           {["Daily creative indexing across 14 channels", "Continuous video hook inspiration loop", "Auto-generated pitch decks"].map((t) => (
