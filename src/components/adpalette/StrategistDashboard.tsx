@@ -69,6 +69,13 @@ type Pitch = {
   action: string | null;
 };
 
+type Confidence = {
+  ads_analysed: number | null;
+  brands_tracked: number | null;
+  trend_points: number | null;
+  classification_coverage: number | null;
+};
+
 function SectionHeader({ index, title, subtitle }: { index: string; title: string; subtitle?: string }) {
   return (
     <div className="flex items-baseline justify-between mb-4">
