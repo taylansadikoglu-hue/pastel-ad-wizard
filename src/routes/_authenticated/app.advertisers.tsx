@@ -1326,9 +1326,9 @@ function AdvertisersPage() {
                               const takeaway = pick("strategist_takeaway");
 
                               const chips = [
-                                { label: "Buyer Stage", value: buyerStage },
-                                { label: "Offer Type", value: offerType },
-                                { label: "Emotional Driver", value: emotionalDriver },
+                                { label: "Customer Stage", value: buyerStage },
+                                { label: "Offer Strategy", value: offerType },
+                                { label: "Dominant Emotion", value: emotionalDriver },
                               ].filter((c) => c.value);
 
                               if (!chips.length && !hookAnalysis && !takeaway) return null;
@@ -1370,7 +1370,7 @@ function AdvertisersPage() {
                                   {chips.length > 0 && (
                                     <div className="space-y-2">
                                       <div className="mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-                                        AI Strategy Layer
+                                        Strategic Layer
                                       </div>
                                       <div className="flex flex-wrap gap-1.5">
                                         {chips.map((c) => (
@@ -1417,7 +1417,7 @@ function AdvertisersPage() {
                                           style={{ background: "#c8a96a" }}
                                         />
                                         <div className="mono text-[10px] uppercase tracking-[0.18em] font-semibold" style={{ color: "#7a5f24" }}>
-                                          Strategist Takeaway · Primary Insight
+                                          Strategic Narrative · Primary Insight
                                         </div>
                                       </div>
                                       <p className="text-[13.5px] leading-[1.6] text-ink font-medium whitespace-pre-wrap">
