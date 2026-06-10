@@ -1513,6 +1513,15 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_barbs_confidence: {
+        Row: {
+          ads_analysed: number | null
+          brands_tracked: number | null
+          classification_coverage: number | null
+          trend_points: number | null
+        }
+        Relationships: []
+      }
       ra_brand_intelligence: {
         Row: {
           brand: string | null
