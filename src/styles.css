@@ -41,11 +41,13 @@
 }
 
 :root {
-  --radius: 4px;
-  --canvas: oklch(0.957 0.012 95);  /* #F4F4F0 warm cream */
-  --paper: oklch(1 0 0);
-  --ink: oklch(0.18 0.012 110);     /* #23251D charcoal */
-  --accent-gold: oklch(0.78 0.16 75); /* #F7A501 vintage orange-gold */
+  --radius: 12px;
+  --canvas: oklch(0.965 0.010 95);   /* warm cream */
+  --paper: oklch(0.995 0.003 95);    /* paper white */
+  --ink: oklch(0.16 0.012 110);      /* deep charcoal text */
+  --hairline: oklch(0.88 0.008 100); /* soft warm border */
+  --hairline-strong: oklch(0.76 0.010 100);
+  --accent-gold: oklch(0.74 0.16 70);
 
   --background: var(--canvas);
   --foreground: var(--ink);
@@ -55,16 +57,16 @@
   --popover-foreground: var(--ink);
   --primary: var(--accent-gold);
   --primary-foreground: var(--ink);
-  --secondary: oklch(0.92 0.008 95);
+  --secondary: oklch(0.945 0.008 95);
   --secondary-foreground: var(--ink);
-  --muted: oklch(0.93 0.008 95);
-  --muted-foreground: oklch(0.42 0.012 110);
+  --muted: oklch(0.945 0.008 95);
+  --muted-foreground: oklch(0.48 0.012 110);
   --accent: var(--accent-gold);
   --accent-foreground: var(--ink);
   --destructive: oklch(0.55 0.22 27);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: var(--ink);
-  --input: var(--ink);
+  --border: var(--hairline);
+  --input: var(--hairline);
   --ring: var(--accent-gold);
 
   --pastel-lilac: oklch(0.85 0.06 300);
@@ -72,14 +74,16 @@
   --pastel-blush: oklch(0.9 0.04 30);
   --pastel-peach: oklch(0.86 0.07 55);
 
-  --shadow-flat: 4px 4px 0 0 var(--ink);
-  --shadow-flat-sm: 2px 2px 0 0 var(--ink);
+  --shadow-flat: 0 1px 2px 0 rgb(20 20 18 / 0.04), 0 10px 28px -16px rgb(20 20 18 / 0.10);
+  --shadow-flat-sm: 0 1px 2px 0 rgb(20 20 18 / 0.05);
 }
 
 .dark {
-  --canvas: oklch(0.18 0.012 265);          /* midnight charcoal */
+  --canvas: oklch(0.18 0.012 265);
   --paper: oklch(0.22 0.014 265);
-  --ink: oklch(0.92 0.02 300);              /* soft lilac-tinted off-white */
+  --ink: oklch(0.94 0.02 300);
+  --hairline: oklch(0.32 0.020 270);
+  --hairline-strong: oklch(0.45 0.030 280);
   --background: var(--canvas);
   --foreground: var(--ink);
   --card: var(--paper);
@@ -91,14 +95,14 @@
   --secondary: oklch(0.27 0.018 270);
   --secondary-foreground: var(--ink);
   --muted: oklch(0.27 0.018 270);
-  --muted-foreground: oklch(0.72 0.02 290);
+  --muted-foreground: oklch(0.74 0.02 290);
   --accent: var(--pastel-sage);
   --accent-foreground: oklch(0.18 0.012 265);
-  --border: oklch(0.55 0.04 290);
-  --input: oklch(0.55 0.04 290);
+  --border: var(--hairline);
+  --input: var(--hairline);
   --ring: var(--pastel-lilac);
-  --shadow-flat: 4px 4px 0 0 oklch(0.55 0.04 290);
-  --shadow-flat-sm: 2px 2px 0 0 oklch(0.55 0.04 290);
+  --shadow-flat: 0 1px 2px 0 rgb(0 0 0 / 0.30), 0 12px 32px -16px rgb(0 0 0 / 0.45);
+  --shadow-flat-sm: 0 1px 2px 0 rgb(0 0 0 / 0.30);
 }
 
 @layer base {
@@ -107,31 +111,37 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
     transition: background-color 320ms ease, color 320ms ease;
   }
   *, *::before, *::after {
     transition: background-color 320ms ease, border-color 320ms ease, color 320ms ease, box-shadow 320ms ease;
   }
-  h1, h2, h3, h4, h5, h6 { letter-spacing: -0.01em; }
+  h1 { letter-spacing: -0.025em; }
+  h2 { letter-spacing: -0.022em; }
+  h3, h4, h5, h6 { letter-spacing: -0.015em; }
 }
 
 @layer utilities {
   .shadow-flat { box-shadow: var(--shadow-flat); }
   .shadow-flat-sm { box-shadow: var(--shadow-flat-sm); }
-  .border-ink { border-color: var(--ink); }
+  .border-ink { border-color: var(--hairline); }
+  .border-ink\/15 { border-color: var(--hairline); }
   .bg-canvas { background-color: var(--canvas); }
   .bg-paper { background-color: var(--paper); }
   .text-ink { color: var(--ink); }
   .card-flat {
     background-color: var(--paper);
-    border: 2px solid var(--ink);
-    border-radius: 4px;
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
     box-shadow: var(--shadow-flat);
   }
   .card-flat-sm {
     background-color: var(--paper);
-    border: 2px solid var(--ink);
-    border-radius: 4px;
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
     box-shadow: var(--shadow-flat-sm);
   }
   .btn-flat {
@@ -139,30 +149,32 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border: 2px solid var(--ink);
-    border-radius: 4px;
-    padding: 0.5rem 0.875rem;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 10px;
+    padding: 0.55rem 0.95rem;
     font-weight: 600;
     background: var(--paper);
     color: var(--ink);
     box-shadow: var(--shadow-flat-sm);
-    transition: transform 80ms ease, box-shadow 80ms ease;
+    transition: transform 120ms ease, box-shadow 200ms ease, background-color 200ms ease, border-color 200ms ease;
     cursor: pointer;
     font-size: 0.875rem;
   }
-  .btn-flat:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 0 var(--ink); }
-  .btn-flat:active { transform: translate(2px,2px); box-shadow: 0 0 0 0 var(--ink); }
-  .btn-primary { background: var(--primary); }
+  .btn-flat:hover { background: var(--secondary); border-color: var(--ink); }
+  .btn-flat:active { transform: translateY(1px); }
+  .btn-primary { background: var(--primary); color: var(--primary-foreground); border-color: transparent; }
+  .btn-primary:hover { background: var(--primary); filter: brightness(0.96); border-color: transparent; }
   .input-flat {
     width: 100%;
-    border: 2px solid var(--ink);
-    border-radius: 4px;
-    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 10px;
+    padding: 0.6rem 0.85rem;
     background: var(--paper);
     color: var(--ink);
     font-family: var(--font-sans);
-    font-size: 0.875rem;
+    font-size: 0.9rem;
   }
-  .input-flat:focus { outline: none; box-shadow: var(--shadow-flat-sm); }
-  .mono { font-family: var(--font-mono); }
+  .input-flat:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent-gold) 25%, transparent); }
+  .mono { font-family: var(--font-mono); letter-spacing: 0.02em; }
 }
+

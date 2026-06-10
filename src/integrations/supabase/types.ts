@@ -280,6 +280,7 @@ export type Database = {
           id: number
           is_active: boolean | null
           last_discovered_at: string | null
+          priority: number | null
         }
         Insert: {
           category?: string | null
@@ -292,6 +293,7 @@ export type Database = {
           id?: number
           is_active?: boolean | null
           last_discovered_at?: string | null
+          priority?: number | null
         }
         Update: {
           category?: string | null
@@ -304,6 +306,7 @@ export type Database = {
           id?: number
           is_active?: boolean | null
           last_discovered_at?: string | null
+          priority?: number | null
         }
         Relationships: []
       }
@@ -370,6 +373,54 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_voice_items: {
+        Row: {
+          author_handle: string | null
+          brand_domain: string
+          created_at: string | null
+          external_id: string | null
+          id: number
+          likes: number | null
+          platform: string
+          posted_at: string | null
+          rating: number | null
+          raw: Json | null
+          replies: number | null
+          source_url: string | null
+          text: string | null
+        }
+        Insert: {
+          author_handle?: string | null
+          brand_domain: string
+          created_at?: string | null
+          external_id?: string | null
+          id?: number
+          likes?: number | null
+          platform: string
+          posted_at?: string | null
+          rating?: number | null
+          raw?: Json | null
+          replies?: number | null
+          source_url?: string | null
+          text?: string | null
+        }
+        Update: {
+          author_handle?: string | null
+          brand_domain?: string
+          created_at?: string | null
+          external_id?: string | null
+          id?: number
+          likes?: number | null
+          platform?: string
+          posted_at?: string | null
+          rating?: number | null
+          raw?: Json | null
+          replies?: number | null
+          source_url?: string | null
+          text?: string | null
+        }
+        Relationships: []
+      }
       domain_scans: {
         Row: {
           average_cpc: number | null
@@ -430,6 +481,45 @@ export type Database = {
           resend_api_key?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      market_signals: {
+        Row: {
+          brand_domain: string | null
+          captured_at: string | null
+          content: string | null
+          created_at: string | null
+          engagement: number | null
+          id: number
+          platform: string | null
+          signal_type: string | null
+          source_url: string | null
+          title: string | null
+        }
+        Insert: {
+          brand_domain?: string | null
+          captured_at?: string | null
+          content?: string | null
+          created_at?: string | null
+          engagement?: number | null
+          id?: number
+          platform?: string | null
+          signal_type?: string | null
+          source_url?: string | null
+          title?: string | null
+        }
+        Update: {
+          brand_domain?: string | null
+          captured_at?: string | null
+          content?: string | null
+          created_at?: string | null
+          engagement?: number | null
+          id?: number
+          platform?: string | null
+          signal_type?: string | null
+          source_url?: string | null
+          title?: string | null
         }
         Relationships: []
       }
@@ -1459,6 +1549,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_advertiser_discovery_queue: {
+        Row: {
+          category: string | null
+          country: string | null
+          discovery_status: string | null
+          domain: string | null
+          id: number | null
+        }
+        Insert: {
+          category?: never
+          country?: string | null
+          discovery_status?: string | null
+          domain?: string | null
+          id?: number | null
+        }
+        Update: {
+          category?: never
+          country?: string | null
+          discovery_status?: string | null
+          domain?: string | null
+          id?: number | null
+        }
+        Relationships: []
+      }
+      ra_advertiser_priority_dashboard: {
+        Row: {
+          advertisers: number | null
+          category: string | null
+          portfolio_share: number | null
+          priority: number | null
+        }
+        Relationships: []
+      }
       ra_advisor: {
         Row: {
           category: string | null
@@ -1495,6 +1618,18 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_barbs_brief_cards: {
+        Row: {
+          emerging_challenger: string | null
+          headline: string | null
+          observation: string | null
+          recommended_action: string | null
+          strategic_opening: string | null
+          strongest_threat: string | null
+          why_it_matters: string | null
+        }
+        Relationships: []
+      }
       ra_barbs_client_brief: {
         Row: {
           category: string | null
@@ -1522,6 +1657,118 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_barbs_context_pack: {
+        Row: {
+          content: string | null
+          section: string | null
+        }
+        Relationships: []
+      }
+      ra_barbs_customer_reality: {
+        Row: {
+          brand_domain: string | null
+          conversations: number | null
+          discussion_depth: number | null
+          engagement: number | null
+        }
+        Relationships: []
+      }
+      ra_barbs_evidence: {
+        Row: {
+          competitor_domain: string | null
+          creative_volume: number | null
+          demand: number | null
+          strategic_position: string | null
+          threat_index: number | null
+          threat_rank: number | null
+          threat_score: number | null
+        }
+        Relationships: []
+      }
+      ra_barbs_evidence_pack: {
+        Row: {
+          competitor_domain: string | null
+          confidence: string | null
+          creative_volume: number | null
+          demand: number | null
+          market_rank: string | null
+          threat_context: string | null
+          threat_score: number | null
+        }
+        Relationships: []
+      }
+      ra_barbs_executive_brief: {
+        Row: {
+          challenger_summary: string | null
+          headline: string | null
+          opening_summary: string | null
+          recommended_action: string | null
+          summary: string | null
+          threat_summary: string | null
+        }
+        Relationships: []
+      }
+      ra_barbs_executive_brief_v2: {
+        Row: {
+          challenger_summary: string | null
+          headline: string | null
+          opening_summary: string | null
+          recommended_action: string | null
+          summary: string | null
+          threat_summary: string | null
+        }
+        Relationships: []
+      }
+      ra_barbs_launch_brief: {
+        Row: {
+          emerging_challenger: string | null
+          headline: string | null
+          observation: string | null
+          recommended_action: string | null
+          strategic_opening: string | null
+          strongest_threat: string | null
+          why_it_matters: string | null
+        }
+        Relationships: []
+      }
+      ra_barbs_prompt_pack: {
+        Row: {
+          answer: string | null
+          question: string | null
+        }
+        Relationships: []
+      }
+      ra_barbs_quant: {
+        Row: {
+          competitor_domain: string | null
+          confidence: string | null
+          creative_volume: number | null
+          demand: number | null
+          demand_vs_avg_pct: number | null
+          threat_rank: number | null
+          threat_score: number | null
+          threat_vs_avg_pct: number | null
+        }
+        Relationships: []
+      }
+      ra_barbs_recommendations: {
+        Row: {
+          category: string | null
+          client_domain: string | null
+          client_name: string | null
+          emerging_challenger: string | null
+          recommendation: string | null
+          strongest_threat: string | null
+          whitespace_emotion: string | null
+        }
+        Relationships: []
+      }
+      ra_barbs_verdict: {
+        Row: {
+          verdict: string | null
+        }
+        Relationships: []
+      }
       ra_brand_intelligence: {
         Row: {
           brand: string | null
@@ -1546,6 +1793,32 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_ceo_summary: {
+        Row: {
+          ceo_summary: string | null
+        }
+        Relationships: []
+      }
+      ra_client_actions: {
+        Row: {
+          client_name: string | null
+          emerging_challenger: string | null
+          recommended_action: string | null
+          strongest_threat: string | null
+          whitespace_emotion: string | null
+        }
+        Relationships: []
+      }
+      ra_client_health: {
+        Row: {
+          client_name: string | null
+          emerging_challenger: string | null
+          recommended_action: string | null
+          strategic_health_score: number | null
+          strongest_threat: string | null
+        }
+        Relationships: []
+      }
       ra_client_impact: {
         Row: {
           client_domain: string | null
@@ -1555,6 +1828,17 @@ export type Database = {
           opportunity_score: number | null
           pressure: string | null
           threat_level: string | null
+        }
+        Relationships: []
+      }
+      ra_client_snapshot: {
+        Row: {
+          category: string | null
+          client_name: string | null
+          emerging_challenger: string | null
+          recommended_action: string | null
+          strategic_opening: string | null
+          strongest_threat: string | null
         }
         Relationships: []
       }
@@ -1578,6 +1862,33 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_cmo_brief: {
+        Row: {
+          headline: string | null
+          market_temperature: string | null
+          observation: string | null
+          pressure_summary: string | null
+          recommended_action: string | null
+        }
+        Relationships: []
+      }
+      ra_competitive_gap: {
+        Row: {
+          gap_narrative: string | null
+          strategic_opening: string | null
+          strongest_threat: string | null
+        }
+        Relationships: []
+      }
+      ra_competitor_rankings: {
+        Row: {
+          competitor_domain: string | null
+          threat_index: number | null
+          threat_rank: number | null
+          threat_score: number | null
+        }
+        Relationships: []
+      }
       ra_customer_voice: {
         Row: {
           brand: string | null
@@ -1586,6 +1897,51 @@ export type Database = {
           positive_mentions: number | null
           top_negative_theme: string | null
           top_positive_theme: string | null
+        }
+        Relationships: []
+      }
+      ra_customer_voice_leaderboard: {
+        Row: {
+          avg_likes: number | null
+          avg_replies: number | null
+          brand_domain: string | null
+          total_mentions: number | null
+        }
+        Relationships: []
+      }
+      ra_customer_voice_summary: {
+        Row: {
+          avg_likes: number | null
+          avg_replies: number | null
+          brand_domain: string | null
+          mentions: number | null
+          platform: string | null
+        }
+        Relationships: []
+      }
+      ra_daily_alerts: {
+        Row: {
+          alert: string | null
+          alert_type: string | null
+        }
+        Relationships: []
+      }
+      ra_daily_brief: {
+        Row: {
+          headline: string | null
+          observation: string | null
+          recommended_action: string | null
+          why_it_matters: string | null
+        }
+        Relationships: []
+      }
+      ra_daily_change_feed: {
+        Row: {
+          brand_domain: string | null
+          latest_interest: number | null
+          market_change: string | null
+          momentum: string | null
+          pressure: string | null
         }
         Relationships: []
       }
@@ -1610,11 +1966,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_demo_story: {
+        Row: {
+          headline: string | null
+          observation: string | null
+          recommended_action: string | null
+          why_it_matters: string | null
+        }
+        Relationships: []
+      }
       ra_emotion_ownership: {
         Row: {
           brand: string | null
           emotion: string | null
           share_percent: number | null
+        }
+        Relationships: []
+      }
+      ra_executive_pack: {
+        Row: {
+          ceo_summary: string | null
+          headline: string | null
+          market_temperature: string | null
+          observation: string | null
+          outlook: string | null
+          pressure_summary: string | null
+          recommended_action: string | null
+        }
+        Relationships: []
+      }
+      ra_executive_scorecard: {
+        Row: {
+          biggest_threat: string | null
+          brands_monitored: number | null
+          challenger: string | null
+          creatives_monitored: number | null
+          opportunity: string | null
         }
         Relationships: []
       }
@@ -1640,6 +2027,29 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_executive_takeaways: {
+        Row: {
+          takeaway: string | null
+        }
+        Relationships: []
+      }
+      ra_investment_signal: {
+        Row: {
+          investment_signal: string | null
+          recommended_action: string | null
+          whitespace_emotion: string | null
+        }
+        Relationships: []
+      }
+      ra_launch_health: {
+        Row: {
+          brands: number | null
+          creatives: number | null
+          threats_identified: number | null
+          trend_points: number | null
+        }
+        Relationships: []
+      }
       ra_market_intelligence: {
         Row: {
           avg_creatives_per_brand: number | null
@@ -1653,6 +2063,30 @@ export type Database = {
           total_creatives: number | null
           x_axis: number | null
           y_axis: number | null
+        }
+        Relationships: []
+      }
+      ra_market_map_100: {
+        Row: {
+          category: string | null
+          country: string | null
+          discovery_status: string | null
+          domain: string | null
+          is_active: boolean | null
+        }
+        Insert: {
+          category?: never
+          country?: string | null
+          discovery_status?: string | null
+          domain?: string | null
+          is_active?: boolean | null
+        }
+        Update: {
+          category?: never
+          country?: string | null
+          discovery_status?: string | null
+          domain?: string | null
+          is_active?: boolean | null
         }
         Relationships: []
       }
@@ -1674,6 +2108,14 @@ export type Database = {
           market_density: string | null
           recommendation: string | null
           strategic_priority: string | null
+        }
+        Relationships: []
+      }
+      ra_market_outlook: {
+        Row: {
+          market_temperature: string | null
+          outlook: string | null
+          pressure_summary: string | null
         }
         Relationships: []
       }
@@ -1699,6 +2141,19 @@ export type Database = {
           ads: number | null
           category: string | null
           share_of_market: number | null
+        }
+        Relationships: []
+      }
+      ra_market_temperature: {
+        Row: {
+          market_temperature: string | null
+        }
+        Relationships: []
+      }
+      ra_meeting_prep: {
+        Row: {
+          content: string | null
+          section: string | null
         }
         Relationships: []
       }
@@ -1737,6 +2192,14 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_opportunity_summary: {
+        Row: {
+          emotion: string | null
+          opportunity_score: number | null
+          priority: string | null
+        }
+        Relationships: []
+      }
       ra_pitch_brief: {
         Row: {
           action: string | null
@@ -1745,6 +2208,16 @@ export type Database = {
           dominant_emotion: string | null
           recommendation: string | null
           whitespace_emotion: string | null
+        }
+        Relationships: []
+      }
+      ra_pressure_summary: {
+        Row: {
+          critical_threats: number | null
+          high_threats: number | null
+          low_threats: number | null
+          medium_threats: number | null
+          pressure_narrative: string | null
         }
         Relationships: []
       }
@@ -1760,6 +2233,22 @@ export type Database = {
         Update: {
           id?: number | null
           normalized_product?: never
+        }
+        Relationships: []
+      }
+      ra_strategic_actions: {
+        Row: {
+          action: string | null
+          priority: number | null
+        }
+        Relationships: []
+      }
+      ra_strategic_risks: {
+        Row: {
+          competitor_domain: string | null
+          risk_level: string | null
+          risk_narrative: string | null
+          threat_score: number | null
         }
         Relationships: []
       }
@@ -1804,6 +2293,16 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_threat_radar: {
+        Row: {
+          competitor_domain: string | null
+          creative_volume: number | null
+          demand: number | null
+          threat_level: string | null
+          threat_score: number | null
+        }
+        Relationships: []
+      }
       ra_top_opportunities: {
         Row: {
           category: string | null
@@ -1836,6 +2335,22 @@ export type Database = {
           latest_date: string | null
           latest_interest: number | null
           peak_interest: number | null
+        }
+        Relationships: []
+      }
+      ra_weekly_email: {
+        Row: {
+          headline: string | null
+          observation: string | null
+          recommended_action: string | null
+          why_it_matters: string | null
+        }
+        Relationships: []
+      }
+      ra_win_themes: {
+        Row: {
+          messaging_direction: string | null
+          theme: string | null
         }
         Relationships: []
       }
