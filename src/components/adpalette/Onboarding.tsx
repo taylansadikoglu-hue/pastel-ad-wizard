@@ -234,7 +234,7 @@ function StepAdvertisers({ data, setData }: any) {
       <div className="card-flat-sm p-3 bg-primary">
         <div className="mono text-[10px] font-bold uppercase">★ Master Brand Fingerprint</div>
         <p className="text-xs mt-1 leading-snug">
-          Each domain you enter below becomes the <span className="font-bold">master fingerprint</span> RevenueAd uses to track every cross-channel ad placement and scrape audience listening sentiment around that brand. One root domain = one indexed advertiser.
+          Each domain you enter below becomes the <span className="font-bold">master fingerprint</span> RevenueAd uses to track every cross-channel ad placement and analyse audience conversation signals around that brand. One root domain = one indexed advertiser.
         </p>
       </div>
       {[0, 1, 2].map((i) => (
