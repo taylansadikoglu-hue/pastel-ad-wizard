@@ -149,7 +149,7 @@ function AppPage() {
         <AdminPicker email={email} onPick={() => setStage("app")} onSignOut={logout} />
       )}
       {stage === "onboard" && <OnboardingWizard onComplete={() => setStage("app")} />}
-      {stage === "app" && (isChildWorkspaceRoute ? <Outlet /> : <Dashboard onLogout={logout} />)}
+      {stage === "app" && (isChildWorkspaceRoute ? <Outlet /> : <StrategistDashboard />)}
     </ThemeProvider>
   );
 }
