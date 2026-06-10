@@ -259,6 +259,52 @@ export function StrategistDashboard() {
           </section>
         )}
 
+        {confidence && (confidence.ads_analysed != null || confidence.brands_tracked != null || confidence.trend_points != null || confidence.classification_coverage != null) && (
+          <section>
+            <div className="card-flat p-6 md:p-8">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">BARBS Confidence</span>
+                  <span className="mono text-[10px] uppercase px-2 py-0.5 border-2 border-ink rounded-[3px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-950 dark:text-emerald-100">
+                    High
+                  </span>
+                </div>
+                <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Based on · ra_barbs_confidence
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6 pt-6 border-t-2 border-ink/15">
+                {confidence.ads_analysed != null && (
+                  <div>
+                    <div className="text-3xl font-bold tracking-tight">{confidence.ads_analysed.toLocaleString()}</div>
+                    <div className="mono text-[10px] uppercase text-muted-foreground mt-1">Creatives analysed</div>
+                  </div>
+                )}
+                {confidence.brands_tracked != null && (
+                  <div>
+                    <div className="text-3xl font-bold tracking-tight">{confidence.brands_tracked.toLocaleString()}</div>
+                    <div className="mono text-[10px] uppercase text-muted-foreground mt-1">Brands with live creative data</div>
+                  </div>
+                )}
+                {confidence.trend_points != null && (
+                  <div>
+                    <div className="text-3xl font-bold tracking-tight">{confidence.trend_points.toLocaleString()}</div>
+                    <div className="mono text-[10px] uppercase text-muted-foreground mt-1">Search trend data points</div>
+                  </div>
+                )}
+                {confidence.classification_coverage != null && (
+                  <div>
+                    <div className="text-3xl font-bold tracking-tight">{Number(confidence.classification_coverage).toFixed(0)}%</div>
+                    <div className="mono text-[10px] uppercase text-muted-foreground mt-1">Classification coverage</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+
+
         {topThreats.length > 0 && (
           <section>
             <SectionHeader index="01" title="Competitive Threats" subtitle="Live · ra_client_threats" />
