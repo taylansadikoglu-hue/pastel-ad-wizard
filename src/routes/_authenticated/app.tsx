@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link, Outlet } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Layers, Radio, Target, TrendingUp, Settings, Home, ArrowRight } from "lucide-react";
+import { Loader2, Radio, Target, TrendingUp, Settings, Home, ArrowRight } from "lucide-react";
 import { ThemeProvider } from "@/components/adpalette/theme";
 import { OnboardingWizard } from "@/components/adpalette/Onboarding";
 import { StrategistDashboard } from "@/components/adpalette/StrategistDashboard";
