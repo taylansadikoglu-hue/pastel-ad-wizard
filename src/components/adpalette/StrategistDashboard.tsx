@@ -182,75 +182,163 @@ export function StrategistDashboard() {
 
   const actionablePitch = pitch.filter((r) => r.action && r.recommendation);
 
+  // Competitor analytics
+  const threatVals = topThreats.map((r) => Number(r.threat_score) || 0);
+  const demandVals = topThreats.map((r) => Number(r.demand) || 0);
+  const creativeVals = topThreats.map((r) => Number(r.creative_volume) || 0);
+  const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+  const max = (xs: number[]) => (xs.length ? Math.max(...xs) : 0);
+  const avgThreat = avg(threatVals);
+  const avgDemand = avg(demandVals);
+  const avgCreative = avg(creativeVals);
+  const maxThreat = max(threatVals);
+  const maxDemand = max(demandVals);
+  const maxCreative = max(creativeVals);
+
+  const pct = (v: number, m: number) => (m > 0 ? Math.min(100, Math.round((v / m) * 100)) : 0);
+  const delta = (v: number, a: number) => (a > 0 ? Math.round(((v - a) / a) * 100) : 0);
+
+  const insightFor = (r: Threat): string | null => {
+    const d = Number(r.demand) || 0;
+    const c = Number(r.creative_volume) || 0;
+    const others = topThreats.filter((x) => x.competitor_domain !== r.competitor_domain);
+    // Similar demand, lower creative
+    const similarDemand = others.find((x) => {
+      const xd = Number(x.demand) || 0;
+      const xc = Number(x.creative_volume) || 0;
+      return d > 0 && xd > 0 && Math.abs(xd - d) / Math.max(xd, d) < 0.2 && c < xc * 0.6;
+    });
+    if (similarDemand) {
+      return `Generates similar demand to ${similarDemand.competitor_domain} with significantly lower creative volume.`;
+    }
+    if (d > avgDemand * 1.4 && c < avgCreative * 0.7 && avgCreative > 0) {
+      return `Above-average demand on below-average creative output — efficient share capture.`;
+    }
+    if (c > avgCreative * 1.4 && d < avgDemand * 0.8 && avgDemand > 0) {
+      return `High creative volume but underperforming on demand — diminishing returns.`;
+    }
+    return null;
+  };
+
+  const confidenceFor = (r: Threat): { label: string; tone: string } => {
+    const signals = [r.threat_score, r.demand, r.creative_volume].filter((v) => Number(v) > 0).length;
+    if (signals >= 3) return { label: "High", tone: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-950 dark:text-emerald-100" };
+    if (signals === 2) return { label: "Medium", tone: "bg-amber-100 dark:bg-amber-900/40 text-amber-950 dark:text-amber-100" };
+    return { label: "Low", tone: "bg-secondary text-muted-foreground" };
+  };
+
   return (
     <WorkspaceShell
       title="BARBS Morning Brief"
       subtitle="Your senior strategy director's read of the market this morning."
     >
-      <div className="space-y-12">
+      <div className="space-y-16">
         {brief && (brief.headline || brief.summary) && (
           <section>
-            <div className="card-flat p-8 md:p-12 bg-secondary/40">
-              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-4">
-                BARBS · {brief.client_name ?? "Client"} · {brief.category ?? "Market"}
+            <div className="space-y-10">
+              {/* Eyebrow */}
+              <div className="flex items-center gap-3 mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
+                <span>Today's Brief</span>
+                <span className="text-ink/30">·</span>
+                <span>{brief.client_name ?? "Client"}</span>
+                {brief.category && <><span className="text-ink/30">·</span><span>{brief.category}</span></>}
               </div>
+
+              {/* Headline */}
               {brief.headline && (
-                <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-[1.05] mb-6">
+                <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-[1.02] max-w-5xl">
                   {brief.headline}
                 </h1>
               )}
               {brief.summary && (
-                <p className="text-lg md:text-xl leading-relaxed text-ink/85 mb-8 max-w-4xl">
+                <p className="text-lg md:text-xl leading-relaxed text-ink/70 max-w-3xl">
                   {brief.summary}
                 </p>
               )}
-              <div className="grid md:grid-cols-2 gap-6 pt-6 border-t-2 border-ink/15">
-                {brief.strategic_opening && (
-                  <div>
-                    <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-                      Strategic Opening
+
+              {/* Three scan cards */}
+              <div className="grid md:grid-cols-3 gap-4 pt-2">
+                {brief.strongest_threat && (
+                  <div className="rounded-2xl bg-secondary/40 p-6">
+                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-rose-700 dark:text-rose-300 mb-3">
+                      <span className="inline-block size-1.5 rounded-full bg-rose-500" />
+                      Strongest Threat
                     </div>
-                    <p className="text-base leading-relaxed">{brief.strategic_opening}</p>
+                    <div className="text-2xl font-bold tracking-tight truncate" title={brief.strongest_threat}>
+                      {brief.strongest_threat}
+                    </div>
                   </div>
                 )}
-                {brief.recommended_action && (
-                  <div>
-                    <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-                      Recommended Action
+                {brief.emerging_challenger && (
+                  <div className="rounded-2xl bg-secondary/40 p-6">
+                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-amber-700 dark:text-amber-300 mb-3">
+                      <span className="inline-block size-1.5 rounded-full bg-amber-500" />
+                      Emerging Challenger
                     </div>
-                    <p className="text-base leading-relaxed font-semibold">{brief.recommended_action}</p>
+                    <div className="text-2xl font-bold tracking-tight truncate" title={brief.emerging_challenger}>
+                      {brief.emerging_challenger}
+                    </div>
+                  </div>
+                )}
+                {(brief.strategic_opening || brief.whitespace_emotion) && (
+                  <div className="rounded-2xl bg-secondary/40 p-6">
+                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-3">
+                      <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
+                      Strategic Opening
+                    </div>
+                    {brief.strategic_opening ? (
+                      <p className="text-base leading-snug font-medium">{brief.strategic_opening}</p>
+                    ) : (
+                      <div className="text-2xl font-bold tracking-tight">{brief.whitespace_emotion}</div>
+                    )}
                   </div>
                 )}
               </div>
-              {(brief.strongest_threat || brief.emerging_challenger || brief.whitespace_emotion) && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8 pt-6 border-t-2 border-ink/15">
-                  {brief.strongest_threat && (
+
+              {/* Recommended Action */}
+              {brief.recommended_action && (
+                <div className="rounded-2xl bg-ink text-paper p-8 md:p-10">
+                  <div className="mono text-[10px] uppercase tracking-widest text-paper/60 mb-3">
+                    Recommended Action
+                  </div>
+                  <p className="text-xl md:text-2xl font-semibold leading-snug max-w-4xl">
+                    {brief.recommended_action}
+                  </p>
+                </div>
+              )}
+
+              {/* Confidence */}
+              {confidence && (confidence.ads_analysed != null || confidence.brands_tracked != null || confidence.trend_points != null || confidence.classification_coverage != null) && (
+                <div className="flex flex-wrap items-end gap-x-10 gap-y-6 pt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Confidence</span>
+                    <span className="mono text-[10px] uppercase px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-950 dark:text-emerald-100">
+                      High
+                    </span>
+                  </div>
+                  {confidence.ads_analysed != null && (
                     <div>
-                      <div className="mono text-[10px] uppercase text-muted-foreground">Strongest Threat</div>
-                      <div className="font-bold mt-1 truncate" title={brief.strongest_threat}>{brief.strongest_threat}</div>
+                      <div className="text-xl font-bold tracking-tight">{confidence.ads_analysed.toLocaleString()}</div>
+                      <div className="mono text-[10px] uppercase text-muted-foreground mt-0.5">Creatives</div>
                     </div>
                   )}
-                  {brief.fastest_mover && (
+                  {confidence.brands_tracked != null && (
                     <div>
-                      <div className="mono text-[10px] uppercase text-muted-foreground">Fastest Mover</div>
-                      <div className="font-bold mt-1 truncate" title={brief.fastest_mover}>{brief.fastest_mover}</div>
+                      <div className="text-xl font-bold tracking-tight">{confidence.brands_tracked.toLocaleString()}</div>
+                      <div className="mono text-[10px] uppercase text-muted-foreground mt-0.5">Brands</div>
                     </div>
                   )}
-                  {brief.emerging_challenger && (
+                  {confidence.trend_points != null && (
                     <div>
-                      <div className="mono text-[10px] uppercase text-muted-foreground">Emerging Challenger</div>
-                      <div className="font-bold mt-1 truncate" title={brief.emerging_challenger}>{brief.emerging_challenger}</div>
+                      <div className="text-xl font-bold tracking-tight">{confidence.trend_points.toLocaleString()}</div>
+                      <div className="mono text-[10px] uppercase text-muted-foreground mt-0.5">Trend points</div>
                     </div>
                   )}
-                  {brief.whitespace_emotion && (
+                  {confidence.classification_coverage != null && (
                     <div>
-                      <div className="mono text-[10px] uppercase text-muted-foreground">Open Territory</div>
-                      <div className="font-bold mt-1">
-                        {brief.whitespace_emotion}
-                        {brief.whitespace_score != null && (
-                          <span className="mono text-[10px] text-muted-foreground ml-2">{brief.whitespace_score}</span>
-                        )}
-                      </div>
+                      <div className="text-xl font-bold tracking-tight">{Number(confidence.classification_coverage).toFixed(0)}%</div>
+                      <div className="mono text-[10px] uppercase text-muted-foreground mt-0.5">Coverage</div>
                     </div>
                   )}
                 </div>
@@ -259,72 +347,85 @@ export function StrategistDashboard() {
           </section>
         )}
 
-        {confidence && (confidence.ads_analysed != null || confidence.brands_tracked != null || confidence.trend_points != null || confidence.classification_coverage != null) && (
-          <section>
-            <div className="card-flat p-6 md:p-8">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                <div className="flex items-center gap-4">
-                  <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">BARBS Confidence</span>
-                  <span className="mono text-[10px] uppercase px-2 py-0.5 border-2 border-ink rounded-[3px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-950 dark:text-emerald-100">
-                    High
-                  </span>
-                </div>
-                <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                  Based on · ra_barbs_confidence
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-6 pt-6 border-t-2 border-ink/15">
-                {confidence.ads_analysed != null && (
-                  <div>
-                    <div className="text-3xl font-bold tracking-tight">{confidence.ads_analysed.toLocaleString()}</div>
-                    <div className="mono text-[10px] uppercase text-muted-foreground mt-1">Creatives analysed</div>
-                  </div>
-                )}
-                {confidence.brands_tracked != null && (
-                  <div>
-                    <div className="text-3xl font-bold tracking-tight">{confidence.brands_tracked.toLocaleString()}</div>
-                    <div className="mono text-[10px] uppercase text-muted-foreground mt-1">Brands with live creative data</div>
-                  </div>
-                )}
-                {confidence.trend_points != null && (
-                  <div>
-                    <div className="text-3xl font-bold tracking-tight">{confidence.trend_points.toLocaleString()}</div>
-                    <div className="mono text-[10px] uppercase text-muted-foreground mt-1">Search trend data points</div>
-                  </div>
-                )}
-                {confidence.classification_coverage != null && (
-                  <div>
-                    <div className="text-3xl font-bold tracking-tight">{Number(confidence.classification_coverage).toFixed(0)}%</div>
-                    <div className="mono text-[10px] uppercase text-muted-foreground mt-1">Classification coverage</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
-
-
-
         {topThreats.length > 0 && (
           <section>
-            <SectionHeader index="01" title="Competitive Threats" subtitle="Live · ra_client_threats" />
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {topThreats.map((r, i) => (
-                <div key={i} className="card-flat p-5">
-                  <div className="flex items-baseline justify-between mb-3">
-                    <div className="font-bold truncate" title={r.competitor_domain ?? ""}>{r.competitor_domain ?? "—"}</div>
-                    <span className="mono text-[10px] uppercase px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">
-                      Score {r.threat_score ?? "—"}
-                    </span>
+            <SectionHeader index="01" title="Competitors" subtitle="Live · ra_client_threats" />
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {topThreats.map((r, i) => {
+                const t = Number(r.threat_score) || 0;
+                const d = Number(r.demand) || 0;
+                const c = Number(r.creative_volume) || 0;
+                const dT = delta(t, avgThreat);
+                const dD = delta(d, avgDemand);
+                const conf = confidenceFor(r);
+                const insight = insightFor(r);
+                return (
+                  <div key={i} className="rounded-2xl bg-secondary/30 p-6 space-y-5">
+                    {/* Rank + domain + confidence */}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="mono text-[10px] font-bold px-2 py-1 rounded-md bg-ink text-paper shrink-0">
+                          #{String(i + 1).padStart(2, "0")}
+                        </span>
+                        <div className="font-bold truncate text-base" title={r.competitor_domain ?? ""}>
+                          {r.competitor_domain ?? "—"}
+                        </div>
+                      </div>
+                      <span className={`mono text-[10px] uppercase px-2 py-0.5 rounded-full ${conf.tone}`}>
+                        {conf.label}
+                      </span>
+                    </div>
+
+                    {/* Hero number: threat score */}
+                    <div>
+                      <div className="flex items-baseline justify-between mb-2">
+                        <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Threat Score</div>
+                        {dT !== 0 && avgThreat > 0 && (
+                          <span className={`mono text-[10px] ${dT > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                            {dT > 0 ? "+" : ""}{dT}% vs avg
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-4xl font-bold tracking-tight tabular-nums">{t || "—"}</div>
+                      <div className="mt-2 h-1 w-full rounded-full bg-ink/10 overflow-hidden">
+                        <div className="h-full bg-ink" style={{ width: `${pct(t, maxThreat)}%` }} />
+                      </div>
+                    </div>
+
+                    {/* Demand + Creative side by side */}
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <div className="flex items-baseline justify-between mb-1">
+                          <div className="mono text-[10px] uppercase text-muted-foreground">Demand</div>
+                          {dD !== 0 && avgDemand > 0 && (
+                            <span className={`mono text-[10px] ${dD > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                              {dD > 0 ? "+" : ""}{dD}%
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xl font-bold tabular-nums">{d}</div>
+                        <div className="mt-1.5 h-1 w-full rounded-full bg-ink/10 overflow-hidden">
+                          <div className="h-full bg-emerald-500" style={{ width: `${pct(d, maxDemand)}%` }} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="mono text-[10px] uppercase text-muted-foreground mb-1">Creative</div>
+                        <div className="text-xl font-bold tabular-nums">{c}</div>
+                        <div className="mt-1.5 h-1 w-full rounded-full bg-ink/10 overflow-hidden">
+                          <div className="h-full bg-amber-500" style={{ width: `${pct(c, maxCreative)}%` }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {insight && (
+                      <div className="pt-1 text-sm leading-snug text-ink/80 border-t border-ink/10">
+                        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground block mb-1">Insight</span>
+                        {insight}
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-y-1 text-xs">
-                    <span className="mono text-muted-foreground">Creative volume</span>
-                    <span className="text-right font-semibold">{r.creative_volume ?? 0}</span>
-                    <span className="mono text-muted-foreground">Search demand</span>
-                    <span className="text-right font-semibold">{r.demand ?? 0}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
