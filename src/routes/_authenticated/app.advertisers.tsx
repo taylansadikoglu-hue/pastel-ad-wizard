@@ -1082,12 +1082,15 @@ function AdvertisersPage() {
             </div>
           </div>
 
-          {/* Brand DNA — per-brand strategic profile */}
+          {/* Brand DNA — live brand_dna_v2 across all tracked brands */}
+          <BrandDNAGrid />
+
+          {/* Brand DNA drilldown — per-brand strategic profile */}
           {activeAdvertiser !== "__all" && (() => {
             const row = rows.find((r) => r.domain === activeAdvertiser);
             return row ? (
               <div className="mt-4 space-y-2">
-                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">02 · Brand DNA</div>
+                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">02b · Brand DNA · {activeAdvertiser}</div>
                 <BrandMetricBlocks row={row} />
               </div>
             ) : null;
