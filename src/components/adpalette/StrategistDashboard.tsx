@@ -148,6 +148,7 @@ export function StrategistDashboard() {
       setMomentum((m.data ?? []) as Momentum[]);
       setExec((e.data ?? null) as Exec | null);
       setPitch((p.data ?? []) as Pitch[]);
+      setConfidence((cf.data ?? null) as Confidence | null);
       setLoading(false);
     })();
     return () => { active = false; };
