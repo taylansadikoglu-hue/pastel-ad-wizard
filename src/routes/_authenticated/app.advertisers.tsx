@@ -69,6 +69,95 @@ const AUD_DEC = new Intl.NumberFormat("en-AU", {
 });
 const NUM = new Intl.NumberFormat("en-AU");
 
+type BrandDNARow = {
+  brand: string | null;
+  primary_category: string | null;
+  emotion_mix: string | null;
+  customer_stage: string | null;
+  primary_cta: string | null;
+  creative_volume: number | null;
+  dominant_emotion: string | null;
+};
+
+function BrandDNAGrid() {
+  const [rows, setRows] = useState<BrandDNARow[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from("brand_dna_v2")
+        .select("brand, primary_category, emotion_mix, customer_stage, primary_cta, creative_volume, dominant_emotion");
+      if (!active) return;
+      const sorted = ((data ?? []) as BrandDNARow[]).sort(
+        (a, b) => (Number(b.creative_volume) || 0) - (Number(a.creative_volume) || 0),
+      );
+      setRows(sorted);
+      setLoaded(true);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+  if (!loaded || rows.length === 0) return null;
+  return (
+    <div className="mt-4">
+      <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+        02 · Brand DNA · live brand_dna_v2
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {rows.map((r, i) => {
+          const emotions = (r.emotion_mix ?? "")
+            .split(/[,;|]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          return (
+            <div key={i} className="card-flat p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-bold truncate">{r.brand ?? "—"}</div>
+                <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">
+                  {Number(r.creative_volume) || 0} creatives
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div>
+                  <div className="mono text-[10px] uppercase text-muted-foreground">Primary Category</div>
+                  <div className="font-semibold">{r.primary_category ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="mono text-[10px] uppercase text-muted-foreground">Dominant Emotion</div>
+                  <div className="font-semibold">{r.dominant_emotion ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="mono text-[10px] uppercase text-muted-foreground">Customer Stage</div>
+                  <div className="font-semibold">{r.customer_stage ?? "—"}</div>
+                </div>
+                <div>
+                  <div className="mono text-[10px] uppercase text-muted-foreground">Primary CTA</div>
+                  <div className="font-semibold">{r.primary_cta ?? "—"}</div>
+                </div>
+              </div>
+              {emotions.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {emotions.slice(0, 6).map((e, j) => (
+                    <span
+                      key={j}
+                      className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper"
+                    >
+                      {e}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
 function BrandMetricBlocks({ row }: { row: Row }) {
   const spend = row.estimated_monthly_spend;
   const kw = row.total_paid_keywords;
