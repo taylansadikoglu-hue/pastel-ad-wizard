@@ -333,30 +333,32 @@ export function StrategistDashboard() {
               {/* Three scan cards */}
               <div className="grid md:grid-cols-3 gap-4 pt-2">
                 {brief.strongest_threat && (
-                  <div className="rounded-2xl bg-secondary/40 p-6">
-                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-rose-700 dark:text-rose-300 mb-3">
+                  <div className="rounded-2xl bg-secondary/40 p-6 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-rose-700 dark:text-rose-300">
                       <span className="inline-block size-1.5 rounded-full bg-rose-500" />
                       Strongest Threat
                     </div>
                     <div className="text-2xl font-bold tracking-tight truncate" title={brief.strongest_threat}>
                       {brief.strongest_threat}
                     </div>
+                    <EvidenceBlock items={threatEvidence} />
                   </div>
                 )}
                 {brief.emerging_challenger && (
-                  <div className="rounded-2xl bg-secondary/40 p-6">
-                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-amber-700 dark:text-amber-300 mb-3">
+                  <div className="rounded-2xl bg-secondary/40 p-6 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-amber-700 dark:text-amber-300">
                       <span className="inline-block size-1.5 rounded-full bg-amber-500" />
                       Emerging Challenger
                     </div>
                     <div className="text-2xl font-bold tracking-tight truncate" title={brief.emerging_challenger}>
                       {brief.emerging_challenger}
                     </div>
+                    <EvidenceBlock items={challengerEvidence} />
                   </div>
                 )}
                 {(brief.strategic_opening || brief.whitespace_emotion) && (
-                  <div className="rounded-2xl bg-secondary/40 p-6">
-                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-3">
+                  <div className="rounded-2xl bg-secondary/40 p-6 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
                       <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
                       Strategic Opening
                     </div>
@@ -365,6 +367,7 @@ export function StrategistDashboard() {
                     ) : (
                       <div className="text-2xl font-bold tracking-tight">{brief.whitespace_emotion}</div>
                     )}
+                    <EvidenceBlock items={openingEvidence} />
                   </div>
                 )}
               </div>
