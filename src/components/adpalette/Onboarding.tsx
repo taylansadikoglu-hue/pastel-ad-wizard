@@ -170,7 +170,7 @@ function StepSignup({ data, setData }: any) {
       <div>
         <h1 className="text-3xl font-bold">Create your operator account</h1>
         <p className="text-sm text-muted-foreground mt-2">
-          RevenueAd gives ad agencies x-ray vision into every advertiser creative running on Meta, Google, and programmatic networks.
+          RevenueAd helps agencies understand who is winning, why they're winning, and what to do next.
         </p>
         <ul className="mt-6 space-y-2 text-sm">
           {["Daily creative indexing across 14 channels", "Continuous video hook inspiration loop", "Auto-generated pitch decks"].map((t) => (
@@ -234,16 +234,19 @@ function StepAdvertisers({ data, setData }: any) {
       <div className="card-flat-sm p-3 bg-primary">
         <div className="mono text-[10px] font-bold uppercase">★ Master Brand Fingerprint</div>
         <p className="text-xs mt-1 leading-snug">
-          Each domain you enter below becomes the <span className="font-bold">master fingerprint</span> RevenueAd uses to track every cross-channel ad placement and scrape audience listening sentiment around that brand. One root domain = one indexed advertiser.
+          Each domain you enter below becomes the <span className="font-bold">master fingerprint</span> RevenueAd uses to track every cross-channel ad placement and analyse audience conversation signals around that brand. One root domain = one indexed advertiser.
         </p>
       </div>
       {[0, 1, 2].map((i) => (
         <Field key={i} label={`Advertiser ${i + 1} · root domain (master fingerprint)`} hint="root only">
           <div className="flex gap-2">
-            <div className="px-3 py-2 border-2 border-ink rounded-[4px] mono text-xs bg-secondary">https://</div>
-            <input className="input-flat flex-1" placeholder={["sephora.com", "lululemon.com", "glossier.com"][i]} value={data.rivals[i]} onChange={(e) => update(i, e.target.value)} />
+            <div className="flex gap-2" style={{ flex: "4 1 0%", minWidth: 0 }}>
+              <div className="px-3 py-2 border-2 border-ink rounded-[4px] mono text-xs bg-secondary shrink-0">https://</div>
+              <input className="input-flat flex-1 min-w-0" placeholder={["sephora.com", "lululemon.com", "glossier.com"][i]} value={data.rivals[i]} onChange={(e) => update(i, e.target.value)} />
+            </div>
             <select
-              className="input-flat mono text-xs"
+              className="input-flat mono text-xs min-w-0"
+              style={{ flex: "1 1 0%" }}
               value={data.countries?.[i] ?? "United States"}
               onChange={(e) => {
                 const c = [...(data.countries ?? ["United States", "United States", "United States"])];

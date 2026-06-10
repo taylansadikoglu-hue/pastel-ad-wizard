@@ -6,7 +6,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 const INTRO: Msg = {
   role: "assistant",
   content:
-    "Morning.\n\nI've analysed the latest market activity.\n\nWant the threats, opportunities, or my recommendation?",
+    "I'm BARBS — your market intelligence partner.\n\nI've already read this morning's activity across your tracked brands.\n\nAsk me about the threats, the opportunities, or what to do next.",
 };
 
 export function BarbsChat() {
