@@ -993,17 +993,18 @@ function AdvertisersPage() {
             </div>
           </div>
 
-          {/* Brand detail metric blocks — only when a specific advertiser is active */}
+          {/* Brand DNA — per-brand strategic profile */}
           {activeAdvertiser !== "__all" && (() => {
             const row = rows.find((r) => r.domain === activeAdvertiser);
             return row ? (
-              <div className="mt-3">
+              <div className="mt-4 space-y-2">
+                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">02 · Brand DNA</div>
                 <BrandMetricBlocks row={row} />
               </div>
             ) : null;
           })()}
 
-          {/* Campaign IQ — live ad_placements rollup */}
+          {/* Category Leaders — live ad_placements rollup */}
           {(() => {
             const scoped = activeAdvertiser === "__all"
               ? enriched
