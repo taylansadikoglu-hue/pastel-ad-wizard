@@ -116,6 +116,27 @@ function PriorityChip({ priority }: { priority: string | null }) {
   );
 }
 
+function EvidenceBlock({ items }: { items: { label: string; value: string }[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="mt-auto pt-4 border-t border-ink/10">
+      <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">
+        Why BARBS Thinks This
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        {items.map((it) => (
+          <div key={it.label}>
+            <div className="text-sm font-semibold tracking-tight truncate" title={it.value}>
+              {it.value}
+            </div>
+            <div className="mono text-[10px] uppercase text-muted-foreground mt-0.5">{it.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function StrategistDashboard() {
   const [brief, setBrief] = useState<Brief | null>(null);
   const [threats, setThreats] = useState<Threat[]>([]);
