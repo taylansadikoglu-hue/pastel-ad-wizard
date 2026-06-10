@@ -124,12 +124,13 @@ export function StrategistDashboard() {
   const [momentum, setMomentum] = useState<Momentum[]>([]);
   const [exec, setExec] = useState<Exec | null>(null);
   const [pitch, setPitch] = useState<Pitch[]>([]);
+  const [confidence, setConfidence] = useState<Confidence | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const [b, t, c, w, m, e, p] = await Promise.all([
+      const [b, t, c, w, m, e, p, cf] = await Promise.all([
         supabase.from("ra_barbs_client_brief").select("*").limit(1).maybeSingle(),
         supabase.from("ra_client_threats").select("*"),
         supabase.from("ra_brand_opportunities").select("*"),
@@ -137,6 +138,7 @@ export function StrategistDashboard() {
         supabase.from("ra_market_pressure").select("*"),
         supabase.from("ra_executive_summary").select("*").maybeSingle(),
         supabase.from("ra_pitch_brief").select("*"),
+        supabase.from("ra_barbs_confidence").select("*").limit(1).maybeSingle(),
       ]);
       if (!active) return;
       setBrief((b.data ?? null) as Brief | null);
