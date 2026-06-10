@@ -116,6 +116,27 @@ function PriorityChip({ priority }: { priority: string | null }) {
   );
 }
 
+function EvidenceBlock({ items }: { items: { label: string; value: string }[] }) {
+  if (!items.length) return null;
+  return (
+    <div className="mt-auto pt-4 border-t border-ink/10">
+      <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">
+        Why BARBS Thinks This
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        {items.map((it) => (
+          <div key={it.label}>
+            <div className="text-sm font-semibold tracking-tight truncate" title={it.value}>
+              {it.value}
+            </div>
+            <div className="mono text-[10px] uppercase text-muted-foreground mt-0.5">{it.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function StrategistDashboard() {
   const [brief, setBrief] = useState<Brief | null>(null);
   const [threats, setThreats] = useState<Threat[]>([]);
@@ -198,6 +219,79 @@ export function StrategistDashboard() {
   const pct = (v: number, m: number) => (m > 0 ? Math.min(100, Math.round((v / m) * 100)) : 0);
   const delta = (v: number, a: number) => (a > 0 ? Math.round(((v - a) / a) * 100) : 0);
 
+  // Evidence behind each BARBS conclusion — live data only
+  const threatTarget =
+    topThreats.find(
+      (t) =>
+        t.competitor_domain &&
+        brief?.strongest_threat &&
+        t.competitor_domain.toLowerCase().includes(brief.strongest_threat.toLowerCase()),
+    ) || topThreats[0];
+  const threatRank = threatTarget
+    ? topThreats.findIndex((t) => t.competitor_domain === threatTarget.competitor_domain) + 1
+    : 0;
+  const threatEvidence = threatTarget
+    ? ([
+        threatRank > 0 ? { label: "Threat Rank", value: `#${String(threatRank).padStart(2, "0")}` } : null,
+        threatTarget.threat_score != null
+          ? { label: "Threat Score", value: Number(threatTarget.threat_score).toFixed(1) }
+          : null,
+        threatTarget.demand != null
+          ? { label: "Demand", value: Number(threatTarget.demand).toLocaleString() }
+          : null,
+        threatTarget.threat_score != null && avgThreat > 0
+          ? {
+              label: "vs Market Avg",
+              value: `${delta(Number(threatTarget.threat_score), avgThreat) >= 0 ? "+" : ""}${delta(Number(threatTarget.threat_score), avgThreat)}%`,
+            }
+          : null,
+      ].filter(Boolean) as { label: string; value: string }[])
+    : [];
+
+  const challengerTarget =
+    topChallengers.find(
+      (c) =>
+        c.brand_domain &&
+        brief?.emerging_challenger &&
+        c.brand_domain.toLowerCase().includes(brief.emerging_challenger.toLowerCase()),
+    ) || topChallengers[0];
+  const challengerEvidence = challengerTarget
+    ? ([
+        challengerTarget.opportunity_score != null
+          ? { label: "Opportunity Score", value: Number(challengerTarget.opportunity_score).toFixed(1) }
+          : null,
+        challengerTarget.momentum ? { label: "Momentum", value: challengerTarget.momentum } : null,
+        challengerTarget.creative_volume != null
+          ? { label: "Creative Volume", value: Number(challengerTarget.creative_volume).toLocaleString() }
+          : null,
+        challengerTarget.latest_interest != null
+          ? { label: "Search Interest", value: Number(challengerTarget.latest_interest).toLocaleString() }
+          : null,
+      ].filter(Boolean) as { label: string; value: string }[])
+    : [];
+
+  const openingTarget =
+    topWhitespace.find(
+      (w) =>
+        w.emotion &&
+        brief?.whitespace_emotion &&
+        w.emotion.toLowerCase() === brief.whitespace_emotion.toLowerCase(),
+    ) || topWhitespace[0];
+  const openingEvidence = openingTarget
+    ? ([
+        openingTarget.opportunity_score != null
+          ? { label: "Opportunity Score", value: Number(openingTarget.opportunity_score).toFixed(1) }
+          : null,
+        openingTarget.market_density
+          ? { label: "Competitive Density", value: openingTarget.market_density }
+          : null,
+        openingTarget.category ? { label: "Category", value: openingTarget.category } : null,
+        openingTarget.strategic_priority
+          ? { label: "Priority", value: openingTarget.strategic_priority }
+          : null,
+      ].filter(Boolean) as { label: string; value: string }[])
+    : [];
+
   const insightFor = (r: Threat): string | null => {
     const d = Number(r.demand) || 0;
     const c = Number(r.creative_volume) || 0;
@@ -260,30 +354,32 @@ export function StrategistDashboard() {
               {/* Three scan cards */}
               <div className="grid md:grid-cols-3 gap-4 pt-2">
                 {brief.strongest_threat && (
-                  <div className="rounded-2xl bg-secondary/40 p-6">
-                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-rose-700 dark:text-rose-300 mb-3">
+                  <div className="rounded-2xl bg-secondary/40 p-6 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-rose-700 dark:text-rose-300">
                       <span className="inline-block size-1.5 rounded-full bg-rose-500" />
                       Strongest Threat
                     </div>
                     <div className="text-2xl font-bold tracking-tight truncate" title={brief.strongest_threat}>
                       {brief.strongest_threat}
                     </div>
+                    <EvidenceBlock items={threatEvidence} />
                   </div>
                 )}
                 {brief.emerging_challenger && (
-                  <div className="rounded-2xl bg-secondary/40 p-6">
-                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-amber-700 dark:text-amber-300 mb-3">
+                  <div className="rounded-2xl bg-secondary/40 p-6 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-amber-700 dark:text-amber-300">
                       <span className="inline-block size-1.5 rounded-full bg-amber-500" />
                       Emerging Challenger
                     </div>
                     <div className="text-2xl font-bold tracking-tight truncate" title={brief.emerging_challenger}>
                       {brief.emerging_challenger}
                     </div>
+                    <EvidenceBlock items={challengerEvidence} />
                   </div>
                 )}
                 {(brief.strategic_opening || brief.whitespace_emotion) && (
-                  <div className="rounded-2xl bg-secondary/40 p-6">
-                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-3">
+                  <div className="rounded-2xl bg-secondary/40 p-6 flex flex-col gap-4">
+                    <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-widest text-emerald-700 dark:text-emerald-300">
                       <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
                       Strategic Opening
                     </div>
@@ -292,6 +388,7 @@ export function StrategistDashboard() {
                     ) : (
                       <div className="text-2xl font-bold tracking-tight">{brief.whitespace_emotion}</div>
                     )}
+                    <EvidenceBlock items={openingEvidence} />
                   </div>
                 )}
               </div>
