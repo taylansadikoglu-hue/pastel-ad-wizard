@@ -1129,9 +1129,9 @@ function aiReply(q: string, visible: Competitor[]): string {
 
 const NAV_ITEMS = [
   { icon: Home, label: "Dashboard / Home", href: "/app/dashboard" },
-  { icon: Radio, label: "Social Listening", href: "/app/sentiment" },
-  { icon: Target, label: "Advertiser Hub", href: "/app/advertisers" },
-  { icon: BarChart3, label: "PCR Reporting", href: "/app/pcr" },
+  { icon: Radio, label: "Audience Signals", href: "/app/sentiment" },
+  { icon: Target, label: "Brand Intelligence", href: "/app/advertisers" },
+  { icon: BarChart3, label: "Market Intelligence", href: "/app/pcr" },
   
 ];
 
