@@ -808,7 +808,13 @@ function AdvertisersPage() {
           </div>
         )}
 
-        {/* Executive Intelligence Ribbon */}
+        {/* Market Overview */}
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <div>
+            <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">01 · Market Overview</div>
+            <div className="text-[15px] font-semibold text-ink mt-0.5">Live competitive footprint across tracked brands</div>
+          </div>
+        </div>
         <section
           className="rounded-[6px] bg-paper border border-ink/10 p-5 grid grid-cols-1 md:grid-cols-3 gap-5"
           style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 10px 30px -22px rgba(35,37,29,0.25)" }}
@@ -826,7 +832,7 @@ function AdvertisersPage() {
           </div>
           <div className="flex flex-col gap-2 md:border-l md:border-ink/10 md:pl-5">
             <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
-              <Activity size={12} className="text-primary" /> Placement Volume Index
+              <Activity size={12} className="text-primary" /> Creative Volume
             </div>
             <div className="flex items-end gap-3">
               <div className="text-[28px] font-bold tracking-tight leading-none text-ink tabular-nums">{ribbon.total}</div>
@@ -843,10 +849,11 @@ function AdvertisersPage() {
               <div className="h-full bg-[#1877f2]" style={{ width: ribbon.total ? `${(ribbon.meta / ribbon.total) * 100}%` : "0%" }} />
               <div className="h-full bg-[#1a73e8]" style={{ width: ribbon.total ? `${(ribbon.google / ribbon.total) * 100}%` : "0%" }} />
             </div>
+            <div className="text-[11px] text-muted-foreground">Ads Collected across live placements feed.</div>
           </div>
           <div className="flex flex-col gap-2 md:border-l md:border-ink/10 md:pl-5">
             <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
-              <Globe size={12} className="text-primary" /> Strategic Advisor Coverage
+              <Globe size={12} className="text-primary" /> Coverage Score
             </div>
             {ribbon.strategy > 0 ? (
               <>
@@ -857,11 +864,14 @@ function AdvertisersPage() {
                   </div>
                   <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold pb-1" style={{ color: "#9a7c3e" }}>
                     <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#c8a96a" }} />
-                    {ribbon.total ? Math.round((ribbon.strategy / ribbon.total) * 100) : 0}% analysed
+                    {ribbon.total ? Math.round((ribbon.strategy / ribbon.total) * 100) : 0}% Ads Analysed
                   </span>
                 </div>
                 <div className="h-1.5 rounded-full bg-ink/5 overflow-hidden">
                   <div className="h-full" style={{ width: ribbon.total ? `${(ribbon.strategy / ribbon.total) * 100}%` : "0%", background: "#c8a96a" }} />
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  {Math.max(ribbon.total - ribbon.strategy, 0)} Pending Analysis · strategic narrative compiled by Strategic Advisor.
                 </div>
               </>
             ) : (
@@ -870,7 +880,7 @@ function AdvertisersPage() {
                   Strategic Advisor pending
                 </span>
                 <span className="text-[11px] text-muted-foreground leading-snug">
-                  Strategist analysis will appear here once placements are processed.
+                  Strategic narrative will appear here once placements are processed.
                 </span>
               </div>
             )}
