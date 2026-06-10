@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate, Link, Outlet } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Layers, Radio, Target, TrendingUp, Settings, Home, ArrowRight } from "lucide-react";
+import { Loader2, Radio, Target, TrendingUp, Settings, Home, ArrowRight } from "lucide-react";
 import { ThemeProvider } from "@/components/adpalette/theme";
 import { OnboardingWizard } from "@/components/adpalette/Onboarding";
-import { Dashboard } from "@/components/adpalette/Dashboard";
+import { StrategistDashboard } from "@/components/adpalette/StrategistDashboard";
 import { Paywall } from "@/components/adpalette/Paywall";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -25,11 +25,11 @@ type Stage = "loading" | "paywall" | "admin_picker" | "onboard" | "app";
 
 function AdminPicker({ email, onPick, onSignOut }: { email: string; onPick: () => void; onSignOut: () => void }) {
   const tiles = [
-    { to: "/app", label: "Workspace dashboard", desc: "Default intelligence cockpit.", icon: Home, choice: "dashboard" },
-    { to: "/app/advertisers", label: "Brand Intelligence", desc: "Tracked competitor domains + live matrix.", icon: Target, choice: "advertisers" },
-    { to: "/app/sentiment", label: "Audience Signals", desc: "Per-brand audience signal panels.", icon: Radio, choice: "sentiment" },
-    { to: "/app/creative", label: "Creative library", desc: "Captured ad creatives.", icon: Layers, choice: "creative" },
-    { to: "/app/benchmarks", label: "Benchmarks", desc: "Channel + vertical benchmarks.", icon: TrendingUp, choice: "benchmarks" },
+    { to: "/app", label: "Dashboard", desc: "Strategist cockpit — coverage, pipeline, opportunities.", icon: Home, choice: "dashboard" },
+    { to: "/app/advertisers", label: "Brand Intelligence", desc: "Tracked competitor domains + brand DNA.", icon: Target, choice: "advertisers" },
+    { to: "/app/pcr", label: "Market Intelligence", desc: "Category leaders, share of voice, positioning.", icon: TrendingUp, choice: "pcr" },
+    { to: "/app/sentiment", label: "Audience Signals", desc: "Emotion ownership and territory gaps.", icon: Radio, choice: "sentiment" },
+    { to: "/app/advisor", label: "Strategic Advisor", desc: "Pitch recommendations and next moves.", icon: ArrowRight, choice: "advisor" },
     { to: "/app/settings", label: "Settings", desc: "Workspace and integrations.", icon: Settings, choice: "settings" },
   ] as const;
 
@@ -149,7 +149,7 @@ function AppPage() {
         <AdminPicker email={email} onPick={() => setStage("app")} onSignOut={logout} />
       )}
       {stage === "onboard" && <OnboardingWizard onComplete={() => setStage("app")} />}
-      {stage === "app" && (isChildWorkspaceRoute ? <Outlet /> : <Dashboard onLogout={logout} />)}
+      {stage === "app" && (isChildWorkspaceRoute ? <Outlet /> : <StrategistDashboard />)}
     </ThemeProvider>
   );
 }

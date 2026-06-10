@@ -20,6 +20,7 @@ import { Route as AuthenticatedAppPcrRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAppDashboardRouteImport } from './routes/_authenticated/app.dashboard'
 import { Route as AuthenticatedAppCreativeRouteImport } from './routes/_authenticated/app.creative'
 import { Route as AuthenticatedAppBenchmarksRouteImport } from './routes/_authenticated/app.benchmarks'
+import { Route as AuthenticatedAppAdvisorRouteImport } from './routes/_authenticated/app.advisor'
 import { Route as AuthenticatedAppAdvertisersRouteImport } from './routes/_authenticated/app.advertisers'
 import { Route as ApiPublicHooksScanReadyRouteImport } from './routes/api/public/hooks/scan-ready'
 
@@ -82,6 +83,11 @@ const AuthenticatedAppBenchmarksRoute =
     path: '/benchmarks',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAdvisorRoute = AuthenticatedAppAdvisorRouteImport.update({
+  id: '/advisor',
+  path: '/advisor',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppAdvertisersRoute =
   AuthenticatedAppAdvertisersRouteImport.update({
     id: '/advertisers',
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/barbs': typeof ApiBarbsRoute
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
+  '/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/app/creative': typeof AuthenticatedAppCreativeRoute
   '/app/dashboard': typeof AuthenticatedAppDashboardRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/barbs': typeof ApiBarbsRoute
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
+  '/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/app/creative': typeof AuthenticatedAppCreativeRoute
   '/app/dashboard': typeof AuthenticatedAppDashboardRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/api/barbs': typeof ApiBarbsRoute
   '/_authenticated/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
+  '/_authenticated/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/_authenticated/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
   '/_authenticated/app/creative': typeof AuthenticatedAppCreativeRoute
   '/_authenticated/app/dashboard': typeof AuthenticatedAppDashboardRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/api/barbs'
     | '/app/advertisers'
+    | '/app/advisor'
     | '/app/benchmarks'
     | '/app/creative'
     | '/app/dashboard'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/api/barbs'
     | '/app/advertisers'
+    | '/app/advisor'
     | '/app/benchmarks'
     | '/app/creative'
     | '/app/dashboard'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/api/barbs'
     | '/_authenticated/app/advertisers'
+    | '/_authenticated/app/advisor'
     | '/_authenticated/app/benchmarks'
     | '/_authenticated/app/creative'
     | '/_authenticated/app/dashboard'
@@ -271,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppBenchmarksRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/advisor': {
+      id: '/_authenticated/app/advisor'
+      path: '/advisor'
+      fullPath: '/app/advisor'
+      preLoaderRoute: typeof AuthenticatedAppAdvisorRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/advertisers': {
       id: '/_authenticated/app/advertisers'
       path: '/advertisers'
@@ -290,6 +309,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAdvertisersRoute: typeof AuthenticatedAppAdvertisersRoute
+  AuthenticatedAppAdvisorRoute: typeof AuthenticatedAppAdvisorRoute
   AuthenticatedAppBenchmarksRoute: typeof AuthenticatedAppBenchmarksRoute
   AuthenticatedAppCreativeRoute: typeof AuthenticatedAppCreativeRoute
   AuthenticatedAppDashboardRoute: typeof AuthenticatedAppDashboardRoute
@@ -300,6 +320,7 @@ interface AuthenticatedAppRouteChildren {
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAdvertisersRoute: AuthenticatedAppAdvertisersRoute,
+  AuthenticatedAppAdvisorRoute: AuthenticatedAppAdvisorRoute,
   AuthenticatedAppBenchmarksRoute: AuthenticatedAppBenchmarksRoute,
   AuthenticatedAppCreativeRoute: AuthenticatedAppCreativeRoute,
   AuthenticatedAppDashboardRoute: AuthenticatedAppDashboardRoute,
@@ -332,13 +353,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
