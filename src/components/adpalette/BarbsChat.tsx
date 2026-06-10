@@ -6,7 +6,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 const INTRO: Msg = {
   role: "assistant",
   content:
-    "Barbs here — RevenueAd's quantitative marketing concierge. I scan live ad libraries across Meta, TikTok, and YouTube, run sentiment radar on raw consumer comment streams, and isolate competitor product and ops vulnerabilities. Drop a competitor domain or niche and I'll return a high-signal read.",
+    "I'm BARBS.\n\nI watch your market 24/7.\n\nAsk me:\n\n• What's changing?\n• Who's winning?\n• What's the opportunity?\n• What should we do next?\n\nEvidence-backed.",
 };
 
 export function BarbsChat() {
