@@ -41,11 +41,13 @@
 }
 
 :root {
-  --radius: 4px;
-  --canvas: oklch(0.957 0.012 95);  /* #F4F4F0 warm cream */
-  --paper: oklch(1 0 0);
-  --ink: oklch(0.18 0.012 110);     /* #23251D charcoal */
-  --accent-gold: oklch(0.78 0.16 75); /* #F7A501 vintage orange-gold */
+  --radius: 12px;
+  --canvas: oklch(0.965 0.010 95);   /* warm cream */
+  --paper: oklch(0.995 0.003 95);    /* paper white */
+  --ink: oklch(0.16 0.012 110);      /* deep charcoal text */
+  --hairline: oklch(0.88 0.008 100); /* soft warm border */
+  --hairline-strong: oklch(0.76 0.010 100);
+  --accent-gold: oklch(0.74 0.16 70);
 
   --background: var(--canvas);
   --foreground: var(--ink);
@@ -53,18 +55,18 @@
   --card-foreground: var(--ink);
   --popover: var(--paper);
   --popover-foreground: var(--ink);
-  --primary: var(--accent-gold);
-  --primary-foreground: var(--ink);
-  --secondary: oklch(0.92 0.008 95);
+  --primary: var(--ink);
+  --primary-foreground: oklch(0.98 0.005 95);
+  --secondary: oklch(0.945 0.008 95);
   --secondary-foreground: var(--ink);
-  --muted: oklch(0.93 0.008 95);
-  --muted-foreground: oklch(0.42 0.012 110);
+  --muted: oklch(0.945 0.008 95);
+  --muted-foreground: oklch(0.48 0.012 110);
   --accent: var(--accent-gold);
   --accent-foreground: var(--ink);
   --destructive: oklch(0.55 0.22 27);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: var(--ink);
-  --input: var(--ink);
+  --border: var(--hairline);
+  --input: var(--hairline);
   --ring: var(--accent-gold);
 
   --pastel-lilac: oklch(0.85 0.06 300);
@@ -72,8 +74,8 @@
   --pastel-blush: oklch(0.9 0.04 30);
   --pastel-peach: oklch(0.86 0.07 55);
 
-  --shadow-flat: 4px 4px 0 0 var(--ink);
-  --shadow-flat-sm: 2px 2px 0 0 var(--ink);
+  --shadow-flat: 0 1px 2px 0 rgb(20 20 18 / 0.04), 0 10px 28px -16px rgb(20 20 18 / 0.10);
+  --shadow-flat-sm: 0 1px 2px 0 rgb(20 20 18 / 0.05);
 }
 
 .dark {
