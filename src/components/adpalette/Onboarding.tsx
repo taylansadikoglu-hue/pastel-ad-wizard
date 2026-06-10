@@ -240,10 +240,13 @@ function StepAdvertisers({ data, setData }: any) {
       {[0, 1, 2].map((i) => (
         <Field key={i} label={`Advertiser ${i + 1} · root domain (master fingerprint)`} hint="root only">
           <div className="flex gap-2">
-            <div className="px-3 py-2 border-2 border-ink rounded-[4px] mono text-xs bg-secondary">https://</div>
-            <input className="input-flat flex-1" placeholder={["sephora.com", "lululemon.com", "glossier.com"][i]} value={data.rivals[i]} onChange={(e) => update(i, e.target.value)} />
+            <div className="flex gap-2" style={{ flex: "4 1 0%", minWidth: 0 }}>
+              <div className="px-3 py-2 border-2 border-ink rounded-[4px] mono text-xs bg-secondary shrink-0">https://</div>
+              <input className="input-flat flex-1 min-w-0" placeholder={["sephora.com", "lululemon.com", "glossier.com"][i]} value={data.rivals[i]} onChange={(e) => update(i, e.target.value)} />
+            </div>
             <select
-              className="input-flat mono text-xs"
+              className="input-flat mono text-xs min-w-0"
+              style={{ flex: "1 1 0%" }}
               value={data.countries?.[i] ?? "United States"}
               onChange={(e) => {
                 const c = [...(data.countries ?? ["United States", "United States", "United States"])];
