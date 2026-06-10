@@ -736,7 +736,7 @@ function AdvertisersPage() {
   return (
     <WorkspaceShell
       title="Brand Intelligence"
-      subtitle={`Client-ready creative compilations across ${rows.length}/${MAX_BRANDS} tracked brands.`}
+      subtitle={`Strategic market view across ${rows.length}/${MAX_BRANDS} tracked brands — creative, category, and audience signal in one frame.`}
     >
       <div className="space-y-5">
         {/* Add brand */}
