@@ -1,145 +1,227 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronDown, Radio } from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
 
-type Insight = {
-  domain: string;
-  good: string | null;
-  friction: string | null;
-  blueprint: string | null;
-  created_at: string;
+type MarketDNA = { domain: string | null; emotion_mix: string | null };
+type Pressure = {
+  category: string | null;
+  competitors: number | null;
+  avg_creatives_per_brand: number | null;
+};
+type Opportunity = {
+  category: string | null;
+  emotion: string | null;
+  market_density: string | null;
+  strategic_priority: string | null;
+  recommendation: string | null;
 };
 
-function brandFromDomain(domain: string) {
-  const root =
-    domain.replace(/^https?:\/\//, "").replace(/^www\./, "").split(/[./]/)[0] ?? domain;
-  return root.charAt(0).toUpperCase() + root.slice(1);
-}
-
-function SocialListeningPanel({ insight }: { insight: Insight }) {
-  const [open, setOpen] = useState(true);
-  const brand = brandFromDomain(insight.domain);
-
+function Section({
+  index,
+  title,
+  source,
+  children,
+}: {
+  index: string;
+  title: string;
+  source: string;
+  children: React.ReactNode;
+}) {
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="card-flat overflow-hidden">
-      <CollapsibleTrigger className="w-full px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between cursor-pointer hover:bg-secondary/80 transition-colors">
-        <div className="flex items-center gap-2 font-bold">
-          <Radio size={16} />
-          <span>📡 Audience Signals for {brand}</span>
+    <section>
+      <div className="flex items-baseline justify-between mb-3">
+        <div>
+          <div className="mono text-[10px] uppercase text-muted-foreground">{index}</div>
+          <h2 className="text-lg font-bold">{title}</h2>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">
-            {insight.domain}
-          </span>
-          <ChevronDown
-            size={18}
-            className={`transition-transform duration-300 ${open ? "rotate-180" : "rotate-0"}`}
-          />
-        </div>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
-        <div className="grid md:grid-cols-2 gap-0">
-          <div className="p-4 border-r-2 border-ink last:border-r-0">
-            <div className="mono text-[10px] uppercase font-bold mb-3">Brand Signals</div>
-            <div className="space-y-3">
-              <div>
-                <div className="text-[11px] mono uppercase text-muted-foreground mb-1">
-                  🟢 The Good
-                </div>
-                <p className="text-sm leading-relaxed">
-                  <span className="bg-green-100 dark:bg-green-900/40 text-green-950 dark:text-green-100 px-1 rounded-[2px] box-decoration-clone">
-                    {insight.good ?? "Awaiting signal…"}
-                  </span>
-                </p>
-              </div>
-              <div>
-                <div className="text-[11px] mono uppercase text-muted-foreground mb-1">
-                  🔴 The Friction
-                </div>
-                <p className="text-sm leading-relaxed">
-                  <span className="bg-red-100 dark:bg-red-900/40 text-red-950 dark:text-red-100 px-1 rounded-[2px] box-decoration-clone">
-                    {insight.friction ?? "Awaiting signal…"}
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 bg-canvas border-t-2 md:border-t-0 border-ink">
-            <div className="mono text-[10px] uppercase font-bold mb-3">Active Ad Angles</div>
-            <p className="text-sm leading-relaxed font-medium">
-              <span className="bg-yellow-100 dark:bg-yellow-900/40 text-yellow-950 dark:text-yellow-100 px-1 rounded-[2px] box-decoration-clone">
-                {insight.blueprint ?? "Awaiting signal…"}
-              </span>
-            </p>
-          </div>
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+        <div className="mono text-[10px] text-muted-foreground">Live · {source}</div>
+      </div>
+      {children}
+    </section>
   );
 }
 
-function SocialListeningPage() {
-  const [rows, setRows] = useState<Insight[]>([]);
+function parseEmotions(mix: string | null): string[] {
+  return (mix ?? "")
+    .split(/[,;|]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function AudienceSignalsPage() {
+  const [market, setMarket] = useState<MarketDNA[]>([]);
+  const [pressure, setPressure] = useState<Pressure[]>([]);
+  const [opps, setOpps] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    const load = async () => {
-      const { data } = await supabase
-        .from("sentiment_insights")
-        .select("domain, good, friction, blueprint, created_at")
-        .order("created_at", { ascending: false })
-        .limit(30);
+    (async () => {
+      const [a, b, c] = await Promise.all([
+        supabase.from("market_dna_v2").select("domain, emotion_mix"),
+        supabase
+          .from("competitive_pressure")
+          .select("category, competitors, avg_creatives_per_brand"),
+        supabase
+          .from("strategist_opportunities")
+          .select("category, emotion, market_density, strategic_priority, recommendation"),
+      ]);
       if (!active) return;
-      const seen = new Set<string>();
-      const unique: Insight[] = [];
-      for (const r of data ?? []) {
-        if (!seen.has(r.domain)) {
-          seen.add(r.domain);
-          unique.push(r as Insight);
-        }
-      }
-      setRows(unique);
+      setMarket((a.data ?? []) as MarketDNA[]);
+      setPressure((b.data ?? []) as Pressure[]);
+      setOpps((c.data ?? []) as Opportunity[]);
       setLoading(false);
-    };
-    load();
-    const channel = supabase
-      .channel("social-listening")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "sentiment_insights" },
-        () => load(),
-      )
-      .subscribe();
+    })();
     return () => {
       active = false;
-      supabase.removeChannel(channel);
     };
   }, []);
+
+  // Emotion ownership: emotion → [domains]
+  const emotionOwnership = (() => {
+    const map = new Map<string, Set<string>>();
+    for (const r of market) {
+      const domain = r.domain ?? "";
+      if (!domain) continue;
+      for (const e of parseEmotions(r.emotion_mix)) {
+        if (!map.has(e)) map.set(e, new Set());
+        map.get(e)!.add(domain);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([emotion, domains]) => ({ emotion, domains: Array.from(domains) }))
+      .sort((a, b) => b.domains.length - a.domains.length);
+  })();
+
+  const underused = emotionOwnership.filter((e) => e.domains.length === 1);
+  const territoryGaps = opps.filter((o) =>
+    ["high", "urgent"].includes((o.strategic_priority ?? "").toLowerCase()),
+  );
+  const saturation = [...pressure].sort(
+    (a, b) => (Number(b.avg_creatives_per_brand) || 0) - (Number(a.avg_creatives_per_brand) || 0),
+  );
+
+  if (loading) {
+    return (
+      <WorkspaceShell title="Audience Signals">
+        <div className="card-flat p-8 text-center text-sm text-muted-foreground">Loading audience signals…</div>
+      </WorkspaceShell>
+    );
+  }
+
+  const empty =
+    emotionOwnership.length === 0 &&
+    territoryGaps.length === 0 &&
+    saturation.length === 0 &&
+    underused.length === 0;
 
   return (
     <WorkspaceShell
       title="Audience Signals"
-      subtitle="Live audience signal compiled per tracked advertiser — what they love, where they friction, and the ad angle to weaponize."
+      subtitle="Emotion ownership, territory gaps, messaging saturation and underused emotional levers — live."
     >
-      {loading ? (
-        <div className="card-flat p-8 text-center text-sm text-muted-foreground">Loading…</div>
-      ) : rows.length === 0 ? (
-        <div className="card-flat p-8 text-center text-sm text-muted-foreground">
-          No data found, please add a domain under the Advertisers tab.
+      {empty ? (
+        <div className="card-flat p-8 text-sm text-muted-foreground">
+          No audience signal yet — add a tracked brand under Brand Intelligence to populate.
         </div>
       ) : (
-        <div className="space-y-4">
-          {rows.map((s, i) => (
-            <SocialListeningPanel key={`${s.domain}-${i}`} insight={s} />
-          ))}
+        <div className="space-y-8">
+          {emotionOwnership.length > 0 && (
+            <Section index="01" title="Emotion Ownership" source="market_dna_v2">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {emotionOwnership.slice(0, 12).map((e) => (
+                  <div key={e.emotion} className="card-flat p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-bold capitalize">{e.emotion}</div>
+                      <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">
+                        {e.domains.length} brand{e.domains.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {e.domains.slice(0, 6).map((d) => (
+                        <span
+                          key={d}
+                          className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper truncate max-w-[120px]"
+                        >
+                          {d}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {territoryGaps.length > 0 && (
+            <Section index="02" title="Territory Gaps" source="strategist_opportunities">
+              <div className="grid gap-3 md:grid-cols-2">
+                {territoryGaps.map((o, i) => (
+                  <div key={i} className="card-flat p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="mono text-[10px] uppercase text-muted-foreground">
+                        {o.category ?? "Unclassified"}
+                        {o.emotion && <span className="ml-1 text-ink/70">· {o.emotion}</span>}
+                      </div>
+                      <span className="mono text-[10px] uppercase px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-orange-100 dark:bg-orange-900/40 text-orange-950 dark:text-orange-100">
+                        {o.strategic_priority}
+                      </span>
+                    </div>
+                    <p className="text-sm leading-relaxed">{o.recommendation ?? "—"}</p>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {saturation.length > 0 && (
+            <Section index="03" title="Messaging Saturation" source="competitive_pressure">
+              <div className="card-flat p-4 space-y-3">
+                {saturation.map((p, i) => {
+                  const v = Number(p.avg_creatives_per_brand) || 0;
+                  const max = Math.max(...saturation.map((s) => Number(s.avg_creatives_per_brand) || 0), 1);
+                  return (
+                    <div key={i}>
+                      <div className="flex items-center justify-between text-[11px] mb-1">
+                        <span className="font-semibold">{p.category ?? "—"}</span>
+                        <span className="mono text-muted-foreground">
+                          {v.toFixed(1)} avg / brand · {Number(p.competitors) || 0} brands
+                        </span>
+                      </div>
+                      <div className="h-2 bg-secondary border-2 border-ink rounded-[3px] overflow-hidden">
+                        <div
+                          className="h-full bg-primary"
+                          style={{ width: `${(v / max) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
+
+          {underused.length > 0 && (
+            <Section index="04" title="Underused Emotions" source="market_dna_v2">
+              <div className="card-flat p-4">
+                <p className="mono text-[10px] uppercase text-muted-foreground mb-3">
+                  Owned by only one brand — open territory for the rest.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {underused.map((e) => (
+                    <span
+                      key={e.emotion}
+                      className="text-sm px-2 py-1 border-2 border-ink rounded-[3px] bg-paper capitalize"
+                    >
+                      {e.emotion}
+                      <span className="mono text-[10px] text-muted-foreground ml-1">· {e.domains[0]}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </Section>
+          )}
         </div>
       )}
     </WorkspaceShell>
@@ -148,5 +230,5 @@ function SocialListeningPage() {
 
 export const Route = createFileRoute("/_authenticated/app/sentiment")({
   head: () => ({ meta: [{ title: "Audience Signals — RevenueAd" }] }),
-  component: SocialListeningPage,
+  component: AudienceSignalsPage,
 });
