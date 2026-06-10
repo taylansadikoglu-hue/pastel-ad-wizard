@@ -103,7 +103,8 @@ function AppPage() {
       .eq("id", u.user.id)
       .maybeSingle();
 
-    if (profile?.stripe_status !== "active") {
+    const demoUnlocked = typeof window !== "undefined" && localStorage.getItem("revenuead_demo_unlocked") === "1";
+    if (profile?.stripe_status !== "active" && !demoUnlocked) {
       setStage("paywall");
       return;
     }
