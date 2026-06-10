@@ -1073,6 +1073,7 @@ function AdvertisersPage() {
                     </tbody>
                   </table>
                 </div>
+                </div>
               </div>
             );
           })()}
