@@ -1,21 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { Dashboard } from "@/components/adpalette/Dashboard";
-import { supabase } from "@/integrations/supabase/client";
-
-const ADMIN_CHOICE_KEY = "revenuead_admin_choice";
+import { createFileRoute } from "@tanstack/react-router";
+import { StrategistDashboard } from "@/components/adpalette/StrategistDashboard";
 
 function DashboardPage() {
-  const navigate = useNavigate();
-
-  const logout = async () => {
-    localStorage.removeItem(ADMIN_CHOICE_KEY);
-    await supabase.auth.signOut();
-    toast("Signed out");
-    navigate({ to: "/", replace: true });
-  };
-
-  return <Dashboard onLogout={logout} />;
+  return <StrategistDashboard />;
 }
 
 export const Route = createFileRoute("/_authenticated/app/dashboard")({

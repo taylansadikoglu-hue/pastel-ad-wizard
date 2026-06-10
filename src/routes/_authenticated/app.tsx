@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Loader2, Layers, Radio, Target, TrendingUp, Settings, Home, ArrowRight } from "lucide-react";
 import { ThemeProvider } from "@/components/adpalette/theme";
 import { OnboardingWizard } from "@/components/adpalette/Onboarding";
-import { Dashboard } from "@/components/adpalette/Dashboard";
+import { StrategistDashboard } from "@/components/adpalette/StrategistDashboard";
 import { Paywall } from "@/components/adpalette/Paywall";
 import { supabase } from "@/integrations/supabase/client";
 
