@@ -307,6 +307,69 @@ export type Database = {
         }
         Relationships: []
       }
+      client_watchlist_competitors: {
+        Row: {
+          competitor_domain: string
+          created_at: string | null
+          id: number
+          watchlist_id: number | null
+        }
+        Insert: {
+          competitor_domain: string
+          created_at?: string | null
+          id?: number
+          watchlist_id?: number | null
+        }
+        Update: {
+          competitor_domain?: string
+          created_at?: string | null
+          id?: number
+          watchlist_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_watchlist_competitors_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "client_watchlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_watchlist_competitors_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "ra_client_watchlist"
+            referencedColumns: ["watchlist_id"]
+          },
+        ]
+      }
+      client_watchlists: {
+        Row: {
+          category: string | null
+          client_domain: string
+          client_name: string
+          country: string | null
+          created_at: string | null
+          id: number
+        }
+        Insert: {
+          category?: string | null
+          client_domain: string
+          client_name: string
+          country?: string | null
+          created_at?: string | null
+          id?: number
+        }
+        Update: {
+          category?: string | null
+          client_domain?: string
+          client_name?: string
+          country?: string | null
+          created_at?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
       domain_scans: {
         Row: {
           average_cpc: number | null
@@ -394,6 +457,111 @@ export type Database = {
           id?: string
           stripe_status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      reddit_brand_sentiment: {
+        Row: {
+          brand_domain: string
+          collected_at: string | null
+          id: number
+          negative_mentions: number | null
+          neutral_mentions: number | null
+          positive_mentions: number | null
+          top_negative_theme: string | null
+          top_positive_theme: string | null
+        }
+        Insert: {
+          brand_domain: string
+          collected_at?: string | null
+          id?: number
+          negative_mentions?: number | null
+          neutral_mentions?: number | null
+          positive_mentions?: number | null
+          top_negative_theme?: string | null
+          top_positive_theme?: string | null
+        }
+        Update: {
+          brand_domain?: string
+          collected_at?: string | null
+          id?: number
+          negative_mentions?: number | null
+          neutral_mentions?: number | null
+          positive_mentions?: number | null
+          top_negative_theme?: string | null
+          top_positive_theme?: string | null
+        }
+        Relationships: []
+      }
+      reddit_posts: {
+        Row: {
+          brand_domain: string
+          collected_at: string | null
+          comment_count: number | null
+          created_utc: string | null
+          id: number
+          post_id: string | null
+          score: number | null
+          selftext: string | null
+          subreddit: string | null
+          title: string | null
+          url: string | null
+        }
+        Insert: {
+          brand_domain: string
+          collected_at?: string | null
+          comment_count?: number | null
+          created_utc?: string | null
+          id?: number
+          post_id?: string | null
+          score?: number | null
+          selftext?: string | null
+          subreddit?: string | null
+          title?: string | null
+          url?: string | null
+        }
+        Update: {
+          brand_domain?: string
+          collected_at?: string | null
+          comment_count?: number | null
+          created_utc?: string | null
+          id?: number
+          post_id?: string | null
+          score?: number | null
+          selftext?: string | null
+          subreddit?: string | null
+          title?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
+      reddit_themes: {
+        Row: {
+          brand_domain: string
+          created_at: string | null
+          evidence: string | null
+          id: number
+          mentions: number | null
+          sentiment: string | null
+          theme: string
+        }
+        Insert: {
+          brand_domain: string
+          created_at?: string | null
+          evidence?: string | null
+          id?: number
+          mentions?: number | null
+          sentiment?: string | null
+          theme: string
+        }
+        Update: {
+          brand_domain?: string
+          created_at?: string | null
+          evidence?: string | null
+          id?: number
+          mentions?: number | null
+          sentiment?: string | null
+          theme?: string
         }
         Relationships: []
       }
@@ -494,6 +662,36 @@ export type Database = {
         Update: {
           key?: string
           value?: string
+        }
+        Relationships: []
+      }
+      trend_signals: {
+        Row: {
+          brand_domain: string
+          created_at: string | null
+          id: number
+          interest_score: number
+          keyword: string
+          source: string | null
+          trend_date: string
+        }
+        Insert: {
+          brand_domain: string
+          created_at?: string | null
+          id?: number
+          interest_score: number
+          keyword: string
+          source?: string | null
+          trend_date: string
+        }
+        Update: {
+          brand_domain?: string
+          created_at?: string | null
+          id?: number
+          interest_score?: number
+          keyword?: string
+          source?: string | null
+          trend_date?: string
         }
         Relationships: []
       }
@@ -1281,6 +1479,40 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_barbs_brief: {
+        Row: {
+          category: string | null
+          client_domain: string | null
+          client_name: string | null
+          emerging_challenger: string | null
+          fastest_mover: string | null
+          report_date: string | null
+          strongest_threat: string | null
+          whitespace_category: string | null
+          whitespace_emotion: string | null
+          whitespace_recommendation: string | null
+          whitespace_score: number | null
+        }
+        Relationships: []
+      }
+      ra_barbs_client_brief: {
+        Row: {
+          category: string | null
+          client_domain: string | null
+          client_name: string | null
+          emerging_challenger: string | null
+          fastest_mover: string | null
+          headline: string | null
+          recommended_action: string | null
+          strategic_opening: string | null
+          strongest_threat: string | null
+          summary: string | null
+          whitespace_category: string | null
+          whitespace_emotion: string | null
+          whitespace_score: number | null
+        }
+        Relationships: []
+      }
       ra_brand_intelligence: {
         Row: {
           brand: string | null
@@ -1293,6 +1525,61 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_brand_opportunities: {
+        Row: {
+          brand_domain: string | null
+          creative_volume: number | null
+          keyword: string | null
+          latest_interest: number | null
+          momentum: string | null
+          opportunity_score: number | null
+          pressure: string | null
+        }
+        Relationships: []
+      }
+      ra_client_impact: {
+        Row: {
+          client_domain: string | null
+          client_name: string | null
+          competitor: string | null
+          momentum: string | null
+          opportunity_score: number | null
+          pressure: string | null
+          threat_level: string | null
+        }
+        Relationships: []
+      }
+      ra_client_threats: {
+        Row: {
+          competitor_domain: string | null
+          creative_volume: number | null
+          demand: number | null
+          threat_score: number | null
+        }
+        Relationships: []
+      }
+      ra_client_watchlist: {
+        Row: {
+          category: string | null
+          client_domain: string | null
+          client_name: string | null
+          competitor_domain: string | null
+          country: string | null
+          watchlist_id: number | null
+        }
+        Relationships: []
+      }
+      ra_customer_voice: {
+        Row: {
+          brand: string | null
+          negative_mentions: number | null
+          neutral_mentions: number | null
+          positive_mentions: number | null
+          top_negative_theme: string | null
+          top_positive_theme: string | null
+        }
+        Relationships: []
+      }
       ra_dashboard: {
         Row: {
           ads_collected: number | null
@@ -1301,6 +1588,16 @@ export type Database = {
           live_brands: number | null
           open_opportunities: number | null
           pending_brands: number | null
+        }
+        Relationships: []
+      }
+      ra_dashboard_hero: {
+        Row: {
+          fastest_momentum: string | null
+          market_leader: string | null
+          market_story: string | null
+          opportunity_score: number | null
+          top_opportunity: string | null
         }
         Relationships: []
       }
@@ -1322,6 +1619,18 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_executive_summary_v2: {
+        Row: {
+          brand_opportunity_score: number | null
+          market_leader: string | null
+          report_date: string | null
+          top_brand_opportunity: string | null
+          whitespace_category: string | null
+          whitespace_emotion: string | null
+          whitespace_recommendation: string | null
+        }
+        Relationships: []
+      }
       ra_market_intelligence: {
         Row: {
           avg_creatives_per_brand: number | null
@@ -1338,6 +1647,17 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_market_momentum: {
+        Row: {
+          avg_interest: number | null
+          brand_domain: string | null
+          keyword: string | null
+          latest_interest: number | null
+          momentum: string | null
+          peak_interest: number | null
+        }
+        Relationships: []
+      }
       ra_market_opportunities: {
         Row: {
           category: string | null
@@ -1345,6 +1665,17 @@ export type Database = {
           market_density: string | null
           recommendation: string | null
           strategic_priority: string | null
+        }
+        Relationships: []
+      }
+      ra_market_pressure: {
+        Row: {
+          brand_domain: string | null
+          creative_volume: number | null
+          keyword: string | null
+          latest_interest: number | null
+          momentum: string | null
+          pressure: string | null
         }
         Relationships: []
       }
@@ -1359,6 +1690,41 @@ export type Database = {
           ads: number | null
           category: string | null
           share_of_market: number | null
+        }
+        Relationships: []
+      }
+      ra_narrative_gap: {
+        Row: {
+          brand: string | null
+          dominant_emotion: string | null
+          gap_risk: string | null
+          narrative_gap_summary: string | null
+          negative_mentions: number | null
+          top_negative_theme: string | null
+        }
+        Relationships: []
+      }
+      ra_opportunity_score: {
+        Row: {
+          brand_domain: string | null
+          creative_volume: number | null
+          keyword: string | null
+          latest_interest: number | null
+          momentum: string | null
+          opportunity_score: number | null
+          pressure: string | null
+        }
+        Relationships: []
+      }
+      ra_opportunity_score_v2: {
+        Row: {
+          brand_domain: string | null
+          creative_volume: number | null
+          keyword: string | null
+          latest_interest: number | null
+          momentum: string | null
+          opportunity_score: number | null
+          pressure: string | null
         }
         Relationships: []
       }
@@ -1388,12 +1754,35 @@ export type Database = {
         }
         Relationships: []
       }
+      ra_strategic_score: {
+        Row: {
+          brand_domain: string | null
+          creative_volume: number | null
+          keyword: string | null
+          latest_interest: number | null
+          momentum: string | null
+          pressure: string | null
+          strategic_score: number | null
+        }
+        Relationships: []
+      }
       ra_strategic_territories: {
         Row: {
           avg_share: number | null
           brands_using: number | null
           emotion: string | null
           territory_status: string | null
+        }
+        Relationships: []
+      }
+      ra_strategy_brief: {
+        Row: {
+          fastest_momentum: string | null
+          generated_date: string | null
+          market_leader: string | null
+          opportunity_score: number | null
+          recommendation: string | null
+          top_opportunity: string | null
         }
         Relationships: []
       }
@@ -1414,6 +1803,30 @@ export type Database = {
           opportunity_score: number | null
           recommendation: string | null
           strategic_priority: string | null
+        }
+        Relationships: []
+      }
+      ra_trend_opportunities: {
+        Row: {
+          brand_domain: string | null
+          creative_volume: number | null
+          keyword: string | null
+          latest_interest: number | null
+          momentum: string | null
+          pressure: string | null
+          recommendation: string | null
+        }
+        Relationships: []
+      }
+      ra_trend_summary: {
+        Row: {
+          avg_interest: number | null
+          brand_domain: string | null
+          data_points: number | null
+          keyword: string | null
+          latest_date: string | null
+          latest_interest: number | null
+          peak_interest: number | null
         }
         Relationships: []
       }
