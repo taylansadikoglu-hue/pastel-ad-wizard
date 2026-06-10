@@ -198,6 +198,79 @@ export function StrategistDashboard() {
   const pct = (v: number, m: number) => (m > 0 ? Math.min(100, Math.round((v / m) * 100)) : 0);
   const delta = (v: number, a: number) => (a > 0 ? Math.round(((v - a) / a) * 100) : 0);
 
+  // Evidence behind each BARBS conclusion — live data only
+  const threatTarget =
+    topThreats.find(
+      (t) =>
+        t.competitor_domain &&
+        brief?.strongest_threat &&
+        t.competitor_domain.toLowerCase().includes(brief.strongest_threat.toLowerCase()),
+    ) || topThreats[0];
+  const threatRank = threatTarget
+    ? topThreats.findIndex((t) => t.competitor_domain === threatTarget.competitor_domain) + 1
+    : 0;
+  const threatEvidence = threatTarget
+    ? ([
+        threatRank > 0 ? { label: "Threat Rank", value: `#${String(threatRank).padStart(2, "0")}` } : null,
+        threatTarget.threat_score != null
+          ? { label: "Threat Score", value: Number(threatTarget.threat_score).toFixed(1) }
+          : null,
+        threatTarget.demand != null
+          ? { label: "Demand", value: Number(threatTarget.demand).toLocaleString() }
+          : null,
+        threatTarget.threat_score != null && avgThreat > 0
+          ? {
+              label: "vs Market Avg",
+              value: `${delta(Number(threatTarget.threat_score), avgThreat) >= 0 ? "+" : ""}${delta(Number(threatTarget.threat_score), avgThreat)}%`,
+            }
+          : null,
+      ].filter(Boolean) as { label: string; value: string }[])
+    : [];
+
+  const challengerTarget =
+    topChallengers.find(
+      (c) =>
+        c.brand_domain &&
+        brief?.emerging_challenger &&
+        c.brand_domain.toLowerCase().includes(brief.emerging_challenger.toLowerCase()),
+    ) || topChallengers[0];
+  const challengerEvidence = challengerTarget
+    ? ([
+        challengerTarget.opportunity_score != null
+          ? { label: "Opportunity Score", value: Number(challengerTarget.opportunity_score).toFixed(1) }
+          : null,
+        challengerTarget.momentum ? { label: "Momentum", value: challengerTarget.momentum } : null,
+        challengerTarget.creative_volume != null
+          ? { label: "Creative Volume", value: Number(challengerTarget.creative_volume).toLocaleString() }
+          : null,
+        challengerTarget.latest_interest != null
+          ? { label: "Search Interest", value: Number(challengerTarget.latest_interest).toLocaleString() }
+          : null,
+      ].filter(Boolean) as { label: string; value: string }[])
+    : [];
+
+  const openingTarget =
+    topWhitespace.find(
+      (w) =>
+        w.emotion &&
+        brief?.whitespace_emotion &&
+        w.emotion.toLowerCase() === brief.whitespace_emotion.toLowerCase(),
+    ) || topWhitespace[0];
+  const openingEvidence = openingTarget
+    ? ([
+        openingTarget.opportunity_score != null
+          ? { label: "Opportunity Score", value: Number(openingTarget.opportunity_score).toFixed(1) }
+          : null,
+        openingTarget.market_density
+          ? { label: "Competitive Density", value: openingTarget.market_density }
+          : null,
+        openingTarget.category ? { label: "Category", value: openingTarget.category } : null,
+        openingTarget.strategic_priority
+          ? { label: "Priority", value: openingTarget.strategic_priority }
+          : null,
+      ].filter(Boolean) as { label: string; value: string }[])
+    : [];
+
   const insightFor = (r: Threat): string | null => {
     const d = Number(r.demand) || 0;
     const c = Number(r.creative_volume) || 0;
