@@ -321,6 +321,6 @@ function PCRPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/app/pcr")({
-  head: () => ({ meta: [{ title: "PCR Reporting — RevenueAd" }] }),
+  head: () => ({ meta: [{ title: "Market Intelligence — RevenueAd" }] }),
   component: PCRPage,
 });

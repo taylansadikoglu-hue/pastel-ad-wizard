@@ -735,7 +735,7 @@ function AdvertisersPage() {
 
   return (
     <WorkspaceShell
-      title="Advertiser Hub"
+      title="Brand Intelligence"
       subtitle={`Client-ready creative compilations across ${rows.length}/${MAX_BRANDS} tracked brands.`}
     >
       <div className="space-y-5">
@@ -846,7 +846,7 @@ function AdvertisersPage() {
           </div>
           <div className="flex flex-col gap-2 md:border-l md:border-ink/10 md:pl-5">
             <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
-              <Globe size={12} className="text-primary" /> Strategy AI Coverage
+              <Globe size={12} className="text-primary" /> Strategic Advisor Coverage
             </div>
             {ribbon.strategy > 0 ? (
               <>
@@ -867,7 +867,7 @@ function AdvertisersPage() {
             ) : (
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center justify-center h-9 px-3 rounded-full text-[12px] font-semibold border bg-ink/5 text-muted-foreground border-ink/10">
-                  Strategy AI pending
+                  Strategic Advisor pending
                 </span>
                 <span className="text-[11px] text-muted-foreground leading-snug">
                   Strategist analysis will appear here once placements are processed.
@@ -1176,11 +1176,11 @@ function AdvertisersPage() {
                                     style={{ background: "#fbf1d4", color: "#7a5f24", borderColor: "rgba(200,169,106,0.55)" }}
                                   >
                                     <span className="h-1.5 w-1.5 rounded-full" style={{ background: "#c8a96a" }} />
-                                    Strategy AI
+                                    Strategic Advisor
                                   </span>
                                 ) : (
                                   <span className="mono text-[10px] px-1.5 py-0.5 rounded-[3px] inline-flex items-center gap-1 border border-ink/10 bg-ink/5 text-muted-foreground">
-                                    Strategy AI pending
+                                    Strategic Advisor pending
                                   </span>
                                 )}
                                 <span className="mono text-[10px] text-muted-foreground ml-auto">
@@ -1294,7 +1294,7 @@ function AdvertisersPage() {
                               );
                             })()}
 
-                            {/* Strategy AI — client-ready strategist note */}
+                            {/* Strategic Advisor — client-ready strategist note */}
                             {(() => {
                               const r = (e.raw && typeof e.raw === "object" ? (e.raw as Record<string, unknown>) : {}) as Record<string, unknown>;
                               const pick = (k: string): string => {
@@ -1342,7 +1342,7 @@ function AdvertisersPage() {
                                         AI
                                       </span>
                                       <h4 className="mono text-[11px] uppercase font-semibold tracking-[0.18em] text-ink/80">
-                                        Strategy AI
+                                        Strategic Advisor
                                       </h4>
                                     </div>
                                     <span className="mono text-[10px] uppercase tracking-[0.16em]" style={{ color: "#9a7c3e" }}>
@@ -1413,7 +1413,7 @@ function AdvertisersPage() {
                             })()}
 
 
-                            {/* Strategy AI pending fallback — only when no strategist fields are present */}
+                            {/* Strategic Advisor pending fallback — only when no strategist fields are present */}
                             {!hasAnyStrategy(e) && (
                               <section className="rounded-[6px] border border-ink/10 bg-paper p-5 space-y-2" style={{ boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset, 0 8px 24px -18px rgba(35,37,29,0.3)" }}>
                                 <div className="flex items-center justify-between gap-3">
@@ -1425,11 +1425,11 @@ function AdvertisersPage() {
                                       AI
                                     </span>
                                     <h4 className="mono text-[11px] uppercase font-semibold tracking-[0.18em] text-muted-foreground">
-                                      Strategy AI
+                                      Strategic Advisor
                                     </h4>
                                   </div>
                                   <span className="mono text-[10px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full border border-ink/10 bg-ink/5 text-muted-foreground">
-                                    Strategy AI pending
+                                    Strategic Advisor pending
                                   </span>
                                 </div>
                                 <p className="text-[12px] text-muted-foreground">
@@ -1454,6 +1454,6 @@ function AdvertisersPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/app/advertisers")({
-  head: () => ({ meta: [{ title: "Advertiser Hub — RevenueAd" }] }),
+  head: () => ({ meta: [{ title: "Brand Intelligence — RevenueAd" }] }),
   component: AdvertisersPage,
 });
