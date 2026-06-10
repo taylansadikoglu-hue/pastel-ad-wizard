@@ -25,7 +25,7 @@ const PLANS: { key: PlanKey; name: string; price: number; tag: string; advertise
     tag: "FOUNDING",
     advertisers: "1 core tracked advertiser brand",
     icon: Crosshair,
-    perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports", "Strategy AI assistant"],
+    perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports", "Strategic Advisor"],
   },
   {
     key: "agency",

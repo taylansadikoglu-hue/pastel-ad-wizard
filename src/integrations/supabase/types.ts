@@ -41,6 +41,7 @@ export type Database = {
           id: number
           landing_url: string | null
           last_seen: string | null
+          market_signal: string | null
           media_url: string | null
           offer_signal: string | null
           offer_theme: string | null
@@ -84,6 +85,7 @@ export type Database = {
           id?: number
           landing_url?: string | null
           last_seen?: string | null
+          market_signal?: string | null
           media_url?: string | null
           offer_signal?: string | null
           offer_theme?: string | null
@@ -127,6 +129,7 @@ export type Database = {
           id?: number
           landing_url?: string | null
           last_seen?: string | null
+          market_signal?: string | null
           media_url?: string | null
           offer_signal?: string | null
           offer_theme?: string | null
@@ -153,6 +156,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      advertiser_dna_history: {
+        Row: {
+          created_at: string | null
+          domain: string
+          id: number
+          placements: number | null
+          snapshot_date: string
+          top_buyer_stage: string | null
+          top_cta: string | null
+          top_emotion: string | null
+          top_offer_type: string | null
+          top_product: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          domain: string
+          id?: number
+          placements?: number | null
+          snapshot_date?: string
+          top_buyer_stage?: string | null
+          top_cta?: string | null
+          top_emotion?: string | null
+          top_offer_type?: string | null
+          top_product?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          domain?: string
+          id?: number
+          placements?: number | null
+          snapshot_date?: string
+          top_buyer_stage?: string | null
+          top_cta?: string | null
+          top_emotion?: string | null
+          top_offer_type?: string | null
+          top_product?: string | null
+        }
+        Relationships: []
       }
       advertiser_matrix: {
         Row: {
@@ -184,6 +226,45 @@ export type Database = {
           meta_pct?: number | null
           primary_channel?: string | null
           prog_pct?: number | null
+        }
+        Relationships: []
+      }
+      advertiser_registry: {
+        Row: {
+          category: string | null
+          country: string | null
+          created_at: string | null
+          discovery_notes: string | null
+          discovery_status: string | null
+          domain: string
+          google_advertiser_id: string | null
+          id: number
+          is_active: boolean | null
+          last_discovered_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          country?: string | null
+          created_at?: string | null
+          discovery_notes?: string | null
+          discovery_status?: string | null
+          domain: string
+          google_advertiser_id?: string | null
+          id?: number
+          is_active?: boolean | null
+          last_discovered_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          country?: string | null
+          created_at?: string | null
+          discovery_notes?: string | null
+          discovery_status?: string | null
+          domain?: string
+          google_advertiser_id?: string | null
+          id?: number
+          is_active?: boolean | null
+          last_discovered_at?: string | null
         }
         Relationships: []
       }
@@ -397,7 +478,742 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      advertiser_benchmark: {
+        Row: {
+          domain: string | null
+          placements: number | null
+          primary_buyer_stage: string | null
+          primary_emotion: string | null
+          primary_offer_strategy: string | null
+          primary_product: string | null
+        }
+        Relationships: []
+      }
+      advertiser_coverage: {
+        Row: {
+          category: string | null
+          coverage_status: string | null
+          domain: string | null
+          google_advertiser_id: string | null
+          latest_placement: string | null
+          placements: number | null
+        }
+        Relationships: []
+      }
+      advertiser_emotion_mix: {
+        Row: {
+          domain: string | null
+          emotional_driver: string | null
+          placements: number | null
+          share_percent: number | null
+        }
+        Relationships: []
+      }
+      advertiser_market_dna: {
+        Row: {
+          domain: string | null
+          placements: number | null
+          top_buyer_stage: string | null
+          top_cta: string | null
+          top_emotion: string | null
+          top_offer_type: string | null
+          top_product: string | null
+        }
+        Relationships: []
+      }
+      advertiser_market_dna_dashboard: {
+        Row: {
+          buyer_stage: string | null
+          dna_signature: string | null
+          domain: string | null
+          funnel_focus: string | null
+          offer_strategy: string | null
+          placements: number | null
+          primary_cta: string | null
+          primary_emotion: string | null
+          primary_product: string | null
+        }
+        Relationships: []
+      }
+      advertiser_market_dna_summary: {
+        Row: {
+          domain: string | null
+          market_dna: string | null
+          placements: number | null
+          top_buyer_stage: string | null
+          top_cta: string | null
+          top_emotion: string | null
+          top_offer_type: string | null
+          top_product: string | null
+        }
+        Relationships: []
+      }
+      advertiser_positioning: {
+        Row: {
+          buyer_stage: string | null
+          domain: string | null
+          emotion: string | null
+          emotion_score: number | null
+          funnel_score: number | null
+          placements: number | null
+          product: string | null
+        }
+        Relationships: []
+      }
+      advertiser_product_mix: {
+        Row: {
+          domain: string | null
+          placements: number | null
+          product_type: string | null
+          share_percent: number | null
+        }
+        Relationships: []
+      }
+      advertiser_recommendations: {
+        Row: {
+          domain: string | null
+          recommendation: string | null
+          top_buyer_stage: string | null
+          top_cta: string | null
+          top_emotion: string | null
+          top_offer_type: string | null
+          top_product: string | null
+        }
+        Relationships: []
+      }
+      advertiser_scorecard: {
+        Row: {
+          domain: string | null
+          funnel_focus: string | null
+          placements: number | null
+          top_buyer_stage: string | null
+          top_cta: string | null
+          top_emotion: string | null
+          top_offer_type: string | null
+          top_product: string | null
+        }
+        Relationships: []
+      }
+      advertiser_snapshot: {
+        Row: {
+          domain: string | null
+          placements: number | null
+          top_buyer_stage: string | null
+          top_cta: string | null
+          top_emotion: string | null
+          top_offer_type: string | null
+          top_product: string | null
+        }
+        Relationships: []
+      }
+      advertiser_stage_mix: {
+        Row: {
+          buyer_stage: string | null
+          domain: string | null
+          placements: number | null
+          share_percent: number | null
+        }
+        Relationships: []
+      }
+      advertiser_strategy_profile: {
+        Row: {
+          buyer_stage: string | null
+          dna_signature: string | null
+          domain: string | null
+          funnel_focus: string | null
+          offer_strategy: string | null
+          placements: number | null
+          positioning_archetype: string | null
+          primary_cta: string | null
+          primary_emotion: string | null
+          primary_product: string | null
+          strategy_summary: string | null
+        }
+        Relationships: []
+      }
+      advertiser_strategy_snapshot: {
+        Row: {
+          domain: string | null
+          placements: number | null
+          strategist_summary: string | null
+          top_buyer_stage: string | null
+          top_cta: string | null
+          top_emotion: string | null
+          top_offer_type: string | null
+          top_product: string | null
+        }
+        Relationships: []
+      }
+      category_heatmap: {
+        Row: {
+          category: string | null
+          competition_level: string | null
+          placements: number | null
+        }
+        Relationships: []
+      }
+      category_leaders: {
+        Row: {
+          category: string | null
+          domain: string | null
+          market_rank: number | null
+          placements: number | null
+        }
+        Relationships: []
+      }
+      category_whitespace: {
+        Row: {
+          emotional_driver: string | null
+          market_condition: string | null
+          placements: number | null
+          product_type: string | null
+          share_percent: number | null
+        }
+        Relationships: []
+      }
+      dashboard_health: {
+        Row: {
+          ads_analysed: number | null
+          ads_collected: number | null
+          coverage_score: number | null
+          empty_records: number | null
+          pending_analysis: number | null
+        }
+        Relationships: []
+      }
+      emotion_distribution: {
+        Row: {
+          domain: string | null
+          emotional_driver: string | null
+          placements: number | null
+          share_percent: number | null
+        }
+        Relationships: []
+      }
+      market_category_leaders: {
+        Row: {
+          domain: string | null
+          market_rank: number | null
+          normalized_product: string | null
+          placements: number | null
+        }
+        Relationships: []
+      }
+      market_dna: {
+        Row: {
+          buyer_stage: string | null
+          domain: string | null
+          emotional_driver: string | null
+          offer_signal: string | null
+          offer_type: string | null
+          placements: number | null
+          primary_cta: string | null
+          product_type: string | null
+        }
+        Relationships: []
+      }
+      market_dna_v2: {
+        Row: {
+          domain: string | null
+          emotion_mix: string | null
+        }
+        Relationships: []
+      }
+      market_emotion_opportunity_gaps: {
+        Row: {
+          emotional_driver: string | null
+          opportunity_status: string | null
+          placements: number | null
+          share_percent: number | null
+        }
+        Relationships: []
+      }
+      market_leaders: {
+        Row: {
+          category: string | null
+          leader: string | null
+          placements: number | null
+          top_buyer_stage: string | null
+          top_emotion: string | null
+          top_offer_type: string | null
+        }
+        Relationships: []
+      }
+      market_positioning_matrix: {
+        Row: {
+          advertiser: string | null
+          buyer_stage: string | null
+          dna_signature: string | null
+          funnel_focus: string | null
+          offer_strategy: string | null
+          placements: number | null
+          positioning_archetype: string | null
+          primary_cta: string | null
+          primary_emotion: string | null
+          primary_product: string | null
+        }
+        Relationships: []
+      }
+      market_shift_alerts: {
+        Row: {
+          current_emotion: string | null
+          current_product: string | null
+          current_stage: string | null
+          domain: string | null
+          previous_emotion: string | null
+          previous_product: string | null
+          previous_stage: string | null
+          shift_type: string | null
+        }
+        Relationships: []
+      }
+      market_whitespace: {
+        Row: {
+          emotional_driver: string | null
+          opportunity_status: string | null
+          share_percent: number | null
+          strategic_priority: string | null
+        }
+        Relationships: []
+      }
+      normalized_ad_placements: {
+        Row: {
+          ad_title: string | null
+          ad_type: string | null
+          advertiser_name: string | null
+          buyer_stage: string | null
+          campaign_cluster: string | null
+          category: string | null
+          channel: string | null
+          channel_platform: string | null
+          confidence_score: number | null
+          created_at: string | null
+          creative_hash: string | null
+          creative_url: string | null
+          days_running: number | null
+          description: string | null
+          detected_cta: string | null
+          domain: string | null
+          emotional_driver: string | null
+          extracted_offer: string | null
+          first_seen: string | null
+          headline: string | null
+          hook: string | null
+          hook_analysis: string | null
+          id: number | null
+          landing_url: string | null
+          last_seen: string | null
+          market_signal: string | null
+          media_url: string | null
+          normalized_product: string | null
+          offer_signal: string | null
+          offer_theme: string | null
+          offer_type: string | null
+          page_description: string | null
+          page_title: string | null
+          primary_cta: string | null
+          product_category: string | null
+          product_type: string | null
+          raw: Json | null
+          raw_copy: string | null
+          scan_id: number | null
+          source_archive_url: string | null
+          source_platform: string | null
+          strategist_takeaway: string | null
+          times_seen: number | null
+        }
+        Insert: {
+          ad_title?: string | null
+          ad_type?: string | null
+          advertiser_name?: string | null
+          buyer_stage?: string | null
+          campaign_cluster?: string | null
+          category?: string | null
+          channel?: string | null
+          channel_platform?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          creative_hash?: string | null
+          creative_url?: string | null
+          days_running?: number | null
+          description?: string | null
+          detected_cta?: string | null
+          domain?: string | null
+          emotional_driver?: string | null
+          extracted_offer?: string | null
+          first_seen?: string | null
+          headline?: string | null
+          hook?: string | null
+          hook_analysis?: string | null
+          id?: number | null
+          landing_url?: string | null
+          last_seen?: string | null
+          market_signal?: string | null
+          media_url?: string | null
+          normalized_product?: never
+          offer_signal?: string | null
+          offer_theme?: string | null
+          offer_type?: string | null
+          page_description?: string | null
+          page_title?: string | null
+          primary_cta?: string | null
+          product_category?: string | null
+          product_type?: string | null
+          raw?: Json | null
+          raw_copy?: string | null
+          scan_id?: number | null
+          source_archive_url?: string | null
+          source_platform?: string | null
+          strategist_takeaway?: string | null
+          times_seen?: number | null
+        }
+        Update: {
+          ad_title?: string | null
+          ad_type?: string | null
+          advertiser_name?: string | null
+          buyer_stage?: string | null
+          campaign_cluster?: string | null
+          category?: string | null
+          channel?: string | null
+          channel_platform?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          creative_hash?: string | null
+          creative_url?: string | null
+          days_running?: number | null
+          description?: string | null
+          detected_cta?: string | null
+          domain?: string | null
+          emotional_driver?: string | null
+          extracted_offer?: string | null
+          first_seen?: string | null
+          headline?: string | null
+          hook?: string | null
+          hook_analysis?: string | null
+          id?: number | null
+          landing_url?: string | null
+          last_seen?: string | null
+          market_signal?: string | null
+          media_url?: string | null
+          normalized_product?: never
+          offer_signal?: string | null
+          offer_theme?: string | null
+          offer_type?: string | null
+          page_description?: string | null
+          page_title?: string | null
+          primary_cta?: string | null
+          product_category?: string | null
+          product_type?: string | null
+          raw?: Json | null
+          raw_copy?: string | null
+          scan_id?: number | null
+          source_archive_url?: string | null
+          source_platform?: string | null
+          strategist_takeaway?: string | null
+          times_seen?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_placements_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "domain_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      normalized_products: {
+        Row: {
+          ad_title: string | null
+          ad_type: string | null
+          advertiser_name: string | null
+          buyer_stage: string | null
+          campaign_cluster: string | null
+          category: string | null
+          channel: string | null
+          channel_platform: string | null
+          confidence_score: number | null
+          created_at: string | null
+          creative_hash: string | null
+          creative_url: string | null
+          days_running: number | null
+          description: string | null
+          detected_cta: string | null
+          domain: string | null
+          emotional_driver: string | null
+          extracted_offer: string | null
+          first_seen: string | null
+          headline: string | null
+          hook: string | null
+          hook_analysis: string | null
+          id: number | null
+          landing_url: string | null
+          last_seen: string | null
+          market_signal: string | null
+          media_url: string | null
+          normalized_product: string | null
+          offer_signal: string | null
+          offer_theme: string | null
+          offer_type: string | null
+          page_description: string | null
+          page_title: string | null
+          primary_cta: string | null
+          product_category: string | null
+          product_type: string | null
+          raw: Json | null
+          raw_copy: string | null
+          scan_id: number | null
+          source_archive_url: string | null
+          source_platform: string | null
+          strategist_takeaway: string | null
+          times_seen: number | null
+        }
+        Insert: {
+          ad_title?: string | null
+          ad_type?: string | null
+          advertiser_name?: string | null
+          buyer_stage?: string | null
+          campaign_cluster?: string | null
+          category?: string | null
+          channel?: string | null
+          channel_platform?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          creative_hash?: string | null
+          creative_url?: string | null
+          days_running?: number | null
+          description?: string | null
+          detected_cta?: string | null
+          domain?: string | null
+          emotional_driver?: string | null
+          extracted_offer?: string | null
+          first_seen?: string | null
+          headline?: string | null
+          hook?: string | null
+          hook_analysis?: string | null
+          id?: number | null
+          landing_url?: string | null
+          last_seen?: string | null
+          market_signal?: string | null
+          media_url?: string | null
+          normalized_product?: never
+          offer_signal?: string | null
+          offer_theme?: string | null
+          offer_type?: string | null
+          page_description?: string | null
+          page_title?: string | null
+          primary_cta?: string | null
+          product_category?: string | null
+          product_type?: string | null
+          raw?: Json | null
+          raw_copy?: string | null
+          scan_id?: number | null
+          source_archive_url?: string | null
+          source_platform?: string | null
+          strategist_takeaway?: string | null
+          times_seen?: number | null
+        }
+        Update: {
+          ad_title?: string | null
+          ad_type?: string | null
+          advertiser_name?: string | null
+          buyer_stage?: string | null
+          campaign_cluster?: string | null
+          category?: string | null
+          channel?: string | null
+          channel_platform?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          creative_hash?: string | null
+          creative_url?: string | null
+          days_running?: number | null
+          description?: string | null
+          detected_cta?: string | null
+          domain?: string | null
+          emotional_driver?: string | null
+          extracted_offer?: string | null
+          first_seen?: string | null
+          headline?: string | null
+          hook?: string | null
+          hook_analysis?: string | null
+          id?: number | null
+          landing_url?: string | null
+          last_seen?: string | null
+          market_signal?: string | null
+          media_url?: string | null
+          normalized_product?: never
+          offer_signal?: string | null
+          offer_theme?: string | null
+          offer_type?: string | null
+          page_description?: string | null
+          page_title?: string | null
+          primary_cta?: string | null
+          product_category?: string | null
+          product_type?: string | null
+          raw?: Json | null
+          raw_copy?: string | null
+          scan_id?: number | null
+          source_archive_url?: string | null
+          source_platform?: string | null
+          strategist_takeaway?: string | null
+          times_seen?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_placements_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "domain_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      placement_quality: {
+        Row: {
+          ad_title: string | null
+          domain: string | null
+          id: number | null
+          product_type: string | null
+          quality: string | null
+        }
+        Insert: {
+          ad_title?: string | null
+          domain?: string | null
+          id?: number | null
+          product_type?: string | null
+          quality?: never
+        }
+        Update: {
+          ad_title?: string | null
+          domain?: string | null
+          id?: number | null
+          product_type?: string | null
+          quality?: never
+        }
+        Relationships: []
+      }
+      platform_data_quality: {
+        Row: {
+          empty_ads: number | null
+          needs_enrichment_ads: number | null
+          strategist_ready_ads: number | null
+          strategist_ready_rate: number | null
+          total_ads: number | null
+        }
+        Relationships: []
+      }
+      platform_health: {
+        Row: {
+          classification_rate: number | null
+          classified_ads: number | null
+          total_ads: number | null
+        }
+        Relationships: []
+      }
+      platform_status: {
+        Row: {
+          coverage_rate: number | null
+          missing_advertisers: number | null
+          ready_advertisers: number | null
+          total_advertisers: number | null
+        }
+        Relationships: []
+      }
+      positioning_matrix: {
+        Row: {
+          buyer_stage: string | null
+          domain: string | null
+          emotional_driver: string | null
+          normalized_product: string | null
+          placements: number | null
+        }
+        Relationships: []
+      }
+      positioning_quadrant: {
+        Row: {
+          domain: string | null
+          placements: number | null
+          top_buyer_stage: string | null
+          top_emotion: string | null
+          top_product: string | null
+          x_axis: number | null
+          y_axis: number | null
+        }
+        Relationships: []
+      }
+      revenuead_health: {
+        Row: {
+          active_advertisers: number | null
+          classification_rate: number | null
+          coverage_rate: number | null
+          total_ads: number | null
+          total_advertisers: number | null
+        }
+        Relationships: []
+      }
+      strategic_change_feed: {
+        Row: {
+          current_emotional_positioning: string | null
+          current_funnel_strategy: string | null
+          current_offer_strategy: string | null
+          current_product_focus: string | null
+          domain: string | null
+          previous_emotional_positioning: string | null
+          previous_funnel_strategy: string | null
+          previous_offer_strategy: string | null
+          previous_product_focus: string | null
+          strategic_change: string | null
+          strategist_summary: string | null
+        }
+        Relationships: []
+      }
+      strategic_recommendations: {
+        Row: {
+          domain: string | null
+          primary_buyer_stage: string | null
+          primary_emotion: string | null
+          primary_offer_strategy: string | null
+          primary_product: string | null
+          recommendation: string | null
+        }
+        Relationships: []
+      }
+      strategist_headlines: {
+        Row: {
+          domain: string | null
+          headline: string | null
+          supporting_text: string | null
+        }
+        Relationships: []
+      }
+      strategist_opportunities: {
+        Row: {
+          category: string | null
+          emotion: string | null
+          market_density: string | null
+          recommendation: string | null
+          strategic_priority: string | null
+        }
+        Relationships: []
+      }
+      whitespace_matrix: {
+        Row: {
+          advertisers: number | null
+          category: string | null
+          emotion: string | null
+          market_density: string | null
+        }
+        Relationships: []
+      }
+      whitespace_recommendations: {
+        Row: {
+          emotional_driver: string | null
+          product_type: string | null
+          share_percent: number | null
+          strategist_recommendation: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

@@ -32,7 +32,7 @@ function SocialListeningPanel({ insight }: { insight: Insight }) {
       <CollapsibleTrigger className="w-full px-4 py-3 border-b-2 border-ink bg-secondary flex items-center justify-between cursor-pointer hover:bg-secondary/80 transition-colors">
         <div className="flex items-center gap-2 font-bold">
           <Radio size={16} />
-          <span>📡 Social Listening for {brand}</span>
+          <span>📡 Audience Signals for {brand}</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-paper">
@@ -126,7 +126,7 @@ function SocialListeningPage() {
 
   return (
     <WorkspaceShell
-      title="Social Listening"
+      title="Audience Signals"
       subtitle="Live audience signal compiled per tracked advertiser — what they love, where they friction, and the ad angle to weaponize."
     >
       {loading ? (
@@ -147,6 +147,6 @@ function SocialListeningPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/app/sentiment")({
-  head: () => ({ meta: [{ title: "Social Listening — RevenueAd" }] }),
+  head: () => ({ meta: [{ title: "Audience Signals — RevenueAd" }] }),
   component: SocialListeningPage,
 });
