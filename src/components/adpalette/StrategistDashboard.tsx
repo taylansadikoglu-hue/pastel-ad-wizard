@@ -1,13 +1,56 @@
 import { useEffect, useState } from "react";
 import { WorkspaceShell } from "./WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from "recharts";
+
+type Brief = {
+  client_name: string | null;
+  category: string | null;
+  headline: string | null;
+  summary: string | null;
+  strategic_opening: string | null;
+  recommended_action: string | null;
+  strongest_threat: string | null;
+  fastest_mover: string | null;
+  emerging_challenger: string | null;
+  whitespace_category: string | null;
+  whitespace_emotion: string | null;
+  whitespace_score: number | null;
+};
+
+type Threat = {
+  competitor_domain: string | null;
+  creative_volume: number | null;
+  demand: number | null;
+  threat_score: number | null;
+};
+
+type Challenger = {
+  brand_domain: string | null;
+  keyword: string | null;
+  opportunity_score: number | null;
+  pressure: string | null;
+  momentum: string | null;
+  latest_interest: number | null;
+  creative_volume: number | null;
+};
+
+type Whitespace = {
+  category: string | null;
+  emotion: string | null;
+  strategic_priority: string | null;
+  market_density: string | null;
+  recommendation: string | null;
+  opportunity_score: number | null;
+};
+
+type Momentum = {
+  brand_domain: string | null;
+  keyword: string | null;
+  momentum: string | null;
+  latest_interest: number | null;
+  creative_volume: number | null;
+  pressure: string | null;
+};
 
 type Exec = {
   dominant_market: string | null;
@@ -17,39 +60,6 @@ type Exec = {
   top_opportunity_emotion: string | null;
 };
 
-type DashKpis = {
-  brands_tracked: number | null;
-  ads_collected: number | null;
-  intelligence_coverage: number | null;
-  live_brands: number | null;
-  pending_brands: number | null;
-  open_opportunities: number | null;
-};
-
-type MarketSummary = { category: string | null; ads: number | null; share_of_market: number | null };
-type Narrative = { category: string | null; share_of_market: number | null; category_narrative: string | null };
-type TopOpp = {
-  category: string | null;
-  emotion: string | null;
-  market_density: string | null;
-  strategic_priority: string | null;
-  recommendation: string | null;
-  opportunity_score: number | null;
-};
-type BrandLeader = {
-  brand: string | null;
-  primary_category: string | null;
-  dominant_emotion: string | null;
-  customer_stage: string | null;
-  primary_cta: string | null;
-  creative_volume: number | null;
-};
-type Territory = {
-  emotion: string | null;
-  brands_using: number | null;
-  avg_share: number | null;
-  territory_status: string | null;
-};
 type Pitch = {
   category: string | null;
   category_leader: string | null;
@@ -59,29 +69,29 @@ type Pitch = {
   action: string | null;
 };
 
-const PALETTE = ["#23251D", "var(--primary)", "#7C8076", "#A1A39A", "#D4D6CB", "#5A5D52"];
-
-function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function SectionHeader({ index, title, subtitle }: { index: string; title: string; subtitle?: string }) {
   return (
-    <div className="card-flat p-4">
-      <div className="mono text-[10px] uppercase text-muted-foreground">{label}</div>
-      <div className="text-lg font-bold mt-1 leading-tight truncate" title={value}>
-        {value}
+    <div className="flex items-baseline justify-between mb-4">
+      <div>
+        <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{index}</div>
+        <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
       </div>
-      {hint && <div className="mono text-[10px] text-muted-foreground mt-1">{hint}</div>}
+      {subtitle && <div className="mono text-[10px] uppercase text-muted-foreground">{subtitle}</div>}
     </div>
   );
 }
 
-function SectionHeader({ index, title, subtitle }: { index: string; title: string; subtitle?: string }) {
+function MomentumChip({ value }: { value: string | null }) {
+  const v = (value ?? "").toLowerCase();
+  const tone = v.includes("rising") || v.includes("accel")
+    ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-950 dark:text-emerald-100"
+    : v.includes("decl") || v.includes("cool")
+      ? "bg-rose-100 dark:bg-rose-900/40 text-rose-950 dark:text-rose-100"
+      : "bg-secondary";
   return (
-    <div className="flex items-baseline justify-between mb-3">
-      <div>
-        <div className="mono text-[10px] uppercase text-muted-foreground">{index}</div>
-        <h2 className="text-lg font-bold">{title}</h2>
-      </div>
-      {subtitle && <div className="mono text-[10px] text-muted-foreground">{subtitle}</div>}
-    </div>
+    <span className={`mono text-[10px] uppercase px-1.5 py-0.5 border-2 border-ink rounded-[3px] ${tone}`}>
+      {value ?? "—"}
+    </span>
   );
 }
 
@@ -99,200 +109,213 @@ function PriorityChip({ priority }: { priority: string | null }) {
   );
 }
 
-function ActionChip({ action }: { action: string | null }) {
-  const a = (action ?? "").toLowerCase();
-  const tone = a.includes("recommended")
-    ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-950 dark:text-emerald-100"
-    : a.includes("monitor")
-      ? "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-950 dark:text-yellow-100"
-      : "bg-secondary";
-  return (
-    <span className={`mono text-[10px] uppercase px-1.5 py-0.5 border-2 border-ink rounded-[3px] ${tone}`}>
-      {action ?? "—"}
-    </span>
-  );
-}
-
 export function StrategistDashboard() {
+  const [brief, setBrief] = useState<Brief | null>(null);
+  const [threats, setThreats] = useState<Threat[]>([]);
+  const [challengers, setChallengers] = useState<Challenger[]>([]);
+  const [whitespace, setWhitespace] = useState<Whitespace[]>([]);
+  const [momentum, setMomentum] = useState<Momentum[]>([]);
   const [exec, setExec] = useState<Exec | null>(null);
-  const [kpis, setKpis] = useState<DashKpis | null>(null);
-  const [market, setMarket] = useState<MarketSummary[]>([]);
-  const [narr, setNarr] = useState<Narrative[]>([]);
-  const [opps, setOpps] = useState<TopOpp[]>([]);
-  const [brands, setBrands] = useState<BrandLeader[]>([]);
-  const [terr, setTerr] = useState<Territory[]>([]);
   const [pitch, setPitch] = useState<Pitch[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const [e, d, m, n, o, b, t, p] = await Promise.all([
-        supabase.from("ra_executive_summary").select("*").maybeSingle(),
-        supabase.from("ra_dashboard").select("*").maybeSingle(),
-        supabase.from("ra_market_summary").select("*"),
-        supabase.from("ra_strategy_narratives").select("*"),
+      const [b, t, c, w, m, e, p] = await Promise.all([
+        supabase.from("ra_barbs_client_brief").select("*").limit(1).maybeSingle(),
+        supabase.from("ra_client_threats").select("*"),
+        supabase.from("ra_brand_opportunities").select("*"),
         supabase.from("ra_top_opportunities").select("*"),
-        supabase.from("ra_brand_intelligence").select("*"),
-        supabase.from("ra_strategic_territories").select("*"),
+        supabase.from("ra_market_pressure").select("*"),
+        supabase.from("ra_executive_summary").select("*").maybeSingle(),
         supabase.from("ra_pitch_brief").select("*"),
       ]);
       if (!active) return;
+      setBrief((b.data ?? null) as Brief | null);
+      setThreats((t.data ?? []) as Threat[]);
+      setChallengers((c.data ?? []) as Challenger[]);
+      setWhitespace((w.data ?? []) as Whitespace[]);
+      setMomentum((m.data ?? []) as Momentum[]);
       setExec((e.data ?? null) as Exec | null);
-      setKpis((d.data ?? null) as DashKpis | null);
-      setMarket((m.data ?? []) as MarketSummary[]);
-      setNarr((n.data ?? []) as Narrative[]);
-      setOpps((o.data ?? []) as TopOpp[]);
-      setBrands((b.data ?? []) as BrandLeader[]);
-      setTerr((t.data ?? []) as Territory[]);
       setPitch((p.data ?? []) as Pitch[]);
       setLoading(false);
     })();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
-
-  const recommendedTerritory =
-    terr.find((r) => (r.territory_status ?? "").toLowerCase() === "open")?.emotion ??
-    [...terr].sort((a, b) => (Number(a.avg_share) || 0) - (Number(b.avg_share) || 0))[0]?.emotion ??
-    null;
-
-  const topOpps = [...opps]
-    .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
-    .slice(0, 6);
-
-  const brandLeaders = [...brands]
-    .sort((a, b) => (Number(b.creative_volume) || 0) - (Number(a.creative_volume) || 0))
-    .slice(0, 6);
-
-  const actionablePitch = pitch.filter((r) => r.action && r.recommendation);
-
-  const marketChart = market
-    .filter((r) => r.category && (Number(r.share_of_market) || 0) > 0)
-    .map((r) => ({ name: r.category as string, value: Number(r.share_of_market) || 0, ads: Number(r.ads) || 0 }));
 
   if (loading) {
     return (
-      <WorkspaceShell title="Dashboard">
-        <div className="card-flat p-8 text-center text-sm text-muted-foreground">Loading live intelligence…</div>
+      <WorkspaceShell title="BARBS Morning Brief">
+        <div className="card-flat p-8 text-center text-sm text-muted-foreground">
+          Loading live intelligence…
+        </div>
       </WorkspaceShell>
     );
   }
 
-  const hasExec =
-    exec &&
-    (exec.dominant_market ||
-      exec.strongest_brand ||
-      exec.dominant_emotion ||
-      exec.top_opportunity_category ||
-      recommendedTerritory);
+  const topThreats = [...threats]
+    .sort((a, b) => (Number(b.threat_score) || 0) - (Number(a.threat_score) || 0))
+    .slice(0, 5);
+
+  const topChallengers = [...challengers]
+    .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
+    .slice(0, 6);
+
+  const topWhitespace = [...whitespace]
+    .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
+    .slice(0, 6);
+
+  const watchlist = [...momentum]
+    .sort((a, b) => (Number(b.latest_interest) || 0) - (Number(a.latest_interest) || 0))
+    .slice(0, 8);
+
+  const actionablePitch = pitch.filter((r) => r.action && r.recommendation);
 
   return (
     <WorkspaceShell
-      title="Dashboard"
-      subtitle="What is happening, who is winning, what territory is open, and what to do next."
+      title="BARBS Morning Brief"
+      subtitle="Your senior strategy director's read of the market this morning."
     >
-      <div className="space-y-8">
-        {hasExec && exec && (
+      <div className="space-y-12">
+        {brief && (brief.headline || brief.summary) && (
           <section>
-            <SectionHeader index="00" title="Executive Summary" subtitle="Live · ra_executive_summary" />
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {exec.dominant_market && <StatCard label="Dominant Market" value={exec.dominant_market} />}
-              {exec.strongest_brand && <StatCard label="Strongest Brand" value={exec.strongest_brand} />}
-              {exec.dominant_emotion && <StatCard label="Dominant Emotion" value={exec.dominant_emotion} />}
-              {exec.top_opportunity_category && (
-                <StatCard
-                  label="Top Opportunity"
-                  value={exec.top_opportunity_category}
-                  hint={exec.top_opportunity_emotion ?? undefined}
-                />
-              )}
-              {recommendedTerritory && (
-                <StatCard label="Recommended Territory" value={recommendedTerritory} hint="Open whitespace" />
-              )}
-            </div>
-            {kpis && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-                <StatCard label="Brands Tracked" value={String(kpis.brands_tracked ?? 0)} hint={`${kpis.live_brands ?? 0} live`} />
-                <StatCard label="Ads Collected" value={String(kpis.ads_collected ?? 0)} />
-                <StatCard label="Intelligence Coverage" value={`${Number(kpis.intelligence_coverage ?? 0)}%`} />
-                <StatCard label="Open Opportunities" value={String(kpis.open_opportunities ?? 0)} />
+            <div className="card-flat p-8 md:p-12 bg-secondary/40">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-4">
+                BARBS · {brief.client_name ?? "Client"} · {brief.category ?? "Market"}
               </div>
-            )}
-          </section>
-        )}
-
-        {marketChart.length > 0 && (
-          <section>
-            <SectionHeader index="01" title="Market Composition" subtitle="Live · ra_market_summary" />
-            <div className="card-flat p-4 grid md:grid-cols-2 gap-4 items-center">
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={marketChart} dataKey="value" nameKey="name" innerRadius={50} outerRadius={90} stroke="var(--ink)" strokeWidth={2}>
-                      {marketChart.map((_, i) => (
-                        <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{ background: "var(--paper)", border: "2px solid var(--ink)", borderRadius: 4, fontSize: 12 }}
-                      formatter={(v: number, _n, p: any) => [`${v}% · ${p.payload.ads} ads`, p.payload.name]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-2">
-                {marketChart.map((r, i) => (
-                  <div key={r.name} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="inline-block w-3 h-3 border-2 border-ink rounded-[2px]" style={{ background: PALETTE[i % PALETTE.length] }} />
-                      <span className="truncate font-semibold">{r.name}</span>
+              {brief.headline && (
+                <h1 className="text-3xl md:text-5xl font-bold tracking-tight leading-[1.05] mb-6">
+                  {brief.headline}
+                </h1>
+              )}
+              {brief.summary && (
+                <p className="text-lg md:text-xl leading-relaxed text-ink/85 mb-8 max-w-4xl">
+                  {brief.summary}
+                </p>
+              )}
+              <div className="grid md:grid-cols-2 gap-6 pt-6 border-t-2 border-ink/15">
+                {brief.strategic_opening && (
+                  <div>
+                    <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
+                      Strategic Opening
                     </div>
-                    <span className="mono text-[11px] text-muted-foreground">{r.value}% · {r.ads} ads</span>
+                    <p className="text-base leading-relaxed">{brief.strategic_opening}</p>
                   </div>
-                ))}
+                )}
+                {brief.recommended_action && (
+                  <div>
+                    <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
+                      Recommended Action
+                    </div>
+                    <p className="text-base leading-relaxed font-semibold">{brief.recommended_action}</p>
+                  </div>
+                )}
               </div>
+              {(brief.strongest_threat || brief.emerging_challenger || brief.whitespace_emotion) && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8 pt-6 border-t-2 border-ink/15">
+                  {brief.strongest_threat && (
+                    <div>
+                      <div className="mono text-[10px] uppercase text-muted-foreground">Strongest Threat</div>
+                      <div className="font-bold mt-1 truncate" title={brief.strongest_threat}>{brief.strongest_threat}</div>
+                    </div>
+                  )}
+                  {brief.fastest_mover && (
+                    <div>
+                      <div className="mono text-[10px] uppercase text-muted-foreground">Fastest Mover</div>
+                      <div className="font-bold mt-1 truncate" title={brief.fastest_mover}>{brief.fastest_mover}</div>
+                    </div>
+                  )}
+                  {brief.emerging_challenger && (
+                    <div>
+                      <div className="mono text-[10px] uppercase text-muted-foreground">Emerging Challenger</div>
+                      <div className="font-bold mt-1 truncate" title={brief.emerging_challenger}>{brief.emerging_challenger}</div>
+                    </div>
+                  )}
+                  {brief.whitespace_emotion && (
+                    <div>
+                      <div className="mono text-[10px] uppercase text-muted-foreground">Open Territory</div>
+                      <div className="font-bold mt-1">
+                        {brief.whitespace_emotion}
+                        {brief.whitespace_score != null && (
+                          <span className="mono text-[10px] text-muted-foreground ml-2">{brief.whitespace_score}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </section>
         )}
 
-        {narr.length > 0 && (
+        {topThreats.length > 0 && (
           <section>
-            <SectionHeader index="02" title="Market Narratives" subtitle="Live · ra_strategy_narratives" />
+            <SectionHeader index="01" title="Competitive Threats" subtitle="Live · ra_client_threats" />
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {narr.map((n, i) => (
-                <div key={i} className="card-flat p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-bold">{n.category ?? "—"}</div>
-                    <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">
-                      {Number(n.share_of_market) || 0}%
+              {topThreats.map((r, i) => (
+                <div key={i} className="card-flat p-5">
+                  <div className="flex items-baseline justify-between mb-3">
+                    <div className="font-bold truncate" title={r.competitor_domain ?? ""}>{r.competitor_domain ?? "—"}</div>
+                    <span className="mono text-[10px] uppercase px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">
+                      Score {r.threat_score ?? "—"}
                     </span>
                   </div>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{n.category_narrative ?? "—"}</p>
+                  <div className="grid grid-cols-2 gap-y-1 text-xs">
+                    <span className="mono text-muted-foreground">Creative volume</span>
+                    <span className="text-right font-semibold">{r.creative_volume ?? 0}</span>
+                    <span className="mono text-muted-foreground">Search demand</span>
+                    <span className="text-right font-semibold">{r.demand ?? 0}</span>
+                  </div>
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        {topOpps.length > 0 && (
+        {topChallengers.length > 0 && (
           <section>
-            <SectionHeader index="03" title="Top Opportunities" subtitle="Live · ra_top_opportunities" />
+            <SectionHeader index="02" title="Emerging Challengers" subtitle="Live · ra_brand_opportunities" />
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {topOpps.map((o, i) => (
-                <div key={i} className="card-flat p-4">
+              {topChallengers.map((r, i) => (
+                <div key={i} className="card-flat p-5">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <div className="font-bold truncate" title={r.brand_domain ?? ""}>{r.brand_domain ?? "—"}</div>
+                    <MomentumChip value={r.momentum} />
+                  </div>
+                  {r.keyword && (
+                    <div className="text-sm mb-3 text-ink/80">around <span className="font-semibold">{r.keyword}</span></div>
+                  )}
+                  <div className="grid grid-cols-3 gap-y-1 text-xs">
+                    <span className="mono text-muted-foreground">Opportunity</span>
+                    <span className="col-span-2 text-right font-semibold">{r.opportunity_score ?? 0}</span>
+                    <span className="mono text-muted-foreground">Interest</span>
+                    <span className="col-span-2 text-right">{r.latest_interest ?? 0}</span>
+                    <span className="mono text-muted-foreground">Creative</span>
+                    <span className="col-span-2 text-right">{r.creative_volume ?? 0}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {topWhitespace.length > 0 && (
+          <section>
+            <SectionHeader index="03" title="Strategic Whitespace" subtitle="Live · ra_top_opportunities" />
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {topWhitespace.map((r, i) => (
+                <div key={i} className="card-flat p-5">
                   <div className="flex items-center justify-between mb-2">
                     <div className="mono text-[10px] uppercase text-muted-foreground">
-                      {o.category ?? "—"}
-                      {o.emotion && <span className="ml-1 text-ink/70">· {o.emotion}</span>}
+                      {r.category ?? "—"}{r.emotion && <span className="ml-1 text-ink/70">· {r.emotion}</span>}
                     </div>
-                    <PriorityChip priority={o.strategic_priority} />
+                    <PriorityChip priority={r.strategic_priority} />
                   </div>
-                  <p className="text-sm leading-relaxed">{o.recommendation ?? "—"}</p>
-                  <div className="mono text-[10px] mt-2 text-muted-foreground flex items-center justify-between">
-                    <span>{o.market_density ?? ""}</span>
-                    <span>Score {o.opportunity_score ?? "—"}</span>
+                  <p className="text-sm leading-relaxed mb-3">{r.recommendation ?? "—"}</p>
+                  <div className="mono text-[10px] flex items-center justify-between text-muted-foreground">
+                    <span>{r.market_density ?? ""}</span>
+                    <span>Score {r.opportunity_score ?? "—"}</span>
                   </div>
                 </div>
               ))}
@@ -300,62 +323,78 @@ export function StrategistDashboard() {
           </section>
         )}
 
-        {brandLeaders.length > 0 && (
+        {watchlist.length > 0 && (
           <section>
-            <SectionHeader index="04" title="Brand Leaders" subtitle="Live · ra_brand_intelligence" />
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {brandLeaders.map((b, i) => (
-                <div key={i} className="card-flat p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-bold truncate" title={b.brand ?? ""}>{b.brand ?? "—"}</div>
-                    <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">
-                      {b.creative_volume ?? 0} ads
-                    </span>
+            <SectionHeader index="04" title="Momentum Watchlist" subtitle="Live · ra_market_pressure" />
+            <div className="grid gap-3 md:grid-cols-2">
+              {watchlist.map((r, i) => (
+                <div key={i} className="card-flat p-4 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="font-bold truncate" title={r.brand_domain ?? ""}>{r.brand_domain ?? "—"}</div>
+                    {r.keyword && <div className="text-xs text-muted-foreground truncate">{r.keyword}</div>}
                   </div>
-                  <div className="grid grid-cols-2 gap-y-1 text-[11px]">
-                    {b.primary_category && (
-                      <>
-                        <span className="mono text-muted-foreground">Category</span>
-                        <span className="text-right">{b.primary_category}</span>
-                      </>
-                    )}
-                    {b.dominant_emotion && (
-                      <>
-                        <span className="mono text-muted-foreground">Emotion</span>
-                        <span className="text-right">{b.dominant_emotion}</span>
-                      </>
-                    )}
-                    {b.customer_stage && (
-                      <>
-                        <span className="mono text-muted-foreground">Stage</span>
-                        <span className="text-right">{b.customer_stage}</span>
-                      </>
-                    )}
-                    {b.primary_cta && (
-                      <>
-                        <span className="mono text-muted-foreground">CTA</span>
-                        <span className="text-right truncate">{b.primary_cta}</span>
-                      </>
-                    )}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-right">
+                      <div className="mono text-[10px] uppercase text-muted-foreground">Interest</div>
+                      <div className="font-bold">{r.latest_interest ?? 0}</div>
+                    </div>
+                    <MomentumChip value={r.momentum} />
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+        )}
+
+        {exec && (exec.dominant_market || exec.strongest_brand || exec.dominant_emotion) && (
+          <section>
+            <SectionHeader index="05" title="Executive Summary" subtitle="Live · ra_executive_summary" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {exec.dominant_market && (
+                <div className="card-flat p-4">
+                  <div className="mono text-[10px] uppercase text-muted-foreground">Dominant Market</div>
+                  <div className="font-bold mt-1 truncate">{exec.dominant_market}</div>
+                </div>
+              )}
+              {exec.strongest_brand && (
+                <div className="card-flat p-4">
+                  <div className="mono text-[10px] uppercase text-muted-foreground">Strongest Brand</div>
+                  <div className="font-bold mt-1 truncate">{exec.strongest_brand}</div>
+                </div>
+              )}
+              {exec.dominant_emotion && (
+                <div className="card-flat p-4">
+                  <div className="mono text-[10px] uppercase text-muted-foreground">Dominant Emotion</div>
+                  <div className="font-bold mt-1 truncate">{exec.dominant_emotion}</div>
+                </div>
+              )}
+              {exec.top_opportunity_category && (
+                <div className="card-flat p-4">
+                  <div className="mono text-[10px] uppercase text-muted-foreground">Top Opportunity</div>
+                  <div className="font-bold mt-1 truncate">{exec.top_opportunity_category}</div>
+                  {exec.top_opportunity_emotion && (
+                    <div className="mono text-[10px] text-muted-foreground mt-1">{exec.top_opportunity_emotion}</div>
+                  )}
+                </div>
+              )}
             </div>
           </section>
         )}
 
         {actionablePitch.length > 0 && (
           <section>
-            <SectionHeader index="05" title="Strategic Advisor" subtitle="Live · ra_pitch_brief" />
+            <SectionHeader index="06" title="Strategic Advisor" subtitle="Live · ra_pitch_brief" />
             <div className="grid gap-3 md:grid-cols-2">
               {actionablePitch.map((r, i) => (
-                <div key={i} className="card-flat p-4">
+                <div key={i} className="card-flat p-5">
                   <div className="flex items-center justify-between mb-2">
                     <div className="mono text-[10px] uppercase text-muted-foreground">
                       {r.category ?? "—"}
                       {r.category_leader && <span className="ml-1 text-ink/70">· leader {r.category_leader}</span>}
                     </div>
-                    <ActionChip action={r.action} />
+                    <span className="mono text-[10px] uppercase px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">
+                      {r.action}
+                    </span>
                   </div>
                   <p className="text-sm leading-relaxed mb-2">{r.recommendation ?? "—"}</p>
                   <div className="mono text-[10px] text-muted-foreground flex items-center gap-3">
@@ -368,7 +407,7 @@ export function StrategistDashboard() {
           </section>
         )}
 
-        {!hasExec && marketChart.length === 0 && topOpps.length === 0 && brandLeaders.length === 0 && (
+        {!brief && topThreats.length === 0 && topChallengers.length === 0 && topWhitespace.length === 0 && (
           <div className="card-flat p-8 text-sm text-muted-foreground">
             No intelligence yet — add a tracked brand under Brand Intelligence to populate.
           </div>
