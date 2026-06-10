@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Lock, Crosshair, Users, Check, LogOut } from "lucide-react";
+import { Lock, Crosshair, Users, Check, LogOut, ArrowRight } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
 type PlanKey = "solo" | "agency";
