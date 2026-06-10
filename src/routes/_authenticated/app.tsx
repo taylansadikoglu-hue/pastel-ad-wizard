@@ -26,7 +26,7 @@ type Stage = "loading" | "paywall" | "admin_picker" | "onboard" | "app";
 function AdminPicker({ email, onPick, onSignOut }: { email: string; onPick: () => void; onSignOut: () => void }) {
   const tiles = [
     { to: "/app", label: "Workspace dashboard", desc: "Default intelligence cockpit.", icon: Home, choice: "dashboard" },
-    { to: "/app/advertisers", label: "Advertisers", desc: "Tracked competitor domains + live matrix.", icon: Target, choice: "advertisers" },
+    { to: "/app/advertisers", label: "Brand Intelligence", desc: "Tracked competitor domains + live matrix.", icon: Target, choice: "advertisers" },
     { to: "/app/sentiment", label: "Audience Signals", desc: "Per-brand audience signal panels.", icon: Radio, choice: "sentiment" },
     { to: "/app/creative", label: "Creative library", desc: "Captured ad creatives.", icon: Layers, choice: "creative" },
     { to: "/app/benchmarks", label: "Benchmarks", desc: "Channel + vertical benchmarks.", icon: TrendingUp, choice: "benchmarks" },
