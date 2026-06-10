@@ -25,11 +25,11 @@ type Stage = "loading" | "paywall" | "admin_picker" | "onboard" | "app";
 
 function AdminPicker({ email, onPick, onSignOut }: { email: string; onPick: () => void; onSignOut: () => void }) {
   const tiles = [
-    { to: "/app", label: "Workspace dashboard", desc: "Default intelligence cockpit.", icon: Home, choice: "dashboard" },
-    { to: "/app/advertisers", label: "Brand Intelligence", desc: "Tracked competitor domains + live matrix.", icon: Target, choice: "advertisers" },
-    { to: "/app/sentiment", label: "Audience Signals", desc: "Per-brand audience signal panels.", icon: Radio, choice: "sentiment" },
-    { to: "/app/creative", label: "Creative library", desc: "Captured ad creatives.", icon: Layers, choice: "creative" },
-    { to: "/app/benchmarks", label: "Benchmarks", desc: "Channel + vertical benchmarks.", icon: TrendingUp, choice: "benchmarks" },
+    { to: "/app", label: "Dashboard", desc: "Strategist cockpit — coverage, pipeline, opportunities.", icon: Home, choice: "dashboard" },
+    { to: "/app/advertisers", label: "Brand Intelligence", desc: "Tracked competitor domains + brand DNA.", icon: Target, choice: "advertisers" },
+    { to: "/app/pcr", label: "Market Intelligence", desc: "Category leaders, share of voice, positioning.", icon: TrendingUp, choice: "pcr" },
+    { to: "/app/sentiment", label: "Audience Signals", desc: "Emotion ownership and territory gaps.", icon: Radio, choice: "sentiment" },
+    { to: "/app/advisor", label: "Strategic Advisor", desc: "Pitch recommendations and next moves.", icon: ArrowRight, choice: "advisor" },
     { to: "/app/settings", label: "Settings", desc: "Workspace and integrations.", icon: Settings, choice: "settings" },
   ] as const;
 
