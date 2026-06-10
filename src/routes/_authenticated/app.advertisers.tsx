@@ -1115,15 +1115,18 @@ function AdvertisersPage() {
               </div>
             );
             return (
-              <div className="mt-3 card-flat overflow-hidden">
-                <div className="px-4 py-3 border-b border-ink/10 bg-paper/60 flex flex-wrap items-center gap-x-6 gap-y-2">
-                  <div className="text-[11px] uppercase tracking-[0.14em] font-semibold text-foreground">Offer IQ</div>
-                  <div className="text-[11px] text-muted-foreground ml-auto">Top product types, offer signals & CTAs across {scoped.length} placements</div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-ink/10">
-                  <Col title="Top Product Types" rows={products} />
-                  <Col title="Top Offer Signals" rows={offers} />
-                  <Col title="Top CTAs" rows={ctas} />
+              <div className="mt-4 space-y-2">
+                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">04 · Market Opportunities</div>
+                <div className="card-flat overflow-hidden">
+                  <div className="px-4 py-3 border-b border-ink/10 bg-paper/60 flex flex-wrap items-center gap-x-6 gap-y-2">
+                    <div className="text-[11px] uppercase tracking-[0.14em] font-semibold text-foreground">Market Opportunities</div>
+                    <div className="text-[11px] text-muted-foreground ml-auto">Product themes, offer hooks & calls-to-action shaping {scoped.length} live creatives</div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-ink/10">
+                    <Col title="Primary Categories" rows={products} />
+                    <Col title="Offer Strategies" rows={offers} />
+                    <Col title="Conversion Calls" rows={ctas} />
+                  </div>
                 </div>
               </div>
             );
