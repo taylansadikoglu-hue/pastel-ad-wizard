@@ -28,6 +28,7 @@ export type Database = {
           created_at: string | null
           creative_hash: string | null
           creative_url: string | null
+          data_quality: string | null
           days_running: number | null
           description: string | null
           detected_cta: string | null
@@ -72,6 +73,7 @@ export type Database = {
           created_at?: string | null
           creative_hash?: string | null
           creative_url?: string | null
+          data_quality?: string | null
           days_running?: number | null
           description?: string | null
           detected_cta?: string | null
@@ -116,6 +118,7 @@ export type Database = {
           created_at?: string | null
           creative_hash?: string | null
           creative_url?: string | null
+          data_quality?: string | null
           days_running?: number | null
           description?: string | null
           detected_cta?: string | null
@@ -156,6 +159,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      advertiser_discovery_candidates: {
+        Row: {
+          advertiser_id: string | null
+          advertiser_name: string | null
+          approved: boolean | null
+          confidence: number | null
+          created_at: string | null
+          domain: string
+          id: number
+          review_decision: string | null
+          source: string | null
+        }
+        Insert: {
+          advertiser_id?: string | null
+          advertiser_name?: string | null
+          approved?: boolean | null
+          confidence?: number | null
+          created_at?: string | null
+          domain: string
+          id?: number
+          review_decision?: string | null
+          source?: string | null
+        }
+        Update: {
+          advertiser_id?: string | null
+          advertiser_name?: string | null
+          approved?: boolean | null
+          confidence?: number | null
+          created_at?: string | null
+          domain?: string
+          id?: number
+          review_decision?: string | null
+          source?: string | null
+        }
+        Relationships: []
       }
       advertiser_dna_history: {
         Row: {
@@ -489,6 +528,19 @@ export type Database = {
         }
         Relationships: []
       }
+      advertiser_candidate_review: {
+        Row: {
+          advertiser_id: string | null
+          advertiser_name: string | null
+          approved: boolean | null
+          category: string | null
+          confidence: number | null
+          current_advertiser_id: string | null
+          domain: string | null
+          review_status: string | null
+        }
+        Relationships: []
+      }
       advertiser_coverage: {
         Row: {
           category: string | null
@@ -545,6 +597,24 @@ export type Database = {
           top_emotion: string | null
           top_offer_type: string | null
           top_product: string | null
+        }
+        Relationships: []
+      }
+      advertiser_pipeline: {
+        Row: {
+          category: string | null
+          domain: string | null
+          pipeline_stage: string | null
+        }
+        Insert: {
+          category?: string | null
+          domain?: string | null
+          pipeline_stage?: never
+        }
+        Update: {
+          category?: string | null
+          domain?: string | null
+          pipeline_stage?: never
         }
         Relationships: []
       }
@@ -644,6 +714,29 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_dna: {
+        Row: {
+          brand: string | null
+          creative_volume: number | null
+          customer_stage: string | null
+          emotion_mix: string | null
+          primary_category: string | null
+          primary_cta: string | null
+        }
+        Relationships: []
+      }
+      brand_dna_v2: {
+        Row: {
+          brand: string | null
+          creative_volume: number | null
+          customer_stage: string | null
+          dominant_emotion: string | null
+          emotion_mix: string | null
+          primary_category: string | null
+          primary_cta: string | null
+        }
+        Relationships: []
+      }
       category_heatmap: {
         Row: {
           category: string | null
@@ -661,6 +754,15 @@ export type Database = {
         }
         Relationships: []
       }
+      category_ownership: {
+        Row: {
+          category: string | null
+          domain: string | null
+          placements: number | null
+          share_of_voice: number | null
+        }
+        Relationships: []
+      }
       category_whitespace: {
         Row: {
           emotional_driver: string | null
@@ -668,6 +770,15 @@ export type Database = {
           placements: number | null
           product_type: string | null
           share_percent: number | null
+        }
+        Relationships: []
+      }
+      competitive_pressure: {
+        Row: {
+          avg_creatives_per_brand: number | null
+          category: string | null
+          competitors: number | null
+          total_creatives: number | null
         }
         Relationships: []
       }
@@ -1110,6 +1221,15 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_pipeline_summary: {
+        Row: {
+          coverage_percent: number | null
+          live_brands: number | null
+          pending_brands: number | null
+          tracked_brands: number | null
+        }
+        Relationships: []
+      }
       platform_status: {
         Row: {
           coverage_rate: number | null
@@ -1175,6 +1295,18 @@ export type Database = {
           primary_offer_strategy: string | null
           primary_product: string | null
           recommendation: string | null
+        }
+        Relationships: []
+      }
+      strategist_brief: {
+        Row: {
+          brand: string | null
+          customer_stage: string | null
+          dominant_emotion: string | null
+          emotion_mix: string | null
+          executive_summary: string | null
+          primary_category: string | null
+          share_of_voice: number | null
         }
         Relationships: []
       }
