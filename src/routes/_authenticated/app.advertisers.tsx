@@ -742,13 +742,25 @@ function AdvertisersPage() {
       .filter((p) => !auOnly || !isForeignToAU(p.domain))
       .map((p) => {
         const media = extractMediaUrl(p.creative_url, p.raw);
+        const meta = p.metadata && typeof p.metadata === "object" ? p.metadata as Record<string, unknown> : {};
+        const days = (meta.days_on_flight as number) ?? p.days_running ?? 0;
+        const firstSeen = (meta.first_seen as string) ?? p.created_at ?? null;
+        const lastSeen = (meta.last_seen as string) ?? null;
+        const multiplicity = (meta.multiplicity as number) ?? null;
+        const platforms = (meta.platforms as string[]) ?? [];
+        const branches = (meta.branches as string[]) ?? [];
         return {
           ...p,
           brand: brandFromDomain(p.domain),
           channelNorm: normalizeChannel(p.channel ?? ""),
           media,
           adType: adType(p, media.type),
-          days: p.days_running ?? 0,
+          days,
+          firstSeen,
+          lastSeen,
+          multiplicity,
+          platforms,
+          branches,
           body: extractRawCopy(p.raw),
         };
       });
