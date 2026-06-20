@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/app")({
   component: AppPage,
 });
 
-const ADMIN_EMAIL = "taylan.sadikoglu@gmail.com";
+const ADMIN_EMAIL = "hello@revenuad.com";
 const ADMIN_CHOICE_KEY = "revenuead_admin_choice";
 
 type Stage = "loading" | "paywall" | "admin_picker" | "onboard" | "app";

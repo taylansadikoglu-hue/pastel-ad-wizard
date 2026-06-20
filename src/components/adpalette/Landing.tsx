@@ -270,7 +270,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
                 </ul>
                 {p.action === "mail" ? (
                   <a
-                    href="mailto:taylan.sadikoglu@gmail.com"
+                    href="mailto:hello@revenuad.com"
                     className="btn-flat btn-primary w-full mt-8 py-3 justify-center"
                   >
                     {p.cta} <ArrowRight size={14} />

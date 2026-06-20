@@ -20,7 +20,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
       estMonthlySpend: 184000,
       primaryChannel: 'Meta',
       dashboardUrl: 'https://revenuad.com/app/advertisers?domain=glossier.com',
-      recipientName: 'Taylan',
+      recipientName: 'Alex',
     },
   },
 }
