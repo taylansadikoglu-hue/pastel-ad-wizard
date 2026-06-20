@@ -670,10 +670,8 @@ function AdvertisersPage() {
   // refetch every 4s so the grid flips from Queued → live cards even if the
   // realtime channel is throttled or the publication payload is dropped.
   useEffect(() => {
-    const inFlight = rows.some((r) => {
-      const s = (r.status ?? "").toLowerCase();
-      return s !== "ready" && s !== "completed" && s !== "done" && s !== "error" && s !== "failed";
-    });
+    const TERMINAL = new Set(["ready", "completed", "done", "error", "failed"]);
+    const inFlight = rows.some((r) => !TERMINAL.has((r.status ?? "").toLowerCase()));
     if (!inFlight) return;
     const id = setInterval(() => load(), 4000);
     return () => clearInterval(id);
