@@ -1437,6 +1437,12 @@ function AdvertisersPage() {
           })()}
 
           {/* Grid */}
+          {activeAdvertiser !== "__all" && (
+            <div className="mt-3">
+              <TrendSparkline domain={activeAdvertiser} />
+            </div>
+          )}
+
           <TabsContent value={activeAdvertiser} className="mt-3">
             {loading ? (
               <div className="card-flat p-10 text-center text-sm text-muted-foreground">
