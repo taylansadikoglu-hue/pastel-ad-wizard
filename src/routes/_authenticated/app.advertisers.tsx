@@ -594,8 +594,16 @@ function MediaEmbed({
     );
   }
 
-  // Meta with no creative → social feed mockup
-  return <MetaFeedAdMockup brand={brand} body={body} domain={domain} />;
+  if (channel === "Meta") {
+    return <MetaFeedAdMockup brand={brand} body={body} domain={domain} />;
+  }
+
+  // No creative and no fallback mockup → placeholder instead of a broken img
+  return (
+    <div className="aspect-video w-full border-b-2 border-ink bg-secondary flex items-center justify-center text-[10px] mono uppercase tracking-[0.18em] text-muted-foreground">
+      No creative
+    </div>
+  );
 }
 
 function AdvertisersPage() {
