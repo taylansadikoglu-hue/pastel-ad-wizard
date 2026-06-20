@@ -1,7 +1,115 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Calendar as CalendarIcon, X, TrendingUp, Activity, Database, Globe } from "lucide-react";
+import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Calendar as CalendarIcon, X, TrendingUp, Activity, Database, Globe, FileDown, ArrowUp, ArrowDown } from "lucide-react";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
+
+const ARCGRID_BASE = "http://37.27.0.36";
+
+type TrendPayload = {
+  domain: string;
+  pct_change_30d?: number | null;
+  velocity?: "growth" | "stable" | "decline" | string | null;
+  source?: "live" | "estimated" | string | null;
+  series?: Array<{ date?: string; spend?: number } | number> | null;
+};
+
+type WinProbPayload = {
+  win_probability?: number | null;
+  flight_strength?: string | null;
+  is_champion?: boolean | null;
+};
+
+type ClustersPayload = {
+  tiers?: Record<string, Array<{ domain: string; spend?: number | string | null }>>;
+};
+
+const TIER_STYLE: Record<string, string> = {
+  "Tier 1": "bg-purple-100 text-purple-800 border-purple-300",
+  "Tier 2": "bg-blue-100 text-blue-800 border-blue-300",
+  "Tier 3": "bg-teal-100 text-teal-800 border-teal-300",
+  "Tier 4": "bg-slate-100 text-slate-700 border-slate-300",
+};
+
+function formatSpend(v: unknown): string {
+  const n = typeof v === "string" ? Number(v.replace(/[^0-9.]/g, "")) : Number(v);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}m`;
+  if (n >= 1_000) return `$${Math.round(n / 1_000)}k`;
+  return `$${Math.round(n)}`;
+}
+
+function TrendSparkline({ domain }: { domain: string }) {
+  const [data, setData] = useState<TrendPayload | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  useEffect(() => {
+    let active = true;
+    setState("loading");
+    setData(null);
+    (async () => {
+      try {
+        const res = await fetch(`${ARCGRID_BASE}/api/trends/${encodeURIComponent(domain)}`);
+        if (!res.ok) throw new Error(String(res.status));
+        const json = (await res.json()) as TrendPayload;
+        if (!active) return;
+        setData(json);
+        setState("ready");
+      } catch {
+        if (active) setState("error");
+      }
+    })();
+    return () => { active = false; };
+  }, [domain]);
+
+  if (state === "loading") {
+    return (
+      <div className="card-flat p-4 flex items-end gap-1 h-24">
+        <div className="w-2 h-8 bg-ink/10 animate-pulse rounded-sm" />
+        <div className="w-2 h-12 bg-ink/10 animate-pulse rounded-sm" />
+        <div className="w-2 h-6 bg-ink/10 animate-pulse rounded-sm" />
+      </div>
+    );
+  }
+  if (state === "error" || !data) {
+    return (
+      <div className="card-flat p-4 text-[11px] text-muted-foreground mono">Trend data unavailable</div>
+    );
+  }
+  const series = (data.series ?? []).map((p, i) =>
+    typeof p === "number" ? { i, spend: p } : { i, spend: Number(p?.spend ?? 0) },
+  );
+  const pct = Number(data.pct_change_30d ?? 0);
+  const up = pct >= 0;
+  const velocity = (data.velocity ?? "stable").toString().toLowerCase();
+  const vTone =
+    velocity === "growth"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+      : velocity === "decline"
+      ? "bg-rose-50 text-rose-700 border-rose-200"
+      : "bg-amber-50 text-amber-800 border-amber-200";
+  return (
+    <div className="card-flat p-4">
+      <div className="flex items-center gap-3 mb-2">
+        <span className="font-semibold text-sm">{data.domain || domain}</span>
+        <span className={`mono text-[10px] inline-flex items-center gap-0.5 ${up ? "text-emerald-700" : "text-rose-700"}`}>
+          {up ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+          {Math.abs(pct).toFixed(1)}% 30d
+        </span>
+        <span className={`mono text-[10px] px-1.5 py-0.5 border rounded-[3px] uppercase ${vTone}`}>{velocity}</span>
+        <span className="mono text-[10px] text-muted-foreground uppercase ml-auto">{data.source ?? ""}</span>
+      </div>
+      <div className="h-20">
+        {series.length > 0 && (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={series}>
+              <Line type="monotone" dataKey="spend" stroke="#6366f1" strokeWidth={2} dot={false} isAnimationActive={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </div>
+  );
+}
 import { format } from "date-fns";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -622,6 +730,76 @@ function AdvertisersPage() {
   const [sortBy, setSortBy] = useState<"recent" | "longest" | "shortest">("recent");
   const [activeAdvertiser, setActiveAdvertiser] = useState<string>("__all");
 
+  // F2 — Win Probability per ad domain
+  const [winProbs, setWinProbs] = useState<Record<string, WinProbPayload | "loading" | "error">>({});
+  useEffect(() => {
+    if (activeAdvertiser === "__all") return;
+    const d = activeAdvertiser;
+    if (winProbs[d] && winProbs[d] !== "error") return;
+    setWinProbs((p) => ({ ...p, [d]: "loading" }));
+    (async () => {
+      try {
+        const res = await fetch(`${ARCGRID_BASE}/api/win-probability/${encodeURIComponent(d)}`);
+        if (!res.ok) throw new Error(String(res.status));
+        const json = (await res.json()) as WinProbPayload;
+        setWinProbs((p) => ({ ...p, [d]: json }));
+      } catch {
+        setWinProbs((p) => ({ ...p, [d]: "error" }));
+      }
+    })();
+  }, [activeAdvertiser]);
+
+  // F4 — Cluster tiers (Banking)
+  const [clusters, setClusters] = useState<ClustersPayload | "loading" | "error">("loading");
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`${ARCGRID_BASE}/api/clusters/Banking`);
+        if (!res.ok) throw new Error(String(res.status));
+        const json = (await res.json()) as ClustersPayload;
+        if (active) setClusters(json);
+      } catch {
+        if (active) setClusters("error");
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+  const clusterFor = (domain: string): { tier: string; spend: string } | null => {
+    if (!clusters || clusters === "loading" || clusters === "error") return null;
+    const tiers = clusters.tiers ?? {};
+    const entry = Object.entries(tiers).find(([, ds]) => ds?.some((d) => d.domain === domain));
+    if (!entry) return null;
+    const [tier, ds] = entry;
+    const match = ds?.find((d) => d.domain === domain);
+    return { tier, spend: formatSpend(match?.spend) };
+  };
+
+  // F3 — Export Brief
+  const [exportingId, setExportingId] = useState<number | null>(null);
+  const exportBrief = async (domain: string, scanId: number | null, id: number) => {
+    setExportingId(id);
+    try {
+      const res = await fetch(`${ARCGRID_BASE}/api/export/brief`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain, scan_id: scanId }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const { pdf_base64, filename } = (await res.json()) as { pdf_base64: string; filename: string };
+      const b = atob(pdf_base64);
+      const a = new Uint8Array(b.length);
+      for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+      const u = URL.createObjectURL(new Blob([a], { type: "application/pdf" }));
+      Object.assign(document.createElement("a"), { href: u, download: filename || `${domain}-brief.pdf` }).click();
+      URL.revokeObjectURL(u);
+    } catch {
+      toast.error("Export failed");
+    } finally {
+      setExportingId(null);
+    }
+  };
+
   const load = async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
@@ -905,6 +1083,18 @@ function AdvertisersPage() {
                   <span className="font-semibold text-sm">{brandFromDomain(r.domain)}</span>
                   <span className="mono text-[10px] text-muted-foreground">{r.domain}</span>
                   <ScanStatusPill status={r.status} />
+                  {(() => {
+                    if (clusters === "loading") return <span className="inline-block w-24 h-5 bg-ink/10 animate-pulse rounded-[3px]" />;
+                    const c = clusterFor(r.domain);
+                    if (!c) return null;
+                    const cls = TIER_STYLE[c.tier] ?? TIER_STYLE["Tier 4"];
+                    return (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className={`mono text-[10px] px-1.5 py-0.5 border rounded-[3px] uppercase ${cls}`}>{c.tier}</span>
+                        {c.spend && <span className="mono text-[10px] text-muted-foreground">{c.spend}</span>}
+                      </span>
+                    );
+                  })()}
                   
                   <button
                     onClick={() => removeDomain(r.id, r.domain)}
@@ -1247,6 +1437,12 @@ function AdvertisersPage() {
           })()}
 
           {/* Grid */}
+          {activeAdvertiser !== "__all" && (
+            <div className="mt-3">
+              <TrendSparkline domain={activeAdvertiser} />
+            </div>
+          )}
+
           <TabsContent value={activeAdvertiser} className="mt-3">
             {loading ? (
               <div className="card-flat p-10 text-center text-sm text-muted-foreground">
@@ -1263,10 +1459,38 @@ function AdvertisersPage() {
                   <Dialog key={e.id}>
                     <DialogTrigger asChild>
                       <article
-                        className="card-flat overflow-hidden flex flex-col cursor-pointer text-left hover:shadow-md transition-shadow"
+                        className="card-flat overflow-hidden flex flex-col cursor-pointer text-left hover:shadow-md transition-shadow relative"
                         role="button"
                         tabIndex={0}
                       >
+                        {(() => {
+                          const wp = winProbs[e.domain];
+                          if (!wp) return null;
+                          if (wp === "loading")
+                            return (
+                              <div className="absolute top-2 right-2 z-10 w-16 h-5 rounded-full bg-ink/10 animate-pulse" />
+                            );
+                          if (wp === "error") return null;
+                          const pct = Number(wp.win_probability ?? 0);
+                          const tone =
+                            pct >= 70
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                              : pct >= 40
+                              ? "bg-amber-100 text-amber-900 border-amber-300"
+                              : "bg-slate-100 text-slate-700 border-slate-300";
+                          return (
+                            <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-0.5">
+                              <span className={`mono text-[10px] px-2 py-0.5 border rounded-full font-semibold ${tone}`}>
+                                {wp.is_champion ? "✦ " : ""}{Math.round(pct)}% Win
+                              </span>
+                              {wp.flight_strength && (
+                                <span className="text-[10px] text-muted-foreground bg-paper/80 px-1.5 rounded">
+                                  {wp.flight_strength}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                         <MediaEmbed
                           creativeUrl={e.creative_url}
                           url={e.media.url}
@@ -1333,6 +1557,15 @@ function AdvertisersPage() {
                           <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px]">
                             {e.adType}
                           </span>
+                          <button
+                            type="button"
+                            onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); exportBrief(e.domain, e.scan_id, e.id); }}
+                            disabled={exportingId === e.id}
+                            className="ml-auto inline-flex items-center gap-1.5 mono text-[10px] uppercase tracking-[0.12em] px-2.5 py-1 border-2 border-ink rounded-[3px] bg-paper hover:bg-secondary disabled:opacity-60"
+                          >
+                            {exportingId === e.id ? <Loader2 size={11} className="animate-spin" /> : <FileDown size={11} />}
+                            {exportingId === e.id ? "Generating…" : "Export Brief"}
+                          </button>
                         </DialogTitle>
                         <DialogDescription className="mono text-[10px]">
                           {(() => {

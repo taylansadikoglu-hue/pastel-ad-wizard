@@ -310,6 +310,42 @@ export type Database = {
         }
         Relationships: []
       }
+      agency_profiles: {
+        Row: {
+          accent_color: string
+          agency_name: string | null
+          created_at: string | null
+          id: number
+          logo_url: string | null
+          primary_color: string
+          slack_webhook_url: string | null
+          user_id: string
+          white_label_enabled: boolean
+        }
+        Insert: {
+          accent_color?: string
+          agency_name?: string | null
+          created_at?: string | null
+          id?: number
+          logo_url?: string | null
+          primary_color?: string
+          slack_webhook_url?: string | null
+          user_id: string
+          white_label_enabled?: boolean
+        }
+        Update: {
+          accent_color?: string
+          agency_name?: string | null
+          created_at?: string | null
+          id?: number
+          logo_url?: string | null
+          primary_color?: string
+          slack_webhook_url?: string | null
+          user_id?: string
+          white_label_enabled?: boolean
+        }
+        Relationships: []
+      }
       client_watchlist_competitors: {
         Row: {
           competitor_domain: string
@@ -426,6 +462,7 @@ export type Database = {
           average_cpc: number | null
           created_at: string | null
           domain: string
+          engine_output: Json | null
           estimated_monthly_spend: number | null
           id: number
           status: string
@@ -436,6 +473,7 @@ export type Database = {
           average_cpc?: number | null
           created_at?: string | null
           domain: string
+          engine_output?: Json | null
           estimated_monthly_spend?: number | null
           id?: number
           status?: string
@@ -446,6 +484,7 @@ export type Database = {
           average_cpc?: number | null
           created_at?: string | null
           domain?: string
+          engine_output?: Json | null
           estimated_monthly_spend?: number | null
           id?: number
           status?: string
@@ -739,6 +778,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      spend_alerts: {
+        Row: {
+          alert_type: string
+          change_pct: number | null
+          domain: string
+          fired_at: string
+          id: number
+          new_value: number | null
+          old_value: number | null
+          user_id: string | null
+        }
+        Insert: {
+          alert_type: string
+          change_pct?: number | null
+          domain: string
+          fired_at?: string
+          id?: number
+          new_value?: number | null
+          old_value?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          alert_type?: string
+          change_pct?: number | null
+          domain?: string
+          fired_at?: string
+          id?: number
+          new_value?: number | null
+          old_value?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      spend_snapshots: {
+        Row: {
+          avg_cpc: number | null
+          created_at: string | null
+          creative_count: number | null
+          domain: string
+          id: number
+          keywords: number | null
+          scan_id: number | null
+          snapshot_date: string
+          spend: number | null
+        }
+        Insert: {
+          avg_cpc?: number | null
+          created_at?: string | null
+          creative_count?: number | null
+          domain: string
+          id?: number
+          keywords?: number | null
+          scan_id?: number | null
+          snapshot_date?: string
+          spend?: number | null
+        }
+        Update: {
+          avg_cpc?: number | null
+          created_at?: string | null
+          creative_count?: number | null
+          domain?: string
+          id?: number
+          keywords?: number | null
+          scan_id?: number | null
+          snapshot_date?: string
+          spend?: number | null
+        }
+        Relationships: []
       }
       system_config: {
         Row: {
