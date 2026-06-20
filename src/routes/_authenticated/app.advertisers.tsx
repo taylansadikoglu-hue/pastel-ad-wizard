@@ -227,6 +227,7 @@ type Placement = {
   product_type: string | null;
   offer_signal: string | null;
   primary_cta: string | null;
+  metadata: unknown;
 };
 
 
@@ -527,6 +528,10 @@ function MetaFeedAdMockup({
   );
 }
 
+function isValidHttpUrl(value: unknown): value is string {
+  return typeof value === "string" && /^https?:\/\//i.test(value.trim());
+}
+
 function MediaEmbed({
   creativeUrl,
   url,
@@ -548,8 +553,7 @@ function MediaEmbed({
   hook: string;
   body: string;
 }) {
-  const directImg =
-    typeof creativeUrl === "string" && /^https?:\/\//.test(creativeUrl) ? creativeUrl : null;
+  const directImg = isValidHttpUrl(creativeUrl) ? creativeUrl : null;
 
   if (channel === "Google" && !directImg) {
     return <GoogleSearchAdMockup domain={domain} hook={hook} body={body} />;
@@ -590,8 +594,16 @@ function MediaEmbed({
     );
   }
 
-  // Meta with no creative → social feed mockup
-  return <MetaFeedAdMockup brand={brand} body={body} domain={domain} />;
+  if (channel === "Meta") {
+    return <MetaFeedAdMockup brand={brand} body={body} domain={domain} />;
+  }
+
+  // No creative and no fallback mockup → placeholder instead of a broken img
+  return (
+    <div className="aspect-video w-full border-b-2 border-ink bg-secondary flex items-center justify-center text-[10px] mono uppercase tracking-[0.18em] text-muted-foreground">
+      No creative
+    </div>
+  );
 }
 
 function AdvertisersPage() {
@@ -625,7 +637,7 @@ function AdvertisersPage() {
           };
         };
       })
-        .select("id, domain, channel, channel_platform, ad_type, hook, days_running, creative_url, raw, created_at, buyer_stage, offer_type, emotional_driver, hook_analysis, strategist_takeaway, category, campaign_cluster, scan_id, product_type, offer_signal, primary_cta")
+        .select("id, domain, channel, channel_platform, ad_type, hook, days_running, creative_url, raw, created_at, buyer_stage, offer_type, emotional_driver, hook_analysis, strategist_takeaway, category, campaign_cluster, scan_id, product_type, offer_signal, primary_cta, metadata")
         .order("created_at", { ascending: false })
         .limit(500),
     ]);
@@ -669,10 +681,8 @@ function AdvertisersPage() {
   // refetch every 4s so the grid flips from Queued → live cards even if the
   // realtime channel is throttled or the publication payload is dropped.
   useEffect(() => {
-    const inFlight = rows.some((r) => {
-      const s = (r.status ?? "").toLowerCase();
-      return s !== "ready" && s !== "completed" && s !== "done" && s !== "error" && s !== "failed";
-    });
+    const TERMINAL = new Set(["ready", "completed", "done", "error", "failed"]);
+    const inFlight = rows.some((r) => !TERMINAL.has((r.status ?? "").toLowerCase()));
     if (!inFlight) return;
     const id = setInterval(() => load(), 4000);
     return () => clearInterval(id);
@@ -743,13 +753,25 @@ function AdvertisersPage() {
       .filter((p) => !auOnly || !isForeignToAU(p.domain))
       .map((p) => {
         const media = extractMediaUrl(p.creative_url, p.raw);
+        const meta = p.metadata && typeof p.metadata === "object" ? p.metadata as Record<string, unknown> : {};
+        const days = (meta.days_on_flight as number) ?? p.days_running ?? 0;
+        const firstSeen = (meta.first_seen as string) ?? p.created_at ?? null;
+        const lastSeen = (meta.last_seen as string) ?? null;
+        const multiplicity = (meta.multiplicity as number) ?? null;
+        const platforms = (meta.platforms as string[]) ?? [];
+        const branches = (meta.branches as string[]) ?? [];
         return {
           ...p,
           brand: brandFromDomain(p.domain),
           channelNorm: normalizeChannel(p.channel ?? ""),
           media,
           adType: adType(p, media.type),
-          days: p.days_running ?? 0,
+          days,
+          firstSeen,
+          lastSeen,
+          multiplicity,
+          platforms,
+          branches,
           body: extractRawCopy(p.raw),
         };
       });
