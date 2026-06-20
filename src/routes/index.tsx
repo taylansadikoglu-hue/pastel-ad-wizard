@@ -5,10 +5,10 @@ import { Landing } from "@/components/adpalette/Landing";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "RevenueAd — The AI strategist that watches your market 24/7" },
-      { name: "description", content: "RevenueAd reads every competitive move, surfaces open territory, and tells your team exactly what to do next — before the morning meeting." },
-      { property: "og:title", content: "RevenueAd — AI strategy platform for modern brand teams" },
-      { property: "og:description", content: "An AI strategist that watches your market 24/7. Daily briefings, strategic openings, and recommended actions." },
+      { title: "RevenueAd — See where your competitors are spending" },
+      { name: "description", content: "RevenueAd tracks every paid ad across Meta and Google — showing you spend estimates, winning creatives, and where the market opportunity is." },
+      { property: "og:title", content: "RevenueAd — Competitive spend intelligence for Meta & Google" },
+      { property: "og:description", content: "Spend estimates, longest-running creatives, channel allocation, and one-click PDF briefs for every competitor you track." },
     ],
   }),
   component: Index,
