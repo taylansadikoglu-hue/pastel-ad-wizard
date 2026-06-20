@@ -528,6 +528,10 @@ function MetaFeedAdMockup({
   );
 }
 
+function isValidHttpUrl(value: unknown): value is string {
+  return typeof value === "string" && /^https?:\/\//i.test(value.trim());
+}
+
 function MediaEmbed({
   creativeUrl,
   url,
@@ -549,8 +553,7 @@ function MediaEmbed({
   hook: string;
   body: string;
 }) {
-  const directImg =
-    typeof creativeUrl === "string" && /^https?:\/\//.test(creativeUrl) ? creativeUrl : null;
+  const directImg = isValidHttpUrl(creativeUrl) ? creativeUrl : null;
 
   if (channel === "Google" && !directImg) {
     return <GoogleSearchAdMockup domain={domain} hook={hook} body={body} />;
