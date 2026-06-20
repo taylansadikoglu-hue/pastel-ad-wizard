@@ -1459,7 +1459,7 @@ function AdvertisersPage() {
                   <Dialog key={e.id}>
                     <DialogTrigger asChild>
                       <article
-                        className="card-flat overflow-hidden flex flex-col cursor-pointer text-left hover:shadow-md transition-shadow"
+                        className="card-flat overflow-hidden flex flex-col cursor-pointer text-left hover:shadow-md transition-shadow relative"
                         role="button"
                         tabIndex={0}
                       >
