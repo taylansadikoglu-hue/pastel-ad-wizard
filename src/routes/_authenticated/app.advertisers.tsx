@@ -227,6 +227,7 @@ type Placement = {
   product_type: string | null;
   offer_signal: string | null;
   primary_cta: string | null;
+  metadata: unknown;
 };
 
 
