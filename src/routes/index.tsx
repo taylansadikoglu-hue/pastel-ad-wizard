@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { ThemeProvider } from "@/components/adpalette/theme";
 import { Landing } from "@/components/adpalette/Landing";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -16,6 +18,21 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled || !session) return;
+      const path = window.location.pathname;
+      if (path === "/" || path === "") {
+        navigate({ to: "/app" });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
   return (
     <ThemeProvider>
       <Landing onEnter={() => navigate({ to: "/auth" })} />
