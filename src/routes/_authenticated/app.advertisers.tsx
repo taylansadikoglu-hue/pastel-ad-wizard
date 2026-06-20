@@ -730,6 +730,76 @@ function AdvertisersPage() {
   const [sortBy, setSortBy] = useState<"recent" | "longest" | "shortest">("recent");
   const [activeAdvertiser, setActiveAdvertiser] = useState<string>("__all");
 
+  // F2 — Win Probability per ad domain
+  const [winProbs, setWinProbs] = useState<Record<string, WinProbPayload | "loading" | "error">>({});
+  useEffect(() => {
+    if (activeAdvertiser === "__all") return;
+    const d = activeAdvertiser;
+    if (winProbs[d] && winProbs[d] !== "error") return;
+    setWinProbs((p) => ({ ...p, [d]: "loading" }));
+    (async () => {
+      try {
+        const res = await fetch(`${ARCGRID_BASE}/api/win-probability/${encodeURIComponent(d)}`);
+        if (!res.ok) throw new Error(String(res.status));
+        const json = (await res.json()) as WinProbPayload;
+        setWinProbs((p) => ({ ...p, [d]: json }));
+      } catch {
+        setWinProbs((p) => ({ ...p, [d]: "error" }));
+      }
+    })();
+  }, [activeAdvertiser]);
+
+  // F4 — Cluster tiers (Banking)
+  const [clusters, setClusters] = useState<ClustersPayload | "loading" | "error">("loading");
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch(`${ARCGRID_BASE}/api/clusters/Banking`);
+        if (!res.ok) throw new Error(String(res.status));
+        const json = (await res.json()) as ClustersPayload;
+        if (active) setClusters(json);
+      } catch {
+        if (active) setClusters("error");
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+  const clusterFor = (domain: string): { tier: string; spend: string } | null => {
+    if (!clusters || clusters === "loading" || clusters === "error") return null;
+    const tiers = clusters.tiers ?? {};
+    const entry = Object.entries(tiers).find(([, ds]) => ds?.some((d) => d.domain === domain));
+    if (!entry) return null;
+    const [tier, ds] = entry;
+    const match = ds?.find((d) => d.domain === domain);
+    return { tier, spend: formatSpend(match?.spend) };
+  };
+
+  // F3 — Export Brief
+  const [exportingId, setExportingId] = useState<number | null>(null);
+  const exportBrief = async (domain: string, scanId: number | null, id: number) => {
+    setExportingId(id);
+    try {
+      const res = await fetch(`${ARCGRID_BASE}/api/export/brief`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain, scan_id: scanId }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const { pdf_base64, filename } = (await res.json()) as { pdf_base64: string; filename: string };
+      const b = atob(pdf_base64);
+      const a = new Uint8Array(b.length);
+      for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+      const u = URL.createObjectURL(new Blob([a], { type: "application/pdf" }));
+      Object.assign(document.createElement("a"), { href: u, download: filename || `${domain}-brief.pdf` }).click();
+      URL.revokeObjectURL(u);
+    } catch {
+      toast.error("Export failed");
+    } finally {
+      setExportingId(null);
+    }
+  };
+
   const load = async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
