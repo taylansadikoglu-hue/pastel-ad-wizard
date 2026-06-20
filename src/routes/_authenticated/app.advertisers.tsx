@@ -1557,6 +1557,15 @@ function AdvertisersPage() {
                           <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px]">
                             {e.adType}
                           </span>
+                          <button
+                            type="button"
+                            onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); exportBrief(e.domain, e.scan_id, e.id); }}
+                            disabled={exportingId === e.id}
+                            className="ml-auto inline-flex items-center gap-1.5 mono text-[10px] uppercase tracking-[0.12em] px-2.5 py-1 border-2 border-ink rounded-[3px] bg-paper hover:bg-secondary disabled:opacity-60"
+                          >
+                            {exportingId === e.id ? <Loader2 size={11} className="animate-spin" /> : <FileDown size={11} />}
+                            {exportingId === e.id ? "Generating…" : "Export Brief"}
+                          </button>
                         </DialogTitle>
                         <DialogDescription className="mono text-[10px]">
                           {(() => {
