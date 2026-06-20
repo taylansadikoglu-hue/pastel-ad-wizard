@@ -28,7 +28,7 @@ const DATE_RANGES = [
   { label: "Last 24 Months", locked: true },
 ];
 
-const ADMIN_EMAIL = "taylan.sadikoglu@gmail.com";
+const ADMIN_EMAIL = "hello@revenuad.com";
 
 type Competitor = {
   name: string;
