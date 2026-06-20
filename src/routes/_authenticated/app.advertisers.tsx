@@ -1083,6 +1083,18 @@ function AdvertisersPage() {
                   <span className="font-semibold text-sm">{brandFromDomain(r.domain)}</span>
                   <span className="mono text-[10px] text-muted-foreground">{r.domain}</span>
                   <ScanStatusPill status={r.status} />
+                  {(() => {
+                    if (clusters === "loading") return <span className="inline-block w-24 h-5 bg-ink/10 animate-pulse rounded-[3px]" />;
+                    const c = clusterFor(r.domain);
+                    if (!c) return null;
+                    const cls = TIER_STYLE[c.tier] ?? TIER_STYLE["Tier 4"];
+                    return (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className={`mono text-[10px] px-1.5 py-0.5 border rounded-[3px] uppercase ${cls}`}>{c.tier}</span>
+                        {c.spend && <span className="mono text-[10px] text-muted-foreground">{c.spend}</span>}
+                      </span>
+                    );
+                  })()}
                   
                   <button
                     onClick={() => removeDomain(r.id, r.domain)}
