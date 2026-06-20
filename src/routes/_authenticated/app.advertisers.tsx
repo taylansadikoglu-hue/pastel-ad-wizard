@@ -1463,6 +1463,34 @@ function AdvertisersPage() {
                         role="button"
                         tabIndex={0}
                       >
+                        {(() => {
+                          const wp = winProbs[e.domain];
+                          if (!wp) return null;
+                          if (wp === "loading")
+                            return (
+                              <div className="absolute top-2 right-2 z-10 w-16 h-5 rounded-full bg-ink/10 animate-pulse" />
+                            );
+                          if (wp === "error") return null;
+                          const pct = Number(wp.win_probability ?? 0);
+                          const tone =
+                            pct >= 70
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                              : pct >= 40
+                              ? "bg-amber-100 text-amber-900 border-amber-300"
+                              : "bg-slate-100 text-slate-700 border-slate-300";
+                          return (
+                            <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-0.5">
+                              <span className={`mono text-[10px] px-2 py-0.5 border rounded-full font-semibold ${tone}`}>
+                                {wp.is_champion ? "✦ " : ""}{Math.round(pct)}% Win
+                              </span>
+                              {wp.flight_strength && (
+                                <span className="text-[10px] text-muted-foreground bg-paper/80 px-1.5 rounded">
+                                  {wp.flight_strength}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                         <MediaEmbed
                           creativeUrl={e.creative_url}
                           url={e.media.url}
