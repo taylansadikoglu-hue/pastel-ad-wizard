@@ -152,7 +152,7 @@ function MarketIntelligencePage() {
 
   if (loading) {
     return (
-      <WorkspaceShell title="Market Intelligence">
+      <WorkspaceShell title="Market Intel">
         <div className="card-flat p-8 text-center text-sm text-muted-foreground">Loading market intelligence…</div>
       </WorkspaceShell>
     );
@@ -163,7 +163,7 @@ function MarketIntelligencePage() {
 
   return (
     <WorkspaceShell
-      title="Market Intelligence"
+      title="Market Intel"
       subtitle="Category leaders, competitive pressure, share of voice, positioning and white space — live."
     >
       {empty ? (

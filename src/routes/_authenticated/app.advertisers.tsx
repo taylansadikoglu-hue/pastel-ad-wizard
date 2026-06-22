@@ -336,6 +336,9 @@ type Placement = {
   offer_signal: string | null;
   primary_cta: string | null;
   metadata: unknown;
+  ad_title: string | null;
+  description: string | null;
+  media_url: string | null;
 };
 
 
@@ -831,7 +834,7 @@ function AdvertisersPage() {
           };
         };
       })
-        .select("id, domain, channel, channel_platform, ad_type, hook, days_running, creative_url, raw, created_at, buyer_stage, offer_type, emotional_driver, hook_analysis, strategist_takeaway, category, campaign_cluster, scan_id, product_type, offer_signal, primary_cta, metadata")
+        .select("id, domain, channel, channel_platform, ad_type, ad_title, description, media_url, hook, days_running, creative_url, raw, created_at, buyer_stage, offer_type, emotional_driver, hook_analysis, strategist_takeaway, category, campaign_cluster, scan_id, product_type, offer_signal, primary_cta, metadata")
         .in("domain", trackedDomains)
         .order("created_at", { ascending: false })
         .limit(500);
@@ -938,7 +941,7 @@ function AdvertisersPage() {
     return placements
       .filter((p) => !auOnly || !isForeignToAU(p.domain))
       .map((p) => {
-        const media = extractMediaUrl(p.creative_url, p.raw);
+        const media = extractMediaUrl(p.creative_url ?? p.media_url, p.raw);
         const meta = p.metadata && typeof p.metadata === "object" ? p.metadata as Record<string, unknown> : {};
         const days = (meta.days_on_flight as number) ?? p.days_running ?? 0;
         const firstSeen = (meta.first_seen as string) ?? p.created_at ?? null;
@@ -1037,7 +1040,7 @@ function AdvertisersPage() {
 
   return (
     <WorkspaceShell
-      title="Brand Intelligence"
+      title="Competitor Ads"
       subtitle={`Strategic market view across ${rows.length}/${MAX_BRANDS} tracked brands — creative, category, and audience signal in one frame.`}
     >
       <div className="space-y-5">

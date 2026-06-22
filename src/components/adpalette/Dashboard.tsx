@@ -1128,11 +1128,11 @@ function aiReply(q: string, visible: Competitor[]): string {
 }
 
 const NAV_ITEMS = [
-  { icon: Home, label: "Dashboard", href: "/app/dashboard" },
-  { icon: Target, label: "Brand Intelligence", href: "/app/advertisers" },
-  { icon: BarChart3, label: "Market Intelligence", href: "/app/pcr" },
-  { icon: Radio, label: "Audience Signals", href: "/app/sentiment" },
-  { icon: Lightbulb, label: "Strategic Advisor", href: "/app/advisor" },
+  { icon: Home, label: "Ad Map", href: "/app/dashboard" },
+  { icon: Target, label: "Competitor Ads", href: "/app/advertisers" },
+  { icon: BarChart3, label: "Market Intel", href: "/app/pcr" },
+  { icon: Radio, label: "Audience Intel", href: "/app/sentiment" },
+  { icon: Lightbulb, label: "Strategy", href: "/app/advisor" },
 ];
 
 export function SidebarNav() {

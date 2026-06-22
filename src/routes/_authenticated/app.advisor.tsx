@@ -128,7 +128,7 @@ function StrategicAdvisorPage() {
 
   if (loading) {
     return (
-      <WorkspaceShell title="Strategic Advisor">
+      <WorkspaceShell title="Strategy">
         <div className="card-flat p-8 text-center text-sm text-muted-foreground">Loading strategic guidance…</div>
       </WorkspaceShell>
     );
@@ -138,7 +138,7 @@ function StrategicAdvisorPage() {
 
   return (
     <WorkspaceShell
-      title="Strategic Advisor"
+      title="Strategy"
       subtitle="Pitch recommendations, competitive threats, white space, and category summaries — your next move, live."
     >
       {empty ? (
