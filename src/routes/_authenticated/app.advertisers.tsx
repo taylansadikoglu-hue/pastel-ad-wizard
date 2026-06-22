@@ -1009,7 +1009,9 @@ function AdvertisersPage() {
     const base = { Meta: 0, Google: 0 } as Record<string, number>;
     for (const e of enriched) {
       if (activeAdvertiser !== "__all" && e.domain !== activeAdvertiser) continue;
-      base[e.channelNorm] = (base[e.channelNorm] ?? 0) + 1;
+      const cp = e.channel_platform ?? "";
+      if (cp === "Google") base.Google += 1;
+      else if (cp === "Meta") base.Meta += 1;
     }
     return base;
   }, [enriched, activeAdvertiser]);
@@ -1021,14 +1023,17 @@ function AdvertisersPage() {
       : visibleRows.filter((r) => r.domain === activeAdvertiser);
     const spend = scopedRows.reduce((s, r) => s + (Number(r.estimated_monthly_spend) || 0), 0);
     const scopedPl = activeAdvertiser === "__all"
+      ? placements
+      : placements.filter((p) => p.domain === activeAdvertiser);
+    const meta = scopedPl.filter((p) => p.channel_platform === "Meta").length;
+    const google = scopedPl.filter((p) => p.channel_platform === "Google").length;
+    const total = scopedPl.length;
+    const scopedEnriched = activeAdvertiser === "__all"
       ? enriched
       : enriched.filter((e) => e.domain === activeAdvertiser);
-    const meta = scopedPl.filter((e) => e.channelNorm === "Meta").length;
-    const google = scopedPl.filter((e) => e.channelNorm === "Google").length;
-    const total = scopedPl.length;
-    const strategy = scopedPl.filter((e) => hasAnyStrategy(e)).length;
+    const strategy = scopedEnriched.filter((e) => hasAnyStrategy(e)).length;
     return { spend, meta, google, total, strategy };
-  }, [visibleRows, enriched, activeAdvertiser]);
+  }, [visibleRows, placements, enriched, activeAdvertiser]);
 
   return (
     <WorkspaceShell
