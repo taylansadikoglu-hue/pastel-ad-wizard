@@ -803,22 +803,10 @@ function AdvertisersPage() {
   const load = async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    const [{ data: scans }, { data: pls }] = await Promise.all([
-      supabase
-        .from("domain_scans")
-        .select("id, domain, status, created_at, estimated_monthly_spend, total_paid_keywords, average_cpc")
-        .order("created_at", { ascending: false }),
-      (supabase.from("ad_placements") as unknown as {
-        select: (cols: string) => {
-          order: (c: string, o: { ascending: boolean }) => {
-            limit: (n: number) => Promise<{ data: Placement[] | null }>;
-          };
-        };
-      })
-        .select("id, domain, channel, channel_platform, ad_type, hook, days_running, creative_url, raw, created_at, buyer_stage, offer_type, emotional_driver, hook_analysis, strategist_takeaway, category, campaign_cluster, scan_id, product_type, offer_signal, primary_cta, metadata")
-        .order("created_at", { ascending: false })
-        .limit(500),
-    ]);
+    const { data: scans } = await supabase
+      .from("domain_scans")
+      .select("id, domain, status, created_at, estimated_monthly_spend, total_paid_keywords, average_cpc")
+      .order("created_at", { ascending: false });
     const seen = new Set<string>();
     const unique: Row[] = [];
     for (const r of scans ?? []) {
@@ -829,6 +817,26 @@ function AdvertisersPage() {
       }
     }
     setRows(unique);
+
+    // F1 — pull ad_placements by tracked-brand domain, no sentiment_insights join
+    const trackedDomains = unique.map((r) => r.domain);
+    let pls: Placement[] | null = [];
+    if (trackedDomains.length > 0) {
+      const { data } = await (supabase.from("ad_placements") as unknown as {
+        select: (cols: string) => {
+          in: (col: string, vals: string[]) => {
+            order: (c: string, o: { ascending: boolean }) => {
+              limit: (n: number) => Promise<{ data: Placement[] | null }>;
+            };
+          };
+        };
+      })
+        .select("id, domain, channel, channel_platform, ad_type, hook, days_running, creative_url, raw, created_at, buyer_stage, offer_type, emotional_driver, hook_analysis, strategist_takeaway, category, campaign_cluster, scan_id, product_type, offer_signal, primary_cta, metadata")
+        .in("domain", trackedDomains)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      pls = data;
+    }
     setPlacements(
       ((pls ?? []) as Placement[]).map((p) => ({ ...p, domain: normalizeDomain(p.domain) })),
     );
