@@ -336,6 +336,9 @@ type Placement = {
   offer_signal: string | null;
   primary_cta: string | null;
   metadata: unknown;
+  ad_title: string | null;
+  description: string | null;
+  media_url: string | null;
 };
 
 
