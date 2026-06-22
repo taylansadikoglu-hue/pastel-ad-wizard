@@ -941,7 +941,7 @@ function AdvertisersPage() {
     return placements
       .filter((p) => !auOnly || !isForeignToAU(p.domain))
       .map((p) => {
-        const media = extractMediaUrl(p.creative_url, p.raw);
+        const media = extractMediaUrl(p.creative_url ?? p.media_url, p.raw);
         const meta = p.metadata && typeof p.metadata === "object" ? p.metadata as Record<string, unknown> : {};
         const days = (meta.days_on_flight as number) ?? p.days_running ?? 0;
         const firstSeen = (meta.first_seen as string) ?? p.created_at ?? null;
