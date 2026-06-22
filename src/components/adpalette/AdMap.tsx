@@ -88,6 +88,12 @@ function industryFromAd(ad: Ad): string | null {
   return typeof v === "string" ? v : null;
 }
 
+function financeOfferFromAd(ad: Ad): string | null {
+  const v = ad.ai_tags?.finance_offer;
+  if (typeof v === "string" && v.trim()) return v;
+  return null;
+}
+
 function StatCard({ label, value, hint, icon: Icon }: {
   label: string;
   value: string;
@@ -285,9 +291,16 @@ export function AdMap() {
                 No ads captured yet.
               </div>
             )}
-            {ads.map((ad) => {
+            {[...ads]
+              .sort((a, b) => {
+                const ta = a.last_seen ? new Date(a.last_seen).getTime() : 0;
+                const tb = b.last_seen ? new Date(b.last_seen).getTime() : 0;
+                return tb - ta;
+              })
+              .map((ad) => {
               const themes = themesFromAd(ad);
               const industry = industryFromAd(ad);
+              const financeOffer = financeOfferFromAd(ad);
               const source = sourceFromAd(ad);
               return (
                 <button
@@ -311,7 +324,12 @@ export function AdMap() {
                         {t}
                       </span>
                     ))}
-                    {themes.length === 0 && (
+                    {financeOffer && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 font-semibold border border-amber-300">
+                        {financeOffer}
+                      </span>
+                    )}
+                    {themes.length === 0 && !financeOffer && (
                       <span className="text-[10px] text-muted-foreground italic">No tags yet</span>
                     )}
                   </div>
