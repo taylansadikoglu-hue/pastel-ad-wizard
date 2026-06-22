@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Calendar as CalendarIcon, X, TrendingUp, Activity, Database, Globe, FileDown, ArrowUp, ArrowDown } from "lucide-react";
@@ -222,7 +222,17 @@ function BrandDNAGrid() {
           return (
             <div key={i} className="card-flat p-4">
               <div className="flex items-center justify-between mb-2">
-                <div className="font-bold truncate">{r.brand ?? "—"}</div>
+                {r.brand ? (
+                  <Link
+                    to="/app/advertiser/$domain"
+                    params={{ domain: r.brand }}
+                    className="font-bold truncate hover:underline underline-offset-2"
+                  >
+                    {r.brand}
+                  </Link>
+                ) : (
+                  <div className="font-bold truncate">—</div>
+                )}
                 <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">
                   {Number(r.creative_volume) || 0} creatives
                 </span>

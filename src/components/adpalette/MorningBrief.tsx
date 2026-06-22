@@ -285,7 +285,7 @@ export function MorningBrief() {
             <span className="capitalize">{pulse.industry}</span> activity is{" "}
             <span className="font-bold">{pulse.level}</span> —{" "}
             <span className="font-bold tabular-nums">{pulse.creativeCount}</span> new creatives —{" "}
-            <Link to="/app/advertiser/$brand" params={{ brand: top.brand }} className="font-bold underline-offset-2 hover:underline">
+            <Link to="/app/advertiser/$domain" params={{ domain: top.brand }} className="font-bold underline-offset-2 hover:underline">
               {top.brand}
             </Link>{" "}
             is most aggressive
@@ -301,7 +301,7 @@ export function MorningBrief() {
                 <AlertTriangle size={12} /> The Incumbent's Play
               </div>
               <div>
-                <Link to="/app/advertiser/$brand" params={{ brand: top.brand }} className="text-4xl font-bold tracking-tight hover:underline underline-offset-4 inline-block">
+                <Link to="/app/advertiser/$domain" params={{ domain: top.brand }} className="text-4xl font-bold tracking-tight hover:underline underline-offset-4 inline-block">
                   {top.brand}
                 </Link>
                 <div className="mono text-[11px] uppercase tracking-widest text-muted-foreground mt-1">

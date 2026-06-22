@@ -80,8 +80,8 @@ function ClientsPage() {
             {filtered.map((r) => (
               <Link
                 key={r.client_name}
-                to="/app/advertiser/$brand"
-                params={{ brand: r.client_name }}
+                to="/app/advertiser/$domain"
+                params={{ domain: r.client_name }}
                 className="card-flat p-4 hover:bg-secondary transition-colors"
               >
                 <div className="flex items-baseline justify-between gap-2">
