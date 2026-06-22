@@ -79,7 +79,7 @@ function ClientsPage() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((r) => (
               <Link
-                key={r.id}
+                key={r.client_name}
                 to="/app/advertiser/$brand"
                 params={{ brand: r.client_name }}
                 className="card-flat p-4 hover:bg-secondary transition-colors"
