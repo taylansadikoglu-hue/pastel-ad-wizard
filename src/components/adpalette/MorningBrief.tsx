@@ -301,7 +301,9 @@ export function MorningBrief() {
                 <AlertTriangle size={12} /> The Incumbent's Play
               </div>
               <div>
-                <div className="text-4xl font-bold tracking-tight">{top.brand}</div>
+                <Link to="/app/advertiser/$brand" params={{ brand: top.brand }} className="text-4xl font-bold tracking-tight hover:underline underline-offset-4 inline-block">
+                  {top.brand}
+                </Link>
                 <div className="mono text-[11px] uppercase tracking-widest text-muted-foreground mt-1">
                   {top.industry ?? "—"}
                 </div>
