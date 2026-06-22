@@ -133,15 +133,66 @@ function AdvertiserPage() {
     let alive = true;
     setLoading(true);
     (async () => {
-      const [sRes, aRes] = await Promise.all([
-        fetch(`${API_BASE}/api/advertisers/${encodeURIComponent(domain)}`).then((r) => r.ok ? r.json() : null).catch(() => null),
-        fetch(`${API_BASE}/api/ads?brand=${encodeURIComponent(domain)}&limit=50`).then((r) => r.ok ? r.json() : null).catch(() => null),
-      ]);
+      const dom = domain.toLowerCase().trim();
+      const host = dom.replace(/^www\./, "");
+      const root = host.split(".")[0] ?? host;
+
+      // 1) Pull advertisers index and find names that match this domain.
+      const advList = await fetch(`${API_BASE}/api/advertisers`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+      const advArr: Array<Record<string, unknown>> =
+        (advList?.advertisers ?? advList?.data ?? (Array.isArray(advList) ? advList : [])) as Array<Record<string, unknown>>;
+
+      const domainMatches = advArr.filter((a) => {
+        const fields = [a.domain, a.website, a.url, a.host]
+          .map((v) => (typeof v === "string" ? v.toLowerCase() : ""))
+          .join(" ");
+        return fields.includes(host) || fields.includes(root);
+      });
+
+      const matchedSummary = (domainMatches[0] ?? null) as AdvertiserSummary | null;
+
+      // 2) Build candidate brand names: matched API names + heuristic guesses.
+      const candidates = new Set<string>();
+      for (const m of domainMatches) {
+        const n = (m.name ?? m.advertiser ?? m.brand) as unknown;
+        if (typeof n === "string" && n.trim()) candidates.add(n.trim());
+      }
+      // Heuristic guesses from the root token.
+      candidates.add(root);
+      candidates.add(root.charAt(0).toUpperCase() + root.slice(1));
+      // CamelCase known shorthand (commbank → CommBank, natwest → NatWest).
+      if (root.length > 4) {
+        candidates.add(root.charAt(0).toUpperCase() + root.slice(1, 4) + root.charAt(4).toUpperCase() + root.slice(5));
+      }
+      // Special case: commbank → Commonwealth Bank
+      if (root === "commbank") {
+        candidates.add("CommBank");
+        candidates.add("Commonwealth Bank");
+      }
+
+      // 3) Fetch ads for each candidate brand, merge & dedupe by id/image_url.
+      const results = await Promise.all(
+        [...candidates].map((brand) =>
+          fetch(`${API_BASE}/api/ads?brand=${encodeURIComponent(brand)}&limit=50`)
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+        ),
+      );
+
+      const merged = new Map<string, Ad>();
+      for (const res of results) {
+        const list: Ad[] = res?.ads ?? res?.data ?? (Array.isArray(res) ? res : []);
+        for (const ad of list) {
+          const key = String(ad.id ?? ad.image_url ?? ad.video_url ?? Math.random());
+          if (!merged.has(key)) merged.set(key, ad);
+        }
+      }
+
       if (!alive) return;
-      const s: AdvertiserSummary | null = sRes?.advertiser ?? sRes ?? null;
-      const list: Ad[] = aRes?.ads ?? aRes?.data ?? (Array.isArray(aRes) ? aRes : []);
-      setSummary(s);
-      setAds(list);
+      setSummary(matchedSummary);
+      setAds([...merged.values()]);
       setLoading(false);
     })();
     return () => { alive = false; };
