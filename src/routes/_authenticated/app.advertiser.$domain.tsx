@@ -666,7 +666,16 @@ function AdPanel({ ad, brand, onClose }: { ad: Ad; brand: string; onClose: () =>
         </div>
 
         <div className="p-4 space-y-5">
-          <AdMedia ad={ad} />
+          {adFormat(ad) === "video" && ad.video_url ? (
+            <video
+              controls
+              src={ad.video_url}
+              poster={ad.thumbnail_url ?? ad.image_url ?? undefined}
+              className="w-full aspect-video bg-black border border-ink/10 rounded-[4px]"
+            />
+          ) : (
+            <AdMedia ad={ad} />
+          )}
 
           {cta && (
             <Section label="Headline">
