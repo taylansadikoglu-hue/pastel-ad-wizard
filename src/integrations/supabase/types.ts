@@ -16,28 +16,43 @@ export type Database = {
     Tables: {
       ad_creatives: {
         Row: {
+          agency_id: number | null
           ai_metadata: Json | null
           brand_name: string | null
           category: string | null
+          channel_type: string | null
           created_at: string | null
           creative_url: string | null
+          dominant_reaction: string | null
+          estimated_spend: number | null
           id: number
+          sentiment_score: number | null
         }
         Insert: {
+          agency_id?: number | null
           ai_metadata?: Json | null
           brand_name?: string | null
           category?: string | null
+          channel_type?: string | null
           created_at?: string | null
           creative_url?: string | null
+          dominant_reaction?: string | null
+          estimated_spend?: number | null
           id?: number
+          sentiment_score?: number | null
         }
         Update: {
+          agency_id?: number | null
           ai_metadata?: Json | null
           brand_name?: string | null
           category?: string | null
+          channel_type?: string | null
           created_at?: string | null
           creative_url?: string | null
+          dominant_reaction?: string | null
+          estimated_spend?: number | null
           id?: number
+          sentiment_score?: number | null
         }
         Relationships: []
       }
@@ -183,6 +198,35 @@ export type Database = {
             columns: ["scan_id"]
             isOneToOne: false
             referencedRelation: "domain_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ad_reactions: {
+        Row: {
+          ad_id: number | null
+          id: number
+          processed_at: string | null
+          sentiment_data: Json | null
+        }
+        Insert: {
+          ad_id?: number | null
+          id?: number
+          processed_at?: string | null
+          sentiment_data?: Json | null
+        }
+        Update: {
+          ad_id?: number | null
+          id?: number
+          processed_at?: string | null
+          sentiment_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_reactions_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ad_creatives"
             referencedColumns: ["id"]
           },
         ]
