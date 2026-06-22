@@ -507,20 +507,41 @@ function FilterGroup<T extends string>({
 }
 
 function AdMedia({ ad }: { ad: Ad }) {
-  const [ok, setOk] = useState<boolean>(Boolean(ad.image_url));
-  const isVideo = adKind(ad) === "video";
-  if (ad.image_url && ok) {
+  const fmt = adFormat(ad);
+  const isVideo = fmt === "video";
+  const isDisplay = fmt === "display";
+  const src = isVideo ? (ad.thumbnail_url ?? ad.image_url ?? null) : (ad.image_url ?? null);
+  const [ok, setOk] = useState<boolean>(Boolean(src));
+  const duration = fmtDuration(ad.ad_duration_seconds);
+
+  const formatBadge = isVideo ? (
+    <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-red-600 text-white text-[10px] mono uppercase tracking-widest font-semibold shadow">
+      <VideoIcon size={10} /> Video
+    </span>
+  ) : isDisplay ? (
+    <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-blue-600 text-white text-[10px] mono uppercase tracking-widest font-semibold shadow">
+      <ImageIcon size={10} /> Display
+    </span>
+  ) : null;
+
+  if (src && ok) {
     return (
       <div className="relative aspect-video bg-paper border-b border-ink/10 overflow-hidden">
         <img
-          src={ad.image_url}
+          src={src}
           alt={ad.advertiser ?? ad.brand ?? "Creative"}
           loading="lazy"
           onError={() => setOk(false)}
           className="w-full h-full object-cover"
         />
+        {formatBadge}
+        {isVideo && duration && (
+          <span className="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded-[3px] bg-black/75 text-white text-[10px] mono font-semibold">
+            {duration}
+          </span>
+        )}
         {isVideo && (
-          <div className="absolute inset-0 grid place-items-center bg-black/30">
+          <div className="absolute inset-0 grid place-items-center bg-black/25 pointer-events-none">
             <div className="w-12 h-12 rounded-full bg-white/95 grid place-items-center shadow">
               <Play size={20} className="text-ink ml-0.5" />
             </div>
@@ -530,7 +551,8 @@ function AdMedia({ ad }: { ad: Ad }) {
     );
   }
   return (
-    <div className="aspect-video bg-paper border-b border-ink/10 grid place-items-center text-muted-foreground">
+    <div className="relative aspect-video bg-paper border-b border-ink/10 grid place-items-center text-muted-foreground">
+      {formatBadge}
       {isVideo ? <VideoIcon size={26} /> : <ImageIcon size={26} />}
     </div>
   );
