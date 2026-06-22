@@ -803,22 +803,10 @@ function AdvertisersPage() {
   const load = async () => {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
-    const [{ data: scans }, { data: pls }] = await Promise.all([
-      supabase
-        .from("domain_scans")
-        .select("id, domain, status, created_at, estimated_monthly_spend, total_paid_keywords, average_cpc")
-        .order("created_at", { ascending: false }),
-      (supabase.from("ad_placements") as unknown as {
-        select: (cols: string) => {
-          order: (c: string, o: { ascending: boolean }) => {
-            limit: (n: number) => Promise<{ data: Placement[] | null }>;
-          };
-        };
-      })
-        .select("id, domain, channel, channel_platform, ad_type, hook, days_running, creative_url, raw, created_at, buyer_stage, offer_type, emotional_driver, hook_analysis, strategist_takeaway, category, campaign_cluster, scan_id, product_type, offer_signal, primary_cta, metadata")
-        .order("created_at", { ascending: false })
-        .limit(500),
-    ]);
+    const { data: scans } = await supabase
+      .from("domain_scans")
+      .select("id, domain, status, created_at, estimated_monthly_spend, total_paid_keywords, average_cpc")
+      .order("created_at", { ascending: false });
     const seen = new Set<string>();
     const unique: Row[] = [];
     for (const r of scans ?? []) {
@@ -829,6 +817,26 @@ function AdvertisersPage() {
       }
     }
     setRows(unique);
+
+    // F1 — pull ad_placements by tracked-brand domain, no sentiment_insights join
+    const trackedDomains = unique.map((r) => r.domain);
+    let pls: Placement[] | null = [];
+    if (trackedDomains.length > 0) {
+      const { data } = await (supabase.from("ad_placements") as unknown as {
+        select: (cols: string) => {
+          in: (col: string, vals: string[]) => {
+            order: (c: string, o: { ascending: boolean }) => {
+              limit: (n: number) => Promise<{ data: Placement[] | null }>;
+            };
+          };
+        };
+      })
+        .select("id, domain, channel, channel_platform, ad_type, hook, days_running, creative_url, raw, created_at, buyer_stage, offer_type, emotional_driver, hook_analysis, strategist_takeaway, category, campaign_cluster, scan_id, product_type, offer_signal, primary_cta, metadata")
+        .in("domain", trackedDomains)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      pls = data;
+    }
     setPlacements(
       ((pls ?? []) as Placement[]).map((p) => ({ ...p, domain: normalizeDomain(p.domain) })),
     );
@@ -1001,7 +1009,9 @@ function AdvertisersPage() {
     const base = { Meta: 0, Google: 0 } as Record<string, number>;
     for (const e of enriched) {
       if (activeAdvertiser !== "__all" && e.domain !== activeAdvertiser) continue;
-      base[e.channelNorm] = (base[e.channelNorm] ?? 0) + 1;
+      const cp = e.channel_platform ?? "";
+      if (cp === "Google") base.Google += 1;
+      else if (cp === "Meta") base.Meta += 1;
     }
     return base;
   }, [enriched, activeAdvertiser]);
@@ -1013,14 +1023,17 @@ function AdvertisersPage() {
       : visibleRows.filter((r) => r.domain === activeAdvertiser);
     const spend = scopedRows.reduce((s, r) => s + (Number(r.estimated_monthly_spend) || 0), 0);
     const scopedPl = activeAdvertiser === "__all"
+      ? placements
+      : placements.filter((p) => p.domain === activeAdvertiser);
+    const meta = scopedPl.filter((p) => p.channel_platform === "Meta").length;
+    const google = scopedPl.filter((p) => p.channel_platform === "Google").length;
+    const total = scopedPl.length;
+    const scopedEnriched = activeAdvertiser === "__all"
       ? enriched
       : enriched.filter((e) => e.domain === activeAdvertiser);
-    const meta = scopedPl.filter((e) => e.channelNorm === "Meta").length;
-    const google = scopedPl.filter((e) => e.channelNorm === "Google").length;
-    const total = scopedPl.length;
-    const strategy = scopedPl.filter((e) => hasAnyStrategy(e)).length;
+    const strategy = scopedEnriched.filter((e) => hasAnyStrategy(e)).length;
     return { spend, meta, google, total, strategy };
-  }, [visibleRows, enriched, activeAdvertiser]);
+  }, [visibleRows, placements, enriched, activeAdvertiser]);
 
   return (
     <WorkspaceShell
