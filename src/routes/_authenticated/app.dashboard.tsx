@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AdMap } from "@/components/adpalette/AdMap";
+import { MorningBrief } from "@/components/adpalette/MorningBrief";
 
 function DashboardPage() {
-  return <AdMap />;
+  return <MorningBrief />;
 }
 
 export const Route = createFileRoute("/_authenticated/app/dashboard")({
-  head: () => ({ meta: [{ title: "Ad Map — RevenueAd" }] }),
+  head: () => ({ meta: [{ title: "Morning Brief — RevenueAd" }] }),
   component: DashboardPage,
 });
