@@ -1040,7 +1040,7 @@ function AdvertisersPage() {
 
   return (
     <WorkspaceShell
-      title="Brand Intelligence"
+      title="Competitor Ads"
       subtitle={`Strategic market view across ${rows.length}/${MAX_BRANDS} tracked brands — creative, category, and audience signal in one frame.`}
     >
       <div className="space-y-5">

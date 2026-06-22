@@ -104,7 +104,7 @@ function AudienceSignalsPage() {
 
   if (loading) {
     return (
-      <WorkspaceShell title="Audience Signals">
+      <WorkspaceShell title="Audience Intel">
         <div className="card-flat p-8 text-center text-sm text-muted-foreground">Loading audience signals…</div>
       </WorkspaceShell>
     );
@@ -118,7 +118,7 @@ function AudienceSignalsPage() {
 
   return (
     <WorkspaceShell
-      title="Audience Signals"
+      title="Audience Intel"
       subtitle="Emotion ownership, territory gaps, messaging saturation and underused emotional levers — live."
     >
       {empty ? (
