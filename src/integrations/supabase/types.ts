@@ -1129,6 +1129,18 @@ export type Database = {
         }
         Relationships: []
       }
+      advertiser_campaign_analytics: {
+        Row: {
+          avg_sentiment: number | null
+          brand_name: string | null
+          channel_type: string | null
+          flight_end: string | null
+          flight_start: string | null
+          total_creatives: number | null
+          total_spend: number | null
+        }
+        Relationships: []
+      }
       advertiser_candidate_review: {
         Row: {
           advertiser_id: string | null
