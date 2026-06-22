@@ -196,12 +196,7 @@ export function AdMap() {
   );
 
   const goToBrand = (brand: string) => {
-    try {
-      localStorage.setItem("revenuead_brand_filter", brand);
-    } catch {
-      // ignore storage failures (private mode)
-    }
-    navigate({ to: "/app/advertisers" });
+    navigate({ to: "/app/advertiser/$domain", params: { domain: brand } });
   };
 
   return (
