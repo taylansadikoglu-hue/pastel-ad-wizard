@@ -362,8 +362,10 @@ function AdvertiserPage() {
         </div>
 
         {/* Stat row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Total" value={String(stats.total)} />
+          <StatCard label="Video" value={String(stats.videoCount)} />
+          <StatCard label="Display" value={String(stats.displayCount)} />
           <StatCard label="Industry" value={stats.topIndustry} capitalize />
           <StatCard label="Top theme" value={stats.topTheme} capitalize />
           <StatCard label="Finance offers" value={String(stats.financeOffers)} />
@@ -381,7 +383,9 @@ function AdvertiserPage() {
                 options={[
                   { v: "all", label: "All" },
                   { v: "image", label: "Images" },
-                  { v: "video", label: "Videos" },
+                  { v: "video", label: "Video" },
+                  { v: "display", label: "Display" },
+                  { v: "text", label: "Text" },
                 ]}
               />
               <span className="w-px h-5 bg-ink/10 mx-1" />
