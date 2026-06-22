@@ -22,11 +22,25 @@ export function BarbsChat() {
   }, [messages, open]);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (open) {
+      inputRef.current?.focus();
+      try {
+        localStorage.setItem("barbs_opened", "1");
+      } catch {
+        // ignore
+      }
+    }
   }, [open]);
 
-  // Auto-open exactly 3s after first mount
+  // Auto-open once ever — 3s after first mount, only if user has never opened it
   useEffect(() => {
+    let alreadyOpened = false;
+    try {
+      alreadyOpened = localStorage.getItem("barbs_opened") === "1";
+    } catch {
+      // ignore
+    }
+    if (alreadyOpened) return;
     const t = setTimeout(() => setOpen(true), 3000);
     return () => clearTimeout(t);
   }, []);
