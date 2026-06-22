@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 
 type ClientRow = {
-  id: number;
   client_name: string;
   client_domain: string | null;
   category: string | null;
@@ -23,10 +22,17 @@ function ClientsPage() {
     (async () => {
       const { data } = await supabase
         .from("ra_client_watchlist")
-        .select("id, client_name, client_domain, category, country")
-        .order("client_name", { ascending: true });
+        .select("client_name, client_domain, category, country");
       if (!active) return;
-      setRows((data ?? []) as ClientRow[]);
+      const seen = new Set<string>();
+      const unique: ClientRow[] = [];
+      for (const r of (data ?? []) as ClientRow[]) {
+        if (!r.client_name || seen.has(r.client_name)) continue;
+        seen.add(r.client_name);
+        unique.push(r);
+      }
+      unique.sort((a, b) => a.client_name.localeCompare(b.client_name));
+      setRows(unique);
       setLoading(false);
     })();
     return () => {
