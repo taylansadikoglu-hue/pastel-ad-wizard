@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_creatives: {
+        Row: {
+          ai_metadata: Json | null
+          brand_name: string | null
+          category: string | null
+          created_at: string | null
+          creative_url: string | null
+          id: number
+        }
+        Insert: {
+          ai_metadata?: Json | null
+          brand_name?: string | null
+          category?: string | null
+          created_at?: string | null
+          creative_url?: string | null
+          id?: number
+        }
+        Update: {
+          ai_metadata?: Json | null
+          brand_name?: string | null
+          category?: string | null
+          created_at?: string | null
+          creative_url?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
       ad_placements: {
         Row: {
           ad_title: string | null
@@ -159,6 +186,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ads: {
+        Row: {
+          ai_analysis_summary: string | null
+          ai_sentiment: string | null
+          ai_sov_score: number | null
+          ai_tags: Json | null
+          created_at: string | null
+          embedding: string | null
+          id: number
+          image_hash: string
+          messaging: string | null
+          sentiment: string | null
+          tags: Json | null
+        }
+        Insert: {
+          ai_analysis_summary?: string | null
+          ai_sentiment?: string | null
+          ai_sov_score?: number | null
+          ai_tags?: Json | null
+          created_at?: string | null
+          embedding?: string | null
+          id?: number
+          image_hash: string
+          messaging?: string | null
+          sentiment?: string | null
+          tags?: Json | null
+        }
+        Update: {
+          ai_analysis_summary?: string | null
+          ai_sentiment?: string | null
+          ai_sov_score?: number | null
+          ai_tags?: Json | null
+          created_at?: string | null
+          embedding?: string | null
+          id?: number
+          image_hash?: string
+          messaging?: string | null
+          sentiment?: string | null
+          tags?: Json | null
+        }
+        Relationships: []
       }
       advertiser_discovery_candidates: {
         Row: {
@@ -343,6 +412,36 @@ export type Database = {
           slack_webhook_url?: string | null
           user_id?: string
           white_label_enabled?: boolean
+        }
+        Relationships: []
+      }
+      category_leaderboard: {
+        Row: {
+          category: string
+          domain: string
+          id: number
+          keyword_coverage: number
+          share_of_voice: number
+          spend_volume: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          domain: string
+          id?: never
+          keyword_coverage: number
+          share_of_voice: number
+          spend_volume: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          domain?: string
+          id?: never
+          keyword_coverage?: number
+          share_of_voice?: number
+          spend_volume?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -779,6 +878,38 @@ export type Database = {
           },
         ]
       }
+      sightings: {
+        Row: {
+          ad_id: number | null
+          id: number
+          medium: string | null
+          seen_at: string | null
+          source_url: string | null
+        }
+        Insert: {
+          ad_id?: number | null
+          id?: number
+          medium?: string | null
+          seen_at?: string | null
+          source_url?: string | null
+        }
+        Update: {
+          ad_id?: number | null
+          id?: number
+          medium?: string | null
+          seen_at?: string | null
+          source_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sightings_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spend_alerts: {
         Row: {
           alert_type: string
@@ -809,6 +940,36 @@ export type Database = {
           new_value?: number | null
           old_value?: number | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      spend_history: {
+        Row: {
+          ai_sentiment: string | null
+          ai_sov_score: number | null
+          channel: string | null
+          domain: string | null
+          estimated_spend: number | null
+          id: number
+          snapshot_date: string | null
+        }
+        Insert: {
+          ai_sentiment?: string | null
+          ai_sov_score?: number | null
+          channel?: string | null
+          domain?: string | null
+          estimated_spend?: number | null
+          id?: number
+          snapshot_date?: string | null
+        }
+        Update: {
+          ai_sentiment?: string | null
+          ai_sov_score?: number | null
+          channel?: string | null
+          domain?: string | null
+          estimated_spend?: number | null
+          id?: number
+          snapshot_date?: string | null
         }
         Relationships: []
       }
@@ -1280,6 +1441,14 @@ export type Database = {
           opportunity_status: string | null
           share_percent: number | null
           strategic_priority: string | null
+        }
+        Relationships: []
+      }
+      mv_safety_ad_trends: {
+        Row: {
+          ad_count: number | null
+          category: string | null
+          week: string | null
         }
         Relationships: []
       }
