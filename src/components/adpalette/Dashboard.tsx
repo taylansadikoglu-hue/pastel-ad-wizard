@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
@@ -1128,28 +1129,29 @@ function aiReply(q: string, visible: Competitor[]): string {
 }
 
 const NAV_ITEMS = [
-  { icon: Home, label: "Ad Map", href: "/app/dashboard" },
-  { icon: Target, label: "Competitor Ads", href: "/app/advertisers" },
+  { icon: Home, label: "Morning Brief", href: "/app/dashboard" },
+  { icon: Target, label: "Advertisers", href: "/app/advertisers" },
+  { icon: Radio, label: "My Clients", href: "/app/clients" },
   { icon: BarChart3, label: "Market Intel", href: "/app/pcr" },
-  { icon: Radio, label: "Audience Intel", href: "/app/sentiment" },
-  { icon: Lightbulb, label: "Strategy", href: "/app/advisor" },
 ];
 
 export function SidebarNav() {
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <nav className="p-2 space-y-1 flex-1">
       {NAV_ITEMS.map((item) => {
-        const active = pathname === item.href || (item.href === "/app/dashboard" && pathname === "/app");
+        const active =
+          pathname === item.href ||
+          (item.href === "/app/dashboard" && pathname === "/app") ||
+          (item.href === "/app/advertisers" && pathname.startsWith("/app/advertiser"));
         return (
-          <button
+          <Link
             key={item.label}
-            type="button"
-            onClick={() => window.location.href = item.href}
+            to={item.href}
             className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-[4px] text-sm font-medium border-2 ${active ? "border-ink bg-secondary shadow-flat-sm" : "border-transparent hover:border-ink"}`}
           >
             <item.icon size={15} /> {item.label}
-          </button>
+          </Link>
         );
       })}
     </nav>

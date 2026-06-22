@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { AlertTriangle, Inbox, Plus, Target } from "lucide-react";
 import { WorkspaceShell } from "./WorkspaceShell";
 import { Progress } from "@/components/ui/progress";
@@ -284,7 +285,10 @@ export function MorningBrief() {
             <span className="capitalize">{pulse.industry}</span> activity is{" "}
             <span className="font-bold">{pulse.level}</span> —{" "}
             <span className="font-bold tabular-nums">{pulse.creativeCount}</span> new creatives —{" "}
-            <span className="font-bold">{top.brand}</span> is most aggressive
+            <Link to="/app/advertiser/$brand" params={{ brand: top.brand }} className="font-bold underline-offset-2 hover:underline">
+              {top.brand}
+            </Link>{" "}
+            is most aggressive
           </div>
         </div>
 
@@ -297,7 +301,9 @@ export function MorningBrief() {
                 <AlertTriangle size={12} /> The Incumbent's Play
               </div>
               <div>
-                <div className="text-4xl font-bold tracking-tight">{top.brand}</div>
+                <Link to="/app/advertiser/$brand" params={{ brand: top.brand }} className="text-4xl font-bold tracking-tight hover:underline underline-offset-4 inline-block">
+                  {top.brand}
+                </Link>
                 <div className="mono text-[11px] uppercase tracking-widest text-muted-foreground mt-1">
                   {top.industry ?? "—"}
                 </div>
