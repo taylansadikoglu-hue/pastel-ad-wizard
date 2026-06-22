@@ -318,16 +318,21 @@ function AdvertiserPage() {
     const themeCounts = new Map<string, number>();
     const industryCounts = new Map<string, number>();
     let financeOffers = 0;
+    let videoCount = 0;
+    let displayCount = 0;
     for (const a of ads) {
       const t = asTags(a.ai_tags);
       for (const th of asStringArray(t.themes)) themeCounts.set(th, (themeCounts.get(th) ?? 0) + 1);
       const ind = typeof t.industry === "string" ? t.industry : "";
       if (ind) industryCounts.set(ind, (industryCounts.get(ind) ?? 0) + 1);
       if (typeof t.finance_offer === "string" && t.finance_offer.trim()) financeOffers += 1;
+      const fmt = adFormat(a);
+      if (fmt === "video") videoCount += 1;
+      else if (fmt === "display") displayCount += 1;
     }
     const topTheme = [...themeCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
     const topIndustry = [...industryCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
-    return { total: ads.length, topTheme, topIndustry, financeOffers };
+    return { total: ads.length, topTheme, topIndustry, financeOffers, videoCount, displayCount };
   }, [ads]);
 
   const headerBrand = summary?.brand ?? summary?.advertiser ?? domain;
