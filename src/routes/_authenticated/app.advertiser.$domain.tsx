@@ -84,9 +84,19 @@ function asBool(v: unknown): boolean | null {
 
 function fmtDate(iso?: string | null): string {
   if (!iso) return "—";
-  const t = new Date(iso).getTime();
+  const d = new Date(iso);
+  const t = d.getTime();
   if (!Number.isFinite(t)) return "—";
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function fmtDuration(v: number | string | null | undefined): string | null {
+  const n = typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) : NaN;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const total = Math.round(n);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function timeAgo(iso?: string | null): string {
@@ -116,8 +126,19 @@ function channelLabel(c: string): string {
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
+type AdFormat = "video" | "display" | "text" | "image";
+function adFormat(ad: Ad): AdFormat {
+  const f = (ad.ad_format ?? "").toString().toLowerCase().trim();
+  if (f === "video") return "video";
+  if (f === "display") return "display";
+  if (f === "text") return "text";
+  if (ad.video_url) return "video";
+  if (ad.image_url) return "display";
+  return "image";
+}
+
 function adKind(ad: Ad): "video" | "image" {
-  return ad.video_url ? "video" : "image";
+  return adFormat(ad) === "video" ? "video" : "image";
 }
 
 type Sentiment = "positive" | "urgency" | "neutral";
