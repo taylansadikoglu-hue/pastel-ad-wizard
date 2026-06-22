@@ -32,6 +32,9 @@ type Ad = {
   brand?: string | null;
   image_url?: string | null;
   video_url?: string | null;
+  thumbnail_url?: string | null;
+  ad_format?: string | null;
+  ad_duration_seconds?: number | string | null;
   ai_tags?: AiTags | string | null;
   first_seen?: string | null;
   last_seen?: string | null;
