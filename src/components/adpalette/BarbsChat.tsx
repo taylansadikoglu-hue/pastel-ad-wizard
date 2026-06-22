@@ -45,6 +45,46 @@ export function BarbsChat() {
     return () => clearTimeout(t);
   }, []);
 
+  // External trigger: window.dispatchEvent(new CustomEvent("barbs:ask", { detail: "query" }))
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (typeof detail !== "string" || !detail.trim()) return;
+      setOpen(true);
+      setInput(detail);
+      // auto-send shortly after open so input ref is mounted
+      setTimeout(() => {
+        setInput("");
+        setMessages((prev) => {
+          const next: Msg[] = [...prev, { role: "user", content: detail }];
+          (async () => {
+            setLoading(true);
+            try {
+              const res = await fetch("/api/barbs", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ messages: next }),
+              });
+              if (!res.ok) throw new Error(await res.text());
+              const { reply } = (await res.json()) as { reply: string };
+              setMessages((m) => [...m, { role: "assistant", content: reply || "(no response)" }]);
+            } catch (err) {
+              setMessages((m) => [
+                ...m,
+                { role: "assistant", content: `Signal lost. Retry in a moment. (${String(err).slice(0, 120)})` },
+              ]);
+            } finally {
+              setLoading(false);
+            }
+          })();
+          return next;
+        });
+      }, 50);
+    };
+    window.addEventListener("barbs:ask", handler as EventListener);
+    return () => window.removeEventListener("barbs:ask", handler as EventListener);
+  }, []);
+
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
