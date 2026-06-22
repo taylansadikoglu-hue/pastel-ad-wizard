@@ -18,6 +18,12 @@ type AiTags = Record<string, unknown> & {
   sentiment?: unknown;
   emotion?: unknown;
   channel?: unknown;
+  call_to_action?: unknown;
+  industry?: unknown;
+  product?: unknown;
+  demographics?: unknown;
+  has_people?: unknown;
+  has_logo?: unknown;
 };
 
 type Ad = {
@@ -63,6 +69,16 @@ function num(v: unknown, fb = 0): number {
   return Number.isFinite(n) ? n : fb;
 }
 
+function asBool(v: unknown): boolean | null {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") {
+    const s = v.toLowerCase().trim();
+    if (s === "true" || s === "yes" || s === "1") return true;
+    if (s === "false" || s === "no" || s === "0") return false;
+  }
+  return null;
+}
+
 function fmtDate(iso?: string | null): string {
   if (!iso) return "—";
   const t = new Date(iso).getTime();
@@ -91,12 +107,49 @@ function adChannel(ad: Ad): string {
   return c || "other";
 }
 
+function channelLabel(c: string): string {
+  if (c === "google") return "Google";
+  if (c === "meta") return "Meta";
+  return c.charAt(0).toUpperCase() + c.slice(1);
+}
+
 function adKind(ad: Ad): "video" | "image" {
   return ad.video_url ? "video" : "image";
 }
 
+type Sentiment = "positive" | "urgency" | "neutral";
+function classifySentiment(raw: unknown): Sentiment {
+  const s = (typeof raw === "string" ? raw : "").toLowerCase();
+  if (/(positive|trust|happy|joy|optimis|reassur)/.test(s)) return "positive";
+  if (/(urgen|fear|pressure|scarcit|warn|alarm|risk|limited)/.test(s)) return "urgency";
+  return "neutral";
+}
+function sentimentMeta(s: Sentiment): { label: string; dot: string; chip: string; reaction: string; icon: string } {
+  if (s === "positive") return {
+    label: "Positive", dot: "bg-emerald-500",
+    chip: "bg-emerald-50 border-emerald-500 text-emerald-900",
+    reaction: "Trust-building message", icon: "🟢",
+  };
+  if (s === "urgency") return {
+    label: "Urgency", dot: "bg-rose-500",
+    chip: "bg-rose-50 border-rose-500 text-rose-900",
+    reaction: "Pressure/fear-based", icon: "🔴",
+  };
+  return {
+    label: "Neutral", dot: "bg-zinc-400",
+    chip: "bg-zinc-50 border-zinc-400 text-zinc-800",
+    reaction: "Awareness play", icon: "⚪",
+  };
+}
+
+function askBarbs(query: string) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("barbs:ask", { detail: query }));
+}
+
 type FilterKind = "all" | "image" | "video";
 type FilterChannel = "all" | "google" | "meta";
+type SortKey = "most_seen" | "most_recent" | "finance_first" | "urgency_first";
 
 function AdvertiserPage() {
   const { domain } = Route.useParams();
@@ -109,6 +162,7 @@ function AdvertiserPage() {
   const [channel, setChannel] = useState<FilterChannel>("all");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
+  const [sort, setSort] = useState<SortKey>("most_seen");
   const [active, setActive] = useState<Ad | null>(null);
 
   useEffect(() => {
@@ -137,7 +191,6 @@ function AdvertiserPage() {
       const host = dom.replace(/^www\./, "");
       const root = host.split(".")[0] ?? host;
 
-      // 1) Pull advertisers index and find names that match this domain.
       const advList = await fetch(`${API_BASE}/api/advertisers`)
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null);
@@ -153,26 +206,21 @@ function AdvertiserPage() {
 
       const matchedSummary = (domainMatches[0] ?? null) as AdvertiserSummary | null;
 
-      // 2) Build candidate brand names: matched API names + heuristic guesses.
       const candidates = new Set<string>();
       for (const m of domainMatches) {
         const n = (m.name ?? m.advertiser ?? m.brand) as unknown;
         if (typeof n === "string" && n.trim()) candidates.add(n.trim());
       }
-      // Heuristic guesses from the root token.
       candidates.add(root);
       candidates.add(root.charAt(0).toUpperCase() + root.slice(1));
-      // CamelCase known shorthand (commbank → CommBank, natwest → NatWest).
       if (root.length > 4) {
         candidates.add(root.charAt(0).toUpperCase() + root.slice(1, 4) + root.charAt(4).toUpperCase() + root.slice(5));
       }
-      // Special case: commbank → Commonwealth Bank
       if (root === "commbank") {
         candidates.add("CommBank");
         candidates.add("Commonwealth Bank");
       }
 
-      // 3) Fetch ads for each candidate brand, merge & dedupe by id/image_url.
       const results = await Promise.all(
         [...candidates].map((brand) =>
           fetch(`${API_BASE}/api/ads?brand=${encodeURIComponent(brand)}&limit=50`)
@@ -201,7 +249,7 @@ function AdvertiserPage() {
   const isBlocked = tierLoaded && tier !== null && SOLO_TIERS.has(tier);
 
   const filtered = useMemo(() => {
-    return ads.filter((a) => {
+    const base = ads.filter((a) => {
       if (kind === "image" && adKind(a) !== "image") return false;
       if (kind === "video" && adKind(a) !== "video") return false;
       if (channel !== "all" && adChannel(a) !== channel) return false;
@@ -215,26 +263,48 @@ function AdvertiserPage() {
       }
       return true;
     });
-  }, [ads, kind, channel, from, to]);
+    const sorted = [...base];
+    sorted.sort((a, b) => {
+      if (sort === "most_seen") return num(b.sighting_count) - num(a.sighting_count);
+      if (sort === "most_recent") {
+        return new Date(b.last_seen ?? b.first_seen ?? 0).getTime()
+          - new Date(a.last_seen ?? a.first_seen ?? 0).getTime();
+      }
+      if (sort === "finance_first") {
+        const af = typeof asTags(a.ai_tags).finance_offer === "string" ? 1 : 0;
+        const bf = typeof asTags(b.ai_tags).finance_offer === "string" ? 1 : 0;
+        if (bf !== af) return bf - af;
+        return num(b.sighting_count) - num(a.sighting_count);
+      }
+      if (sort === "urgency_first") {
+        const au = classifySentiment(asTags(a.ai_tags).sentiment) === "urgency" ? 1 : 0;
+        const bu = classifySentiment(asTags(b.ai_tags).sentiment) === "urgency" ? 1 : 0;
+        if (bu !== au) return bu - au;
+        return num(b.sighting_count) - num(a.sighting_count);
+      }
+      return 0;
+    });
+    return sorted;
+  }, [ads, kind, channel, from, to, sort]);
 
   const stats = useMemo(() => {
     const themeCounts = new Map<string, number>();
-    const emotionCounts = new Map<string, number>();
+    const industryCounts = new Map<string, number>();
     let financeOffers = 0;
     for (const a of ads) {
       const t = asTags(a.ai_tags);
       for (const th of asStringArray(t.themes)) themeCounts.set(th, (themeCounts.get(th) ?? 0) + 1);
-      const em = typeof t.emotion === "string" ? t.emotion : typeof t.sentiment === "string" ? t.sentiment : "";
-      if (em) emotionCounts.set(em, (emotionCounts.get(em) ?? 0) + 1);
+      const ind = typeof t.industry === "string" ? t.industry : "";
+      if (ind) industryCounts.set(ind, (industryCounts.get(ind) ?? 0) + 1);
       if (typeof t.finance_offer === "string" && t.finance_offer.trim()) financeOffers += 1;
     }
     const topTheme = [...themeCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
-    const topEmotion = [...emotionCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
-    return { totalCreatives: ads.length, topTheme, topEmotion, financeOffers };
+    const topIndustry = [...industryCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
+    return { total: ads.length, topTheme, topIndustry, financeOffers };
   }, [ads]);
 
   const headerBrand = summary?.brand ?? summary?.advertiser ?? domain;
-  const headerIndustry = summary?.industry ?? "—";
+  const headerIndustry = summary?.industry ?? stats.topIndustry ?? "—";
   const headerTotal = summary ? num(summary.ad_count ?? summary.total_sightings) || ads.length : ads.length;
   const headerFirst = summary?.first_seen ?? ads.reduce<string | null>((acc, a) => {
     if (!a.first_seen) return acc;
@@ -242,8 +312,10 @@ function AdvertiserPage() {
     return new Date(a.first_seen) < new Date(acc) ? a.first_seen : acc;
   }, null);
 
+  const brandLabel = String(headerBrand);
+
   return (
-    <WorkspaceShell title={String(headerBrand)} subtitle="Ad library · creatives, themes and channel mix for this advertiser.">
+    <WorkspaceShell title={brandLabel} subtitle="Ad library · creatives, themes and channel mix for this advertiser.">
       <div className="space-y-6">
         <Link to="/app/advertisers" className="mono text-[11px] uppercase tracking-widest text-muted-foreground inline-flex items-center gap-1 hover:text-ink">
           <ArrowLeft size={12} /> Back to advertisers
@@ -251,7 +323,7 @@ function AdvertiserPage() {
 
         {/* Header strip */}
         <div className="card-flat p-5 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <HeaderCell label="Brand" value={String(headerBrand)} />
+          <HeaderCell label="Brand" value={brandLabel} />
           <HeaderCell label="Industry" value={String(headerIndustry)} className="capitalize" />
           <HeaderCell label="Total ads" value={String(headerTotal)} />
           <HeaderCell label="First seen" value={fmtDate(headerFirst)} />
@@ -259,9 +331,9 @@ function AdvertiserPage() {
 
         {/* Stat row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard label="Total creatives" value={String(stats.totalCreatives)} />
-          <StatCard label="Most used theme" value={stats.topTheme} capitalize />
-          <StatCard label="Dominant emotion" value={stats.topEmotion} capitalize />
+          <StatCard label="Total" value={String(stats.total)} />
+          <StatCard label="Industry" value={stats.topIndustry} capitalize />
+          <StatCard label="Top theme" value={stats.topTheme} capitalize />
           <StatCard label="Finance offers" value={String(stats.financeOffers)} />
         </div>
 
@@ -317,6 +389,21 @@ function AdvertiserPage() {
                   </button>
                 )}
               </div>
+              <span className="w-px h-5 bg-ink/10 mx-1" />
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Sort</span>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortKey)}
+                  className="border border-ink/20 rounded-[3px] px-2 py-1 bg-paper text-xs"
+                  aria-label="Sort ads"
+                >
+                  <option value="most_seen">Most seen</option>
+                  <option value="most_recent">Most recent</option>
+                  <option value="finance_first">Finance offers first</option>
+                  <option value="urgency_first">Urgency ads first</option>
+                </select>
+              </div>
               <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground ml-auto">
                 {filtered.length}/{ads.length}
               </span>
@@ -332,7 +419,7 @@ function AdvertiserPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filtered.map((ad) => (
-                  <AdCard key={ad.id} ad={ad} onOpen={() => setActive(ad)} />
+                  <AdCard key={ad.id} ad={ad} brand={brandLabel} onOpen={() => setActive(ad)} />
                 ))}
               </div>
             )}
@@ -340,7 +427,7 @@ function AdvertiserPage() {
         )}
       </div>
 
-      {active && <AdPanel ad={active} onClose={() => setActive(null)} />}
+      {active && <AdPanel ad={active} brand={brandLabel} onClose={() => setActive(null)} />}
     </WorkspaceShell>
   );
 }
@@ -413,12 +500,17 @@ function AdMedia({ ad }: { ad: Ad }) {
   );
 }
 
-function AdCard({ ad, onOpen }: { ad: Ad; onOpen: () => void }) {
+function AdCard({ ad, brand, onOpen }: { ad: Ad; brand: string; onOpen: () => void }) {
   const tags = asTags(ad.ai_tags);
-  const themes = asStringArray(tags.themes).slice(0, 3);
+  const themes = asStringArray(tags.themes).slice(0, 2);
   const finance = typeof tags.finance_offer === "string" ? tags.finance_offer : null;
-  const sentiment = typeof tags.sentiment === "string" ? tags.sentiment : null;
+  const sentiment = classifySentiment(tags.sentiment);
+  const sMeta = sentimentMeta(sentiment);
   const sightings = num(ad.sighting_count);
+  const ch = adChannel(ad);
+  const cta = typeof tags.call_to_action === "string" ? tags.call_to_action : null;
+  const displayBrand = ad.advertiser ?? ad.brand ?? brand;
+
   return (
     <button
       onClick={onOpen}
@@ -426,89 +518,170 @@ function AdCard({ ad, onOpen }: { ad: Ad; onOpen: () => void }) {
     >
       <AdMedia ad={ad} />
       <div className="p-4 flex flex-col gap-2.5 flex-1">
-        {sentiment && (
-          <div>
-            <Badge variant="outline" className="capitalize text-[10px] mono uppercase tracking-widest">
-              {sentiment}
-            </Badge>
+        {/* Brand + sponsored label */}
+        <div className="flex items-center gap-2 text-[11px]">
+          <span className="font-bold truncate">{displayBrand}</span>
+          <span className="mono text-[9px] uppercase tracking-widest text-muted-foreground border border-ink/20 px-1.5 py-0.5 rounded-[2px]">
+            Sponsored
+          </span>
+        </div>
+
+        {/* CTA headline */}
+        {cta && (
+          <div className="text-sm font-semibold leading-snug text-ink line-clamp-2">
+            {cta}
           </div>
         )}
-        {themes.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {themes.map((t) => (
-              <span key={t} className="px-2 py-0.5 border border-ink/30 rounded-full text-[10px] font-medium capitalize">
-                {t.replace(/_/g, " ")}
-              </span>
-            ))}
-          </div>
-        )}
+
+        {/* Sentiment + themes */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={`inline-flex items-center gap-1 text-[10px] mono uppercase tracking-widest border px-1.5 py-0.5 rounded-[3px] ${sMeta.chip}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${sMeta.dot}`} />
+            {sMeta.label}
+          </span>
+          {themes.map((t) => (
+            <span key={t} className="px-2 py-0.5 border border-ink/30 rounded-full text-[10px] font-medium capitalize">
+              {t.replace(/_/g, " ")}
+            </span>
+          ))}
+        </div>
+
+        {/* Finance offer pill */}
         {finance && (
-          <div className="bg-amber-100 border border-amber-500 rounded-[6px] px-2.5 py-1.5 text-[11px] font-semibold text-amber-950">
+          <div className="bg-amber-100 border border-amber-500 rounded-full px-2.5 py-1 text-[11px] font-semibold text-amber-950 self-start">
             {finance}
           </div>
         )}
+
+        {/* Footer */}
         <div className="flex items-center justify-between mt-auto pt-2 border-t border-ink/10 text-[11px] text-muted-foreground">
-          <span>{fmtDate(ad.first_seen)} → {timeAgo(ad.last_seen)}</span>
-          {sightings > 0 && <span className="mono">Seen {sightings}×</span>}
+          <span className="mono">{sightings > 0 ? `Seen ${sightings}×` : "—"}</span>
+          <span className="mono text-[10px] uppercase tracking-widest border border-ink/20 px-1.5 py-0.5 rounded-[2px]">
+            {channelLabel(ch)}
+          </span>
+        </div>
+        <div className="text-[10px] text-muted-foreground mono">
+          First seen {fmtDate(ad.first_seen)}
         </div>
       </div>
     </button>
   );
 }
 
-function AdPanel({ ad, onClose }: { ad: Ad; onClose: () => void }) {
+function AdPanel({ ad, brand, onClose }: { ad: Ad; brand: string; onClose: () => void }) {
   const tags = asTags(ad.ai_tags);
-  const entries = Object.entries(tags);
+  const sentiment = classifySentiment(tags.sentiment);
+  const sMeta = sentimentMeta(sentiment);
+  const themes = asStringArray(tags.themes);
+  const finance = typeof tags.finance_offer === "string" ? tags.finance_offer : null;
+  const cta = typeof tags.call_to_action === "string" ? tags.call_to_action : null;
+  const ch = adChannel(ad);
+
+  const signals: Array<{ k: string; v: string }> = [];
+  if (typeof tags.industry === "string") signals.push({ k: "Industry", v: tags.industry });
+  if (typeof tags.product === "string") signals.push({ k: "Product", v: tags.product });
+  if (typeof tags.demographics === "string") signals.push({ k: "Demographics", v: tags.demographics });
+  else if (Array.isArray(tags.demographics)) signals.push({ k: "Demographics", v: (tags.demographics as unknown[]).join(", ") });
+  const hp = asBool(tags.has_people);
+  if (hp !== null) signals.push({ k: "Has People", v: hp ? "Yes" : "No" });
+  const hl = asBool(tags.has_logo);
+  if (hl !== null) signals.push({ k: "Has Logo", v: hl ? "Yes" : "No" });
+
+  const handleChip = (theme: string) => {
+    askBarbs(`Show me all ${theme.replace(/_/g, " ")} ads from ${brand}`);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-ink/40" onClick={onClose}>
       <div
         className="w-full max-w-md bg-paper border-l border-ink h-full overflow-auto shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-paper border-b border-ink/10 p-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-paper border-b border-ink/10 p-4 flex items-center justify-between z-10">
           <div className="min-w-0">
             <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Creative detail</div>
-            <div className="font-bold truncate">{ad.advertiser ?? ad.brand ?? "Ad"}</div>
+            <div className="font-bold truncate">{ad.advertiser ?? ad.brand ?? brand}</div>
           </div>
           <button onClick={onClose} className="p-1 rounded hover:bg-secondary" aria-label="Close">
             <X size={16} />
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-5">
           <AdMedia ad={ad} />
 
-          <Section label="Channel source">
-            <div className="capitalize text-sm font-medium">{adChannel(ad)}</div>
-          </Section>
+          {cta && (
+            <Section label="Headline">
+              <div className="text-sm font-semibold leading-snug">{cta}</div>
+            </Section>
+          )}
 
-          <Section label="Sighting history">
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              <KV k="First seen" v={fmtDate(ad.first_seen)} />
-              <KV k="Last seen" v={fmtDate(ad.last_seen)} />
-              <KV k="Sightings" v={String(num(ad.sighting_count))} />
+          {finance && (
+            <Section label="Finance offer">
+              <div className="bg-amber-100 border border-amber-500 rounded-[6px] px-3 py-2 text-sm font-semibold text-amber-950">
+                {finance}
+              </div>
+            </Section>
+          )}
+
+          <Section label="Public Reaction">
+            <div className={`flex items-center gap-2 border rounded-[6px] px-3 py-2 ${sMeta.chip}`}>
+              <span className="text-base leading-none">{sMeta.icon}</span>
+              <div>
+                <div className="text-sm font-semibold">{sMeta.label}</div>
+                <div className="text-xs">{sMeta.reaction}</div>
+              </div>
             </div>
           </Section>
 
-          <Section label="AI tags">
-            {entries.length === 0 ? (
-              <div className="text-xs text-muted-foreground">No AI tags recorded.</div>
+          <Section label="Key Signals">
+            {signals.length === 0 ? (
+              <div className="text-xs text-muted-foreground">No signal data.</div>
             ) : (
-              <dl className="space-y-2 text-xs">
-                {entries.map(([k, v]) => (
-                  <div key={k} className="grid grid-cols-[120px_1fr] gap-2">
-                    <dt className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{k}</dt>
-                    <dd className="font-medium break-words whitespace-pre-wrap">
-                      {typeof v === "string" || typeof v === "number" || typeof v === "boolean"
-                        ? String(v)
-                        : Array.isArray(v)
-                          ? v.join(", ")
-                          : JSON.stringify(v, null, 2)}
-                    </dd>
+              <dl className="grid grid-cols-2 gap-2">
+                {signals.map((s) => (
+                  <div key={s.k} className="border border-ink/10 rounded-[4px] p-2">
+                    <dt className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{s.k}</dt>
+                    <dd className="text-sm font-medium capitalize mt-0.5 break-words">{s.v}</dd>
                   </div>
                 ))}
               </dl>
             )}
+          </Section>
+
+          <Section label="Where Seen">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <KV k="Sightings" v={String(num(ad.sighting_count))} />
+              <KV k="Platform" v={channelLabel(ch)} />
+              <KV k="First seen" v={fmtDate(ad.first_seen)} />
+              <KV k="Last seen" v={fmtDate(ad.last_seen)} />
+            </div>
+          </Section>
+
+          <Section label="Keywords">
+            {themes.length === 0 ? (
+              <div className="text-xs text-muted-foreground">No themes.</div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {themes.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => handleChip(t)}
+                    className="px-2.5 py-1 border-2 border-ink rounded-full text-[11px] font-medium capitalize bg-paper hover:bg-secondary transition-colors"
+                    title={`Ask Barbs about ${t.replace(/_/g, " ")}`}
+                  >
+                    {t.replace(/_/g, " ")}
+                  </button>
+                ))}
+              </div>
+            )}
+          </Section>
+
+          <Section label="Raw AI tags">
+            <Badge variant="outline" className="text-[10px] mono uppercase tracking-widest mb-2">debug</Badge>
+            <pre className="text-[10px] bg-canvas border border-ink/10 rounded-[4px] p-2 overflow-auto max-h-48">
+{JSON.stringify(tags, null, 2)}
+            </pre>
           </Section>
         </div>
       </div>
