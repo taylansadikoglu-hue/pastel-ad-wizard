@@ -274,8 +274,11 @@ function AdvertiserPage() {
 
   const filtered = useMemo(() => {
     const base = ads.filter((a) => {
-      if (kind === "image" && adKind(a) !== "image") return false;
-      if (kind === "video" && adKind(a) !== "video") return false;
+      const fmt = adFormat(a);
+      if (kind === "image" && !(fmt === "image" || fmt === "display")) return false;
+      if (kind === "video" && fmt !== "video") return false;
+      if (kind === "display" && fmt !== "display") return false;
+      if (kind === "text" && fmt !== "text") return false;
       if (channel !== "all" && adChannel(a) !== channel) return false;
       if (from) {
         const t = a.first_seen ? new Date(a.first_seen).getTime() : 0;
