@@ -171,7 +171,7 @@ function askBarbs(query: string) {
   window.dispatchEvent(new CustomEvent("barbs:ask", { detail: query }));
 }
 
-type FilterKind = "all" | "image" | "video";
+type FilterKind = "all" | "image" | "video" | "display" | "text";
 type FilterChannel = "all" | "google" | "meta";
 type SortKey = "most_seen" | "most_recent" | "finance_first" | "urgency_first";
 
