@@ -77,19 +77,29 @@ function sourceFromAd(ad: Ad): "Apify" | "DataForSEO" {
   return "Apify";
 }
 
+function aiTagsOf(ad: Ad): Record<string, unknown> {
+  const raw = ad.ai_tags as unknown;
+  if (!raw) return {};
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
+  }
+  if (typeof raw === "object") return raw as Record<string, unknown>;
+  return {};
+}
+
 function themesFromAd(ad: Ad): string[] {
-  const themes = ad.ai_tags?.themes;
+  const themes = aiTagsOf(ad).themes;
   if (Array.isArray(themes)) return themes.filter((t): t is string => typeof t === "string").slice(0, 3);
   return [];
 }
 
 function industryFromAd(ad: Ad): string | null {
-  const v = ad.ai_tags?.industry;
+  const v = aiTagsOf(ad).industry;
   return typeof v === "string" ? v : null;
 }
 
 function financeOfferFromAd(ad: Ad): string | null {
-  const v = ad.ai_tags?.finance_offer;
+  const v = aiTagsOf(ad).finance_offer;
   if (typeof v === "string" && v.trim()) return v;
   return null;
 }
