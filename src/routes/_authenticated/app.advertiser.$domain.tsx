@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-const API_BASE = "https://api.revenuead.com";
+const API_BASE = "https://api.revenuad.com";
 const SOLO_TIERS = new Set(["solo", "free", "trial", "starter"]);
 
 type AiTags = Record<string, unknown> & {
