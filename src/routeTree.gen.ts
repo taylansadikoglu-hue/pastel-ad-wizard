@@ -26,6 +26,7 @@ import { Route as AuthenticatedAppBenchmarksRouteImport } from './routes/_authen
 import { Route as AuthenticatedAppAdvisorRouteImport } from './routes/_authenticated/app.advisor'
 import { Route as AuthenticatedAppAdvertisersRouteImport } from './routes/_authenticated/app.advertisers'
 import { Route as ApiPublicHooksScanReadyRouteImport } from './routes/api/public/hooks/scan-ready'
+import { Route as AuthenticatedAppAdvertiserDomainRouteImport } from './routes/_authenticated/app.advertiser.$domain'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -117,6 +118,12 @@ const ApiPublicHooksScanReadyRoute = ApiPublicHooksScanReadyRouteImport.update({
   path: '/api/public/hooks/scan-ready',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAppAdvertiserDomainRoute =
+  AuthenticatedAppAdvertiserDomainRouteImport.update({
+    id: '/advertiser/$domain',
+    path: '/advertiser/$domain',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/app/pcr': typeof AuthenticatedAppPcrRoute
   '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
 }
 export interface FileRoutesByTo {
@@ -152,6 +160,7 @@ export interface FileRoutesByTo {
   '/app/pcr': typeof AuthenticatedAppPcrRoute
   '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
 }
 export interface FileRoutesById {
@@ -172,6 +181,7 @@ export interface FileRoutesById {
   '/_authenticated/app/pcr': typeof AuthenticatedAppPcrRoute
   '/_authenticated/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
 }
 export interface FileRouteTypes {
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/app/pcr'
     | '/app/sentiment'
     | '/app/settings'
+    | '/app/advertiser/$domain'
     | '/api/public/hooks/scan-ready'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/app/pcr'
     | '/app/sentiment'
     | '/app/settings'
+    | '/app/advertiser/$domain'
     | '/api/public/hooks/scan-ready'
   id:
     | '__root__'
@@ -229,6 +241,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/pcr'
     | '/_authenticated/app/sentiment'
     | '/_authenticated/app/settings'
+    | '/_authenticated/app/advertiser/$domain'
     | '/api/public/hooks/scan-ready'
   fileRoutesById: FileRoutesById
 }
@@ -363,6 +376,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksScanReadyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/app/advertiser/$domain': {
+      id: '/_authenticated/app/advertiser/$domain'
+      path: '/advertiser/$domain'
+      fullPath: '/app/advertiser/$domain'
+      preLoaderRoute: typeof AuthenticatedAppAdvertiserDomainRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
   }
 }
 
@@ -376,6 +396,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppPcrRoute: typeof AuthenticatedAppPcrRoute
   AuthenticatedAppSentimentRoute: typeof AuthenticatedAppSentimentRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppAdvertiserDomainRoute: typeof AuthenticatedAppAdvertiserDomainRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
@@ -388,6 +409,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppPcrRoute: AuthenticatedAppPcrRoute,
   AuthenticatedAppSentimentRoute: AuthenticatedAppSentimentRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppAdvertiserDomainRoute: AuthenticatedAppAdvertiserDomainRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
