@@ -285,7 +285,10 @@ export function MorningBrief() {
             <span className="capitalize">{pulse.industry}</span> activity is{" "}
             <span className="font-bold">{pulse.level}</span> —{" "}
             <span className="font-bold tabular-nums">{pulse.creativeCount}</span> new creatives —{" "}
-            <span className="font-bold">{top.brand}</span> is most aggressive
+            <Link to="/app/advertiser/$brand" params={{ brand: top.brand }} className="font-bold underline-offset-2 hover:underline">
+              {top.brand}
+            </Link>{" "}
+            is most aggressive
           </div>
         </div>
 
