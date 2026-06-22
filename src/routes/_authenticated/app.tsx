@@ -84,8 +84,8 @@ function AppPage() {
   const navigate = useNavigate();
   const [stage, setStage] = useState<Stage>("loading");
   const [email, setEmail] = useState("");
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "/app";
-  const isChildWorkspaceRoute = pathname !== "/app";
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isChildWorkspaceRoute = pathname !== "/app" && pathname !== "/app/";
 
   const refresh = async () => {
     const { data: u } = await supabase.auth.getUser();
