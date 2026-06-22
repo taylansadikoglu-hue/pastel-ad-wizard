@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { AlertTriangle, Inbox, Plus, Target } from "lucide-react";
 import { WorkspaceShell } from "./WorkspaceShell";
 import { Progress } from "@/components/ui/progress";
