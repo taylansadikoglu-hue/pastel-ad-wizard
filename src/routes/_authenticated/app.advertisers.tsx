@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, Loader2, Film, Image as ImageIcon, Filter, MoreHorizontal, ThumbsUp, MessageCircle, Share2, Calendar as CalendarIcon, X, TrendingUp, Activity, Database, Globe, FileDown, ArrowUp, ArrowDown } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 
-const ARCGRID_BASE = "https://api.revenuead.com";
+const ARCGRID_BASE = "https://api.revenuad.com";
 
 type TrendPayload = {
   domain: string;
