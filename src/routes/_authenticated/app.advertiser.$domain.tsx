@@ -32,6 +32,9 @@ type Ad = {
   brand?: string | null;
   image_url?: string | null;
   video_url?: string | null;
+  thumbnail_url?: string | null;
+  ad_format?: string | null;
+  ad_duration_seconds?: number | string | null;
   ai_tags?: AiTags | string | null;
   first_seen?: string | null;
   last_seen?: string | null;
@@ -81,9 +84,19 @@ function asBool(v: unknown): boolean | null {
 
 function fmtDate(iso?: string | null): string {
   if (!iso) return "—";
-  const t = new Date(iso).getTime();
+  const d = new Date(iso);
+  const t = d.getTime();
   if (!Number.isFinite(t)) return "—";
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function fmtDuration(v: number | string | null | undefined): string | null {
+  const n = typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) : NaN;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const total = Math.round(n);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function timeAgo(iso?: string | null): string {
@@ -113,8 +126,19 @@ function channelLabel(c: string): string {
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
+type AdFormat = "video" | "display" | "text" | "image";
+function adFormat(ad: Ad): AdFormat {
+  const f = (ad.ad_format ?? "").toString().toLowerCase().trim();
+  if (f === "video") return "video";
+  if (f === "display") return "display";
+  if (f === "text") return "text";
+  if (ad.video_url) return "video";
+  if (ad.image_url) return "display";
+  return "image";
+}
+
 function adKind(ad: Ad): "video" | "image" {
-  return ad.video_url ? "video" : "image";
+  return adFormat(ad) === "video" ? "video" : "image";
 }
 
 type Sentiment = "positive" | "urgency" | "neutral";
@@ -147,7 +171,7 @@ function askBarbs(query: string) {
   window.dispatchEvent(new CustomEvent("barbs:ask", { detail: query }));
 }
 
-type FilterKind = "all" | "image" | "video";
+type FilterKind = "all" | "image" | "video" | "display" | "text";
 type FilterChannel = "all" | "google" | "meta";
 type SortKey = "most_seen" | "most_recent" | "finance_first" | "urgency_first";
 
@@ -250,8 +274,11 @@ function AdvertiserPage() {
 
   const filtered = useMemo(() => {
     const base = ads.filter((a) => {
-      if (kind === "image" && adKind(a) !== "image") return false;
-      if (kind === "video" && adKind(a) !== "video") return false;
+      const fmt = adFormat(a);
+      if (kind === "image" && !(fmt === "image" || fmt === "display")) return false;
+      if (kind === "video" && fmt !== "video") return false;
+      if (kind === "display" && fmt !== "display") return false;
+      if (kind === "text" && fmt !== "text") return false;
       if (channel !== "all" && adChannel(a) !== channel) return false;
       if (from) {
         const t = a.first_seen ? new Date(a.first_seen).getTime() : 0;
@@ -291,16 +318,21 @@ function AdvertiserPage() {
     const themeCounts = new Map<string, number>();
     const industryCounts = new Map<string, number>();
     let financeOffers = 0;
+    let videoCount = 0;
+    let displayCount = 0;
     for (const a of ads) {
       const t = asTags(a.ai_tags);
       for (const th of asStringArray(t.themes)) themeCounts.set(th, (themeCounts.get(th) ?? 0) + 1);
       const ind = typeof t.industry === "string" ? t.industry : "";
       if (ind) industryCounts.set(ind, (industryCounts.get(ind) ?? 0) + 1);
       if (typeof t.finance_offer === "string" && t.finance_offer.trim()) financeOffers += 1;
+      const fmt = adFormat(a);
+      if (fmt === "video") videoCount += 1;
+      else if (fmt === "display") displayCount += 1;
     }
     const topTheme = [...themeCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
     const topIndustry = [...industryCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
-    return { total: ads.length, topTheme, topIndustry, financeOffers };
+    return { total: ads.length, topTheme, topIndustry, financeOffers, videoCount, displayCount };
   }, [ads]);
 
   const headerBrand = summary?.brand ?? summary?.advertiser ?? domain;
@@ -330,8 +362,10 @@ function AdvertiserPage() {
         </div>
 
         {/* Stat row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Total" value={String(stats.total)} />
+          <StatCard label="Video" value={String(stats.videoCount)} />
+          <StatCard label="Display" value={String(stats.displayCount)} />
           <StatCard label="Industry" value={stats.topIndustry} capitalize />
           <StatCard label="Top theme" value={stats.topTheme} capitalize />
           <StatCard label="Finance offers" value={String(stats.financeOffers)} />
@@ -349,7 +383,9 @@ function AdvertiserPage() {
                 options={[
                   { v: "all", label: "All" },
                   { v: "image", label: "Images" },
-                  { v: "video", label: "Videos" },
+                  { v: "video", label: "Video" },
+                  { v: "display", label: "Display" },
+                  { v: "text", label: "Text" },
                 ]}
               />
               <span className="w-px h-5 bg-ink/10 mx-1" />
@@ -471,20 +507,41 @@ function FilterGroup<T extends string>({
 }
 
 function AdMedia({ ad }: { ad: Ad }) {
-  const [ok, setOk] = useState<boolean>(Boolean(ad.image_url));
-  const isVideo = adKind(ad) === "video";
-  if (ad.image_url && ok) {
+  const fmt = adFormat(ad);
+  const isVideo = fmt === "video";
+  const isDisplay = fmt === "display";
+  const src = isVideo ? (ad.thumbnail_url ?? ad.image_url ?? null) : (ad.image_url ?? null);
+  const [ok, setOk] = useState<boolean>(Boolean(src));
+  const duration = fmtDuration(ad.ad_duration_seconds);
+
+  const formatBadge = isVideo ? (
+    <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-red-600 text-white text-[10px] mono uppercase tracking-widest font-semibold shadow">
+      <VideoIcon size={10} /> Video
+    </span>
+  ) : isDisplay ? (
+    <span className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-blue-600 text-white text-[10px] mono uppercase tracking-widest font-semibold shadow">
+      <ImageIcon size={10} /> Display
+    </span>
+  ) : null;
+
+  if (src && ok) {
     return (
       <div className="relative aspect-video bg-paper border-b border-ink/10 overflow-hidden">
         <img
-          src={ad.image_url}
+          src={src}
           alt={ad.advertiser ?? ad.brand ?? "Creative"}
           loading="lazy"
           onError={() => setOk(false)}
           className="w-full h-full object-cover"
         />
+        {formatBadge}
+        {isVideo && duration && (
+          <span className="absolute top-2 right-2 z-10 px-1.5 py-0.5 rounded-[3px] bg-black/75 text-white text-[10px] mono font-semibold">
+            {duration}
+          </span>
+        )}
         {isVideo && (
-          <div className="absolute inset-0 grid place-items-center bg-black/30">
+          <div className="absolute inset-0 grid place-items-center bg-black/25 pointer-events-none">
             <div className="w-12 h-12 rounded-full bg-white/95 grid place-items-center shadow">
               <Play size={20} className="text-ink ml-0.5" />
             </div>
@@ -494,7 +551,8 @@ function AdMedia({ ad }: { ad: Ad }) {
     );
   }
   return (
-    <div className="aspect-video bg-paper border-b border-ink/10 grid place-items-center text-muted-foreground">
+    <div className="relative aspect-video bg-paper border-b border-ink/10 grid place-items-center text-muted-foreground">
+      {formatBadge}
       {isVideo ? <VideoIcon size={26} /> : <ImageIcon size={26} />}
     </div>
   );
@@ -608,7 +666,16 @@ function AdPanel({ ad, brand, onClose }: { ad: Ad; brand: string; onClose: () =>
         </div>
 
         <div className="p-4 space-y-5">
-          <AdMedia ad={ad} />
+          {adFormat(ad) === "video" && ad.video_url ? (
+            <video
+              controls
+              src={ad.video_url}
+              poster={ad.thumbnail_url ?? ad.image_url ?? undefined}
+              className="w-full aspect-video bg-black border border-ink/10 rounded-[4px]"
+            />
+          ) : (
+            <AdMedia ad={ad} />
+          )}
 
           {cta && (
             <Section label="Headline">
