@@ -372,6 +372,68 @@ export function AdMap() {
   );
 }
 
+function AdCard({
+  ad,
+  themes,
+  industry,
+  financeOffer,
+  source,
+  onOpen,
+}: {
+  ad: Ad;
+  themes: string[];
+  industry: string | null;
+  financeOffer: string | null;
+  source: "Apify" | "DataForSEO";
+  onOpen: () => void;
+}) {
+  const [imgOk, setImgOk] = useState<boolean>(Boolean(ad.image_url));
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="card-flat p-4 text-left hover:shadow-flat-md transition-shadow flex flex-col gap-3"
+    >
+      {ad.image_url && imgOk && (
+        <div className="rounded-md overflow-hidden border border-ink/10 bg-secondary/40">
+          <img
+            src={ad.image_url}
+            alt={ad.advertiser ?? "ad"}
+            loading="lazy"
+            onError={() => setImgOk(false)}
+            className="w-full h-40 object-cover"
+          />
+        </div>
+      )}
+      <div className="flex items-start justify-between gap-2">
+        <div className="font-semibold text-ink truncate">{ad.advertiser ?? "Unknown brand"}</div>
+        <SourceBadge source={source} />
+      </div>
+      {industry && (
+        <span className="inline-flex w-fit items-center px-2 py-0.5 rounded-full text-[10px] mono font-semibold bg-secondary text-ink capitalize">
+          {industry}
+        </span>
+      )}
+      <div className="flex flex-wrap gap-1.5">
+        {themes.map((t) => (
+          <span key={t} className="px-2 py-0.5 rounded-full text-[10px] bg-primary/10 text-primary font-medium">
+            {t}
+          </span>
+        ))}
+        {financeOffer && (
+          <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 font-semibold border border-amber-300">
+            {financeOffer}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center justify-between gap-2 mt-auto pt-2 border-t border-ink/5">
+        <span className="text-[10px] mono uppercase tracking-wide text-muted-foreground">Tagged by ChatGPT</span>
+        <span className="text-[10px] text-muted-foreground">{timeAgo(ad.last_seen ?? ad.first_seen)}</span>
+      </div>
+    </button>
+  );
+}
+
 function AdDetail({ ad, onClose }: { ad: Ad; onClose: () => void }) {
   const entries = ad.ai_tags ? Object.entries(ad.ai_tags) : [];
   return (
