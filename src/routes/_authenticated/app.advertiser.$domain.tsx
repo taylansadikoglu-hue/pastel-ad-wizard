@@ -42,6 +42,7 @@ type War = {
   monthly_velocity?: { month: string; ads: number }[];
   seasonal_clusters?: { eofy?: number; christmas?: number; tax?: number; back_to_school?: number };
   recent_ads?: RecentAd[];
+  insight?: string;
 };
 
 type Spend = {
@@ -50,13 +51,22 @@ type Spend = {
   spend_by_channel?: { search?: number; display?: number; video?: number; social?: number };
   confidence?: string;
   methodology?: string;
+  insight?: string;
 };
 
 type Placements = {
   brand?: string;
   total_placements?: number;
   sites?: { domain: string; count: number; pct?: number; label?: string; ad_formats?: string[] }[];
+  insight?: string;
 };
+
+type Explain = {
+  one_liner?: string;
+  their_weakness?: string;
+  opportunity_for_competitors?: string;
+};
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -93,6 +103,13 @@ function fmtNum(n: number | undefined): string {
   if (!n || !Number.isFinite(n)) return "0";
   return Math.round(n).toLocaleString();
 }
+
+function fmtPct(n: number | undefined): string {
+  if (n === undefined || n === null || !Number.isFinite(n)) return "0%";
+  const v = Math.abs(n) <= 1 ? n * 100 : n;
+  return `${v.toFixed(1)}%`;
+}
+
 
 function askBarbs(query: string) {
   if (typeof window === "undefined") return;
@@ -174,6 +191,7 @@ function AdvertiserPage() {
   const [war, setWar] = useState<War | null>(null);
   const [spend, setSpend] = useState<Spend | null>(null);
   const [places, setPlaces] = useState<Placements | null>(null);
+  const [explain, setExplain] = useState<Explain | null>(null);
   const [loading, setLoading] = useState(true);
   const [seasonalFilter, setSeasonalFilter] = useState<string | null>(null);
   const ChartLib = useChartJs();
@@ -189,19 +207,22 @@ function AdvertiserPage() {
       } catch { return null; }
     };
     (async () => {
-      const [w, s, p] = await Promise.all([
+      const [w, s, p, e] = await Promise.all([
         safe<War>(`${API_BASE}/api/advertisers/${encodeURIComponent(brand)}`),
         safe<Spend>(`${API_BASE}/api/spend/${encodeURIComponent(brand)}`),
         safe<Placements>(`${API_BASE}/api/placements/${encodeURIComponent(brand)}`),
+        safe<Explain>(`${API_BASE}/api/explain/${encodeURIComponent(brand)}`),
       ]);
       if (!alive) return;
       setWar(w);
       setSpend(s);
       setPlaces(p);
+      setExplain(e);
       setLoading(false);
     })();
     return () => { alive = false; };
   }, [brand]);
+
 
   // Derived numbers
   const topTheme = war?.top_themes?.[0]?.theme ?? "—";
@@ -392,6 +413,9 @@ function AdvertiserPage() {
 
         {/* SECTION 1 — Dark hero header */}
         <section className="rounded-[12px] bg-zinc-950 text-white p-8 md:p-10">
+          {explain?.one_liner && (
+            <div className="mono text-[11px] uppercase tracking-widest text-amber-300 mb-3">{explain.one_liner}</div>
+          )}
           <div className="text-2xl md:text-3xl font-bold tracking-tight leading-snug">
             <span className="text-amber-300">{brand}</span> has run{" "}
             <span className="tabular-nums">{fmtNum(totalAds)}</span> ads since {firstSeen}.
@@ -400,11 +424,14 @@ function AdvertiserPage() {
             <br />
             <span className="text-emerald-300 capitalize">{topTheme}</span> is their #1 weapon.
           </div>
+          {war.insight && (
+            <p className="text-zinc-300 italic mt-4 text-base leading-relaxed">{war.insight}</p>
+          )}
           <div className="mt-6 flex flex-wrap gap-2">
             <Pill>{fmtMoney(spend?.estimated_monthly_spend)}/mo</Pill>
             <Pill>{fmtNum(totalSight)} sightings</Pill>
             <Pill>Since {fmtMonth(war.first_seen)}</Pill>
-            <Pill>{thisMonthAds} ads this month</Pill>
+            <Pill>{fmtNum(thisMonthAds)} ads this month</Pill>
           </div>
           <div className="mt-6 flex gap-3">
             <a href="#all-creatives" className="inline-flex items-center gap-2 bg-white text-zinc-900 px-4 py-2 rounded-[8px] text-sm font-semibold hover:bg-zinc-100">
@@ -419,13 +446,38 @@ function AdvertiserPage() {
           </div>
         </section>
 
+        {/* Explain — weakness + opportunity */}
+        {(explain?.their_weakness || explain?.opportunity_for_competitors) && (
+          <section className="grid md:grid-cols-2 gap-4">
+            {explain?.their_weakness && (
+              <div className="rounded-[12px] border border-emerald-300 bg-emerald-50 p-5">
+                <div className="mono text-[10px] uppercase tracking-widest text-emerald-800">Their weakness</div>
+                <div className="mt-2 text-base text-emerald-950 leading-relaxed">
+                  ⚡ {explain.their_weakness}
+                </div>
+              </div>
+            )}
+            {explain?.opportunity_for_competitors && (
+              <div className="rounded-[12px] border border-amber-400 bg-amber-50 p-5">
+                <div className="mono text-[10px] uppercase tracking-widest text-amber-800">Your opportunity</div>
+                <div className="mt-2 text-base text-amber-950 leading-relaxed">
+                  🎯 {explain.opportunity_for_competitors}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+
         {/* SECTION 2 — 3 charts */}
         <section className="grid lg:grid-cols-3 gap-4">
           <ChartCard title="Channel Split" subtitle="Where their budget lands">
+            {spend?.insight && <p className="text-gray-500 italic text-sm mb-3">{spend.insight}</p>}
             <div className="h-72"><ChartCanvas build={buildChannel} className="!w-full !h-full" /></div>
           </ChartCard>
 
           <ChartCard title="Where They Show Up" subtitle="Top sites your audience sees their ads">
+            {places?.insight && <p className="text-gray-500 italic text-sm mb-3">{places.insight}</p>}
             <div className="h-72"><ChartCanvas build={buildPlaces} className="!w-full !h-full" /></div>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {(places?.sites ?? []).slice(0, 6).map((s) => (
@@ -457,6 +509,9 @@ function AdvertiserPage() {
           <div className="card-flat p-6">
             <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Theme Intelligence</div>
             <h3 className="text-lg font-bold tracking-tight mt-1">What they keep saying</h3>
+            <p className="text-gray-500 italic text-sm mt-2">
+              <span className="capitalize">{topTheme}</span> is their weapon — every other message orbits around it.
+            </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {(war.top_themes ?? []).slice(0, 8).map((t) => (
                 <button
@@ -465,10 +520,11 @@ function AdvertiserPage() {
                   className="px-3 py-2 rounded-full border border-ink text-sm font-medium capitalize hover:bg-ink hover:text-paper transition-colors"
                 >
                   {t.theme}
-                  <span className="ml-2 mono text-[10px] text-muted-foreground">{t.count} · {t.pct}%</span>
+                  <span className="ml-2 mono text-[10px] text-muted-foreground">{fmtNum(t.count)} · {fmtPct(t.pct)}</span>
                 </button>
               ))}
             </div>
+
 
             <div className="mt-5 space-y-2 text-sm">
               {war.finance_offers?.[0] && (
@@ -482,7 +538,7 @@ function AdvertiserPage() {
                 </div>
               )}
               <div className="px-3 py-2 rounded-[8px] bg-zinc-50 border border-zinc-200">
-                👥 <span className="font-semibold tabular-nums">{war.has_people_pct ?? 0}%</span> of ads feature real people
+                👥 <span className="font-semibold tabular-nums">{fmtPct(war.has_people_pct)}</span> of ads feature real people
               </div>
             </div>
 
@@ -502,6 +558,7 @@ function AdvertiserPage() {
         {/* SECTION 4 — Spend breakdown */}
         <section>
           <h2 className="text-xl font-bold tracking-tight mb-3">Estimated Media Spend</h2>
+          {spend?.insight && <p className="text-gray-500 italic mb-4">{spend.insight}</p>}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard label="Total Est." value={`${fmtMoney(spend?.estimated_monthly_spend)}/mo`} accent="bg-zinc-950 text-white" />
             <StatCard label="Programmatic" value={fmtMoney(spend?.spend_by_channel?.display)} />
@@ -509,9 +566,10 @@ function AdvertiserPage() {
             <StatCard label="Video" value={fmtMoney(spend?.spend_by_channel?.video)} />
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Estimated from AU avg CPCs/CPMs. <span className="capitalize">{spend?.confidence ?? "low"}</span> confidence.
+            Estimated using Australian market rates. <span className="capitalize">{spend?.confidence ?? "low"}</span> confidence.
           </p>
         </section>
+
 
         {/* SECTION 5 — Seasonal clusters */}
         {war.seasonal_clusters && Object.values(war.seasonal_clusters).some((v) => (v ?? 0) > 0) && (
