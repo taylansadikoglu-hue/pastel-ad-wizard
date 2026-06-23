@@ -191,6 +191,7 @@ function AdvertiserPage() {
   const [war, setWar] = useState<War | null>(null);
   const [spend, setSpend] = useState<Spend | null>(null);
   const [places, setPlaces] = useState<Placements | null>(null);
+  const [explain, setExplain] = useState<Explain | null>(null);
   const [loading, setLoading] = useState(true);
   const [seasonalFilter, setSeasonalFilter] = useState<string | null>(null);
   const ChartLib = useChartJs();
@@ -206,19 +207,22 @@ function AdvertiserPage() {
       } catch { return null; }
     };
     (async () => {
-      const [w, s, p] = await Promise.all([
+      const [w, s, p, e] = await Promise.all([
         safe<War>(`${API_BASE}/api/advertisers/${encodeURIComponent(brand)}`),
         safe<Spend>(`${API_BASE}/api/spend/${encodeURIComponent(brand)}`),
         safe<Placements>(`${API_BASE}/api/placements/${encodeURIComponent(brand)}`),
+        safe<Explain>(`${API_BASE}/api/explain/${encodeURIComponent(brand)}`),
       ]);
       if (!alive) return;
       setWar(w);
       setSpend(s);
       setPlaces(p);
+      setExplain(e);
       setLoading(false);
     })();
     return () => { alive = false; };
   }, [brand]);
+
 
   // Derived numbers
   const topTheme = war?.top_themes?.[0]?.theme ?? "—";
