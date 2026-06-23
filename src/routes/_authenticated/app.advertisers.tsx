@@ -1018,13 +1018,17 @@ function AdvertisersPage() {
   }, [enriched, activeAdvertiser, channelFilter, adTypeFilter, dateRange, sortBy]);
 
 
+  const platformOf = (p: { channel_platform?: string | null; channel?: string | null }): "Meta" | "Google" => {
+    const cp = (p.channel_platform ?? "").trim();
+    if (cp === "Meta" || cp === "Google") return cp;
+    return normalizeChannel(p.channel ?? "");
+  };
+
   const channelCounts = useMemo(() => {
     const base = { Meta: 0, Google: 0 } as Record<string, number>;
     for (const e of enriched) {
       if (activeAdvertiser !== "__all" && e.domain !== activeAdvertiser) continue;
-      const cp = e.channel_platform ?? "";
-      if (cp === "Google") base.Google += 1;
-      else if (cp === "Meta") base.Meta += 1;
+      base[platformOf(e)] += 1;
     }
     return base;
   }, [enriched, activeAdvertiser]);
@@ -1038,8 +1042,8 @@ function AdvertisersPage() {
     const scopedPl = activeAdvertiser === "__all"
       ? placements
       : placements.filter((p) => p.domain === activeAdvertiser);
-    const meta = scopedPl.filter((p) => p.channel_platform === "Meta").length;
-    const google = scopedPl.filter((p) => p.channel_platform === "Google").length;
+    const meta = scopedPl.filter((p) => platformOf(p) === "Meta").length;
+    const google = scopedPl.filter((p) => platformOf(p) === "Google").length;
     const total = scopedPl.length;
     const scopedEnriched = activeAdvertiser === "__all"
       ? enriched
