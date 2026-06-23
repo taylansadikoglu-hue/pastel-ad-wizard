@@ -104,6 +104,13 @@ function fmtNum(n: number | undefined): string {
   return Math.round(n).toLocaleString();
 }
 
+function fmtPct(n: number | undefined): string {
+  if (n === undefined || n === null || !Number.isFinite(n)) return "0%";
+  const v = Math.abs(n) <= 1 ? n * 100 : n;
+  return `${v.toFixed(1)}%`;
+}
+
+
 function askBarbs(query: string) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent("barbs:ask", { detail: query }));
