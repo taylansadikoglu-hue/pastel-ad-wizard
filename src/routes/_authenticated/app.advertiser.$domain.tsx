@@ -558,6 +558,7 @@ function AdvertiserPage() {
         {/* SECTION 4 — Spend breakdown */}
         <section>
           <h2 className="text-xl font-bold tracking-tight mb-3">Estimated Media Spend</h2>
+          {spend?.insight && <p className="text-gray-500 italic mb-4">{spend.insight}</p>}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard label="Total Est." value={`${fmtMoney(spend?.estimated_monthly_spend)}/mo`} accent="bg-zinc-950 text-white" />
             <StatCard label="Programmatic" value={fmtMoney(spend?.spend_by_channel?.display)} />
@@ -565,9 +566,10 @@ function AdvertiserPage() {
             <StatCard label="Video" value={fmtMoney(spend?.spend_by_channel?.video)} />
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Estimated from AU avg CPCs/CPMs. <span className="capitalize">{spend?.confidence ?? "low"}</span> confidence.
+            Estimated using Australian market rates. <span className="capitalize">{spend?.confidence ?? "low"}</span> confidence.
           </p>
         </section>
+
 
         {/* SECTION 5 — Seasonal clusters */}
         {war.seasonal_clusters && Object.values(war.seasonal_clusters).some((v) => (v ?? 0) > 0) && (
