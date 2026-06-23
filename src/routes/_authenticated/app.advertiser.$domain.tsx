@@ -472,10 +472,12 @@ function AdvertiserPage() {
         {/* SECTION 2 — 3 charts */}
         <section className="grid lg:grid-cols-3 gap-4">
           <ChartCard title="Channel Split" subtitle="Where their budget lands">
+            {spend?.insight && <p className="text-gray-500 italic text-sm mb-3">{spend.insight}</p>}
             <div className="h-72"><ChartCanvas build={buildChannel} className="!w-full !h-full" /></div>
           </ChartCard>
 
           <ChartCard title="Where They Show Up" subtitle="Top sites your audience sees their ads">
+            {places?.insight && <p className="text-gray-500 italic text-sm mb-3">{places.insight}</p>}
             <div className="h-72"><ChartCanvas build={buildPlaces} className="!w-full !h-full" /></div>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {(places?.sites ?? []).slice(0, 6).map((s) => (
@@ -507,6 +509,9 @@ function AdvertiserPage() {
           <div className="card-flat p-6">
             <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Theme Intelligence</div>
             <h3 className="text-lg font-bold tracking-tight mt-1">What they keep saying</h3>
+            <p className="text-gray-500 italic text-sm mt-2">
+              <span className="capitalize">{topTheme}</span> is their weapon — every other message orbits around it.
+            </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {(war.top_themes ?? []).slice(0, 8).map((t) => (
                 <button
@@ -515,10 +520,11 @@ function AdvertiserPage() {
                   className="px-3 py-2 rounded-full border border-ink text-sm font-medium capitalize hover:bg-ink hover:text-paper transition-colors"
                 >
                   {t.theme}
-                  <span className="ml-2 mono text-[10px] text-muted-foreground">{t.count} · {t.pct}%</span>
+                  <span className="ml-2 mono text-[10px] text-muted-foreground">{fmtNum(t.count)} · {fmtPct(t.pct)}</span>
                 </button>
               ))}
             </div>
+
 
             <div className="mt-5 space-y-2 text-sm">
               {war.finance_offers?.[0] && (
