@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Download, Play } from "lucide-react";
+import { ArrowLeft, Download, Play, Star, ExternalLink } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 
 const API_BASE = "https://api.revenuad.com";
@@ -29,10 +29,7 @@ type War = {
   total_sightings?: number;
   first_seen?: string;
   last_seen?: string;
-  channel_split?: {
-    search?: number; display?: number; video?: number; image?: number; social?: number;
-    search_pct?: number; display_pct?: number; video_pct?: number; image_pct?: number; social_pct?: number;
-  };
+  channel_split?: Record<string, number>;
   top_themes?: { theme: string; count: number; pct: number }[];
   sentiment_breakdown?: { positive?: number; neutral?: number; urgency?: number };
   finance_offer_count?: number;
@@ -40,7 +37,7 @@ type War = {
   top_ctas?: { cta: string; count: number }[];
   has_people_pct?: number;
   monthly_velocity?: { month: string; ads: number }[];
-  seasonal_clusters?: { eofy?: number; christmas?: number; tax?: number; back_to_school?: number };
+  seasonal_clusters?: Record<string, number>;
   recent_ads?: RecentAd[];
   insight?: string;
 };
@@ -48,7 +45,7 @@ type War = {
 type Spend = {
   brand?: string;
   estimated_monthly_spend?: number;
-  spend_by_channel?: { search?: number; display?: number; video?: number; social?: number };
+  spend_by_channel?: { search?: number; display?: number; video?: number; social?: number; meta?: number };
   confidence?: string;
   methodology?: string;
   insight?: string;
@@ -57,26 +54,44 @@ type Spend = {
 type Placements = {
   brand?: string;
   total_placements?: number;
-  sites?: { domain: string; count: number; pct?: number; label?: string; ad_formats?: string[] }[];
+  sites?: { domain: string; count: number; pct?: number; label?: string }[];
   insight?: string;
 };
 
-type Explain = {
-  one_liner?: string;
-  their_weakness?: string;
-  opportunity_for_competitors?: string;
+type Channels = {
+  channels?: Record<string, number>;
+  insight?: string;
 };
 
+type NewsItem = {
+  title?: string;
+  url?: string;
+  source?: string;
+  published_at?: string;
+  date?: string;
+  sentiment?: string;
+};
+
+type News = { articles?: NewsItem[] };
+
+type Sentiment = {
+  trustpilot?: { rating?: number; reviews?: number };
+  google?: { rating?: number; reviews?: number };
+};
+
+type AiVisibility = {
+  ai_share_of_voice?: number;
+  queries?: string[];
+  industry?: string;
+};
+
+type AdvertiserListItem = {
+  name?: string;
+  brand?: string;
+  domain?: string;
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function resolveBrand(domain: string): string {
-  const host = domain.toLowerCase().replace(/^www\./, "").trim();
-  const root = host.split(".")[0] ?? host;
-  if (root === "commbank") return "CommBank";
-  if (root === "macquarie") return "Macquarie";
-  return root.charAt(0).toUpperCase() + root.slice(1);
-}
 
 function fmtDate(iso?: string | null): string {
   if (!iso) return "—";
@@ -84,66 +99,109 @@ function fmtDate(iso?: string | null): string {
   if (!Number.isFinite(d.getTime())) return "—";
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
-
 function fmtMonth(iso?: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (!Number.isFinite(d.getTime())) return "—";
   return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
 }
-
-function fmtMoney(n: number | undefined): string {
-  if (!n || !Number.isFinite(n)) return "$0";
+function fmtMoney(n: number | undefined | null): string {
+  if (n == null || !Number.isFinite(n) || n <= 0) return "$0";
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
   return `$${Math.round(n).toLocaleString()}`;
 }
-
-function fmtNum(n: number | undefined): string {
-  if (!n || !Number.isFinite(n)) return "0";
+function fmtNum(n: number | undefined | null): string {
+  if (n == null || !Number.isFinite(n)) return "0";
   return Math.round(n).toLocaleString();
 }
-
-function fmtPct(n: number | undefined): string {
-  if (n === undefined || n === null || !Number.isFinite(n)) return "0%";
+function fmtPct(n: number | undefined | null): string {
+  if (n == null || !Number.isFinite(n)) return "0%";
   const v = Math.abs(n) <= 1 ? n * 100 : n;
   return `${v.toFixed(1)}%`;
 }
-
-
-function askBarbs(query: string) {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent("barbs:ask", { detail: query }));
+function rootSlug(d: string): string {
+  return d.toLowerCase().replace(/^www\./, "").split(".")[0] ?? d;
+}
+function titleCase(s: string): string {
+  return s.split(/[\s_-]+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+function asTags(raw: Record<string, unknown> | string | null | undefined): Record<string, unknown> {
+  if (!raw) return {};
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
+  }
+  return raw;
+}
+function classifySentiment(raw: unknown): "positive" | "urgency" | "neutral" {
+  const s = (typeof raw === "string" ? raw : "").toLowerCase();
+  if (/(positive|trust|happy|joy|optimis|reassur)/.test(s)) return "positive";
+  if (/(urgen|fear|pressure|scarcit|warn|alarm|risk|limited)/.test(s)) return "urgency";
+  return "neutral";
 }
 
-const PLATFORM_LABEL: Record<string, string> = {
-  display: "Programmatic Display",
-  text: "Google Search Ad",
-  video: "Video Ad",
-  image: "Display Image Ad",
+const SITE_LABELS: Record<string, string> = {
+  "news.com.au": "News",
+  "smh.com.au": "News",
+  "theage.com.au": "News",
+  "abc.net.au": "News",
+  "realestate.com.au": "Real Estate",
+  "domain.com.au": "Real Estate",
+  "seek.com.au": "Employment",
+  "nrl.com": "Sports",
+  "afl.com.au": "Sports",
+  "canstar.com.au": "Finance",
+  "finder.com.au": "Finance",
 };
-
-const SENTIMENT_COPY = {
-  positive: { icon: "🟢", line: "Building trust" },
-  urgency: { icon: "🔴", line: "Pressure play" },
-  neutral: { icon: "⚪", line: "Awareness play" },
-};
-
+function labelSite(domain: string): string {
+  const d = domain.toLowerCase().replace(/^www\./, "");
+  return SITE_LABELS[d] ?? "General Web";
+}
 const SITE_LABEL_TONE: Record<string, string> = {
   Finance: "bg-amber-50 text-amber-900 border-amber-300",
   News: "bg-sky-50 text-sky-900 border-sky-300",
   Sports: "bg-emerald-50 text-emerald-900 border-emerald-300",
   "Real Estate": "bg-violet-50 text-violet-900 border-violet-300",
+  Employment: "bg-rose-50 text-rose-900 border-rose-300",
   "General Web": "bg-zinc-50 text-zinc-700 border-zinc-300",
-  "Keyword/Topic": "bg-zinc-50 text-zinc-700 border-zinc-300",
 };
-
 const SEASONAL_LABEL: Record<string, string> = {
   eofy: "EOFY",
   christmas: "Christmas",
   tax: "Tax",
   back_to_school: "Back to School",
 };
+
+// Channel donut config — canonical 6 channels
+const CHANNEL_DEFS: { key: string; label: string; colour: string; aliases: string[] }[] = [
+  { key: "youtube", label: "YouTube", colour: "#ef4444", aliases: ["youtube", "video"] },
+  { key: "display", label: "Programmatic Display", colour: "#3b82f6", aliases: ["display", "programmatic", "image"] },
+  { key: "search", label: "Google Search", colour: "#10b981", aliases: ["search", "google_search", "google"] },
+  { key: "meta", label: "Meta", colour: "#8b5cf6", aliases: ["meta", "facebook", "instagram"] },
+  { key: "tiktok", label: "TikTok", colour: "#0ea5e9", aliases: ["tiktok"] },
+  { key: "linkedin", label: "LinkedIn", colour: "#0a66c2", aliases: ["linkedin"] },
+];
+
+function readChannelValue(src: Record<string, number> | undefined, aliases: string[]): number {
+  if (!src) return 0;
+  let total = 0;
+  for (const a of aliases) {
+    if (typeof src[a] === "number") total += src[a];
+    if (typeof src[`${a}_pct`] === "number") total += src[`${a}_pct`];
+  }
+  return total;
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 // ─── Chart.js loader ──────────────────────────────────────────────────────────
 
@@ -186,46 +244,65 @@ function ChartCanvas({
 
 function AdvertiserPage() {
   const { domain } = Route.useParams();
-  const brand = useMemo(() => resolveBrand(domain), [domain]);
 
+  const [brand, setBrand] = useState<string>(() => titleCase(rootSlug(domain)));
   const [war, setWar] = useState<War | null>(null);
   const [spend, setSpend] = useState<Spend | null>(null);
   const [places, setPlaces] = useState<Placements | null>(null);
-  const [explain, setExplain] = useState<Explain | null>(null);
+  const [channels, setChannels] = useState<Channels | null>(null);
+  const [news, setNews] = useState<News | null>(null);
+  const [sentiment, setSentiment] = useState<Sentiment | null>(null);
+  const [aivis, setAivis] = useState<AiVisibility | null>(null);
   const [loading, setLoading] = useState(true);
   const [seasonalFilter, setSeasonalFilter] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const ChartLib = useChartJs();
 
+  // Step 1 — resolve brand name from /api/advertisers
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    const safe = async <T,>(url: string): Promise<T | null> => {
-      try {
-        const r = await fetch(url);
-        if (!r.ok) return null;
-        return (await r.json()) as T;
-      } catch { return null; }
-    };
     (async () => {
-      const [w, s, p, e] = await Promise.all([
-        safe<War>(`${API_BASE}/api/advertisers/${encodeURIComponent(brand)}`),
-        safe<Spend>(`${API_BASE}/api/spend/${encodeURIComponent(brand)}`),
-        safe<Placements>(`${API_BASE}/api/placements/${encodeURIComponent(brand)}`),
-        safe<Explain>(`${API_BASE}/api/explain/${encodeURIComponent(brand)}`),
+      setLoading(true);
+      const safe = async <T,>(url: string): Promise<T | null> => {
+        try {
+          const r = await fetch(url);
+          if (!r.ok) return null;
+          return (await r.json()) as T;
+        } catch { return null; }
+      };
+      const root = rootSlug(domain);
+      const list = await safe<AdvertiserListItem[] | { advertisers?: AdvertiserListItem[] }>(`${API_BASE}/api/advertisers`);
+      const items: AdvertiserListItem[] = Array.isArray(list)
+        ? list
+        : (list?.advertisers ?? []);
+      const match = items.find((i) => {
+        const n = (i.name ?? i.brand ?? "").toLowerCase();
+        const d = (i.domain ?? "").toLowerCase().replace(/^www\./, "");
+        return d === domain.toLowerCase() || d.startsWith(root) || n === root || n.replace(/\s+/g, "") === root;
+      });
+      const resolved = match?.name ?? match?.brand ?? titleCase(root);
+      if (!alive) return;
+      setBrand(resolved);
+
+      const b = encodeURIComponent(resolved);
+      const [w, s, p, c, n, se, av] = await Promise.all([
+        safe<War>(`${API_BASE}/api/advertisers/${b}`),
+        safe<Spend>(`${API_BASE}/api/spend/${b}`),
+        safe<Placements>(`${API_BASE}/api/placements/${b}`),
+        safe<Channels>(`${API_BASE}/api/channels/${b}`),
+        safe<News>(`${API_BASE}/api/news/${b}`),
+        safe<Sentiment>(`${API_BASE}/api/sentiment/${b}`),
+        safe<AiVisibility>(`${API_BASE}/api/ai-visibility/${b}`),
       ]);
       if (!alive) return;
-      setWar(w);
-      setSpend(s);
-      setPlaces(p);
-      setExplain(e);
+      setWar(w); setSpend(s); setPlaces(p); setChannels(c); setNews(n); setSentiment(se); setAivis(av);
       setLoading(false);
     })();
     return () => { alive = false; };
-  }, [brand]);
+  }, [domain]);
 
-
-  // Derived numbers
-  const topTheme = war?.top_themes?.[0]?.theme ?? "—";
+  // Derived
+  const topTheme = war?.top_themes?.[0]?.theme ?? "";
   const monthly = war?.monthly_velocity ?? [];
   const thisMonthAds = monthly.length ? monthly[monthly.length - 1].ads : 0;
   const velocityDir = useMemo(() => {
@@ -237,7 +314,6 @@ function AdvertiserPage() {
     return "steady" as const;
   }, [monthly]);
 
-  // Industry — derive from most common ai_tags.industry across recent_ads
   const derivedIndustry = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const ad of war?.recent_ads ?? []) {
@@ -246,15 +322,33 @@ function AdvertiserPage() {
       if (!ind) continue;
       counts[ind] = (counts[ind] ?? 0) + 1;
     }
-    let best = "";
-    let max = 0;
-    for (const [k, v] of Object.entries(counts)) {
-      if (v > max) { best = k; max = v; }
-    }
-    return best;
-  }, [war]);
+    let best = ""; let max = 0;
+    for (const [k, v] of Object.entries(counts)) if (v > max) { best = k; max = v; }
+    return best || (war?.industry ?? aivis?.industry ?? "");
+  }, [war, aivis]);
 
-  // Sentiment radar values (0-100) — recalculated per-ad from war.recent_ads
+  // Channel donut — merge /api/channels + war.channel_split → canonical 6
+  const channelRows = useMemo(() => {
+    const src: Record<string, number> = { ...(war?.channel_split ?? {}), ...(channels?.channels ?? {}) };
+    return CHANNEL_DEFS.map((def) => ({ ...def, value: readChannelValue(src, def.aliases) }));
+  }, [war, channels]);
+
+  // Site label warnings
+  const ownDomainRoot = rootSlug(domain);
+  const ownDomainPlacement = useMemo(() => {
+    const sites = places?.sites ?? [];
+    if (!sites.length) return null;
+    const total = sites.reduce((s, x) => s + (x.count ?? 0), 0) || 1;
+    const sorted = [...sites].sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+    const top = sorted[0];
+    if (!top) return null;
+    if (rootSlug(top.domain) === ownDomainRoot) {
+      return { domain: top.domain, pct: Math.round((top.count / total) * 100) };
+    }
+    return null;
+  }, [places, ownDomainRoot]);
+
+  // Sentiment radar from ai_tags
   const sentimentAxes = useMemo(() => {
     const ads = war?.recent_ads ?? [];
     const total = ads.length;
@@ -277,29 +371,11 @@ function AdvertiserPage() {
     }
     const pct = (n: number) => Math.max(0, Math.min(100, Math.round((n / total) * 100)));
     return {
-      Trust: pct(trust),
-      Urgency: pct(urgency),
-      Aspiration: pct(aspiration),
-      Simplicity: pct(simplicity),
-      Security: pct(security),
+      Trust: pct(trust), Urgency: pct(urgency), Aspiration: pct(aspiration),
+      Simplicity: pct(simplicity), Security: pct(security),
     };
   }, [war]);
 
-  const colourSwatches = useMemo(() => {
-    const out: string[] = [];
-    for (const ad of war?.recent_ads ?? []) {
-      for (const c of ad.primary_colours ?? []) {
-        if (typeof c === "string" && /^#?[0-9a-f]{3,8}$/i.test(c) && !out.includes(c)) {
-          out.push(c.startsWith("#") ? c : `#${c}`);
-        }
-        if (out.length >= 5) break;
-      }
-      if (out.length >= 5) break;
-    }
-    return out;
-  }, [war]);
-
-  // Filter creative preview cards by seasonal cluster (simple month-based)
   const filteredRecent = useMemo(() => {
     const all = (war?.recent_ads ?? []).slice(0, 6);
     if (!seasonalFilter) return all;
@@ -314,31 +390,31 @@ function AdvertiserPage() {
     });
   }, [war, seasonalFilter]);
 
-  // ─── Chart builders (memoised by data) ──────────────────────────────────────
-
+  // Chart builders
   const buildChannel = useMemo(() => (canvas: HTMLCanvasElement) => {
     if (!ChartLib) return null;
-    const split = war?.channel_split ?? {};
-    const data = [
-      { label: "Google Search", v: split.search ?? 0, c: "#10b981" },
-      { label: "Programmatic", v: split.display ?? 0, c: "#3b82f6" },
-      { label: "Video/YouTube", v: split.video ?? 0, c: "#ef4444" },
-      { label: "Display Image", v: split.image ?? 0, c: "#f59e0b" },
-      { label: "Meta/Social", v: split.social ?? 0, c: "#8b5cf6" },
-    ].filter((d) => d.v > 0);
-    const total = data.reduce((s, d) => s + d.v, 0) || 1;
+    const data = channelRows.filter((d) => d.value > 0);
+    const total = data.reduce((s, d) => s + d.value, 0) || 1;
+    if (!data.length) {
+      // Render placeholder ring
+      return new ChartLib(canvas, {
+        type: "doughnut",
+        data: { labels: ["Pipeline active"], datasets: [{ data: [1], backgroundColor: ["#e5e7eb"], borderWidth: 0 }] },
+        options: { plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: "60%" },
+      });
+    }
     return new ChartLib(canvas, {
       type: "doughnut",
-      data: { labels: data.map((d) => d.label), datasets: [{ data: data.map((d) => d.v), backgroundColor: data.map((d) => d.c), borderWidth: 0 }] },
+      data: { labels: data.map((d) => d.label), datasets: [{ data: data.map((d) => d.value), backgroundColor: data.map((d) => d.colour), borderWidth: 0 }] },
       options: {
         plugins: {
           legend: { position: "bottom", labels: { boxWidth: 10 } },
-          tooltip: { callbacks: { label: (ctx: { label: string; raw: number }) => `${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw / total * 100)}%)` } },
+          tooltip: { callbacks: { label: (ctx: { label: string; raw: number }) => `${ctx.label}: ${Math.round(ctx.raw / total * 100)}%` } },
         },
         cutout: "60%",
       },
     });
-  }, [ChartLib, war]);
+  }, [ChartLib, channelRows]);
 
   const buildPlaces = useMemo(() => (canvas: HTMLCanvasElement) => {
     if (!ChartLib) return null;
@@ -349,11 +425,7 @@ function AdvertiserPage() {
         labels: sites.map((s) => s.domain),
         datasets: [{ label: "Sightings", data: sites.map((s) => s.count), backgroundColor: "#3b82f6" }],
       },
-      options: {
-        indexAxis: "y",
-        plugins: { legend: { display: false } },
-        scales: { x: { beginAtZero: true } },
-      },
+      options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } },
     });
   }, [ChartLib, places]);
 
@@ -365,13 +437,9 @@ function AdvertiserPage() {
       data: {
         labels: v.map((m) => fmtMonth(m.month)),
         datasets: [{
-          label: "Ads launched",
-          data: v.map((m) => m.ads),
-          borderColor: "#3b82f6",
-          backgroundColor: "rgba(59,130,246,0.15)",
-          fill: true,
-          tension: 0.35,
-          pointRadius: 4,
+          label: "Ads launched", data: v.map((m) => m.ads),
+          borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.15)",
+          fill: true, tension: 0.35, pointRadius: 4,
         }],
       },
       options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
@@ -384,22 +452,29 @@ function AdvertiserPage() {
     const data = Object.values(sentimentAxes);
     return new ChartLib(canvas, {
       type: "radar",
-      data: {
-        labels,
-        datasets: [{
-          label: "Sentiment mix",
-          data,
-          backgroundColor: "rgba(59,130,246,0.20)",
-          borderColor: "#3b82f6",
-          pointBackgroundColor: "#3b82f6",
-        }],
-      },
-      options: {
-        plugins: { legend: { display: false } },
-        scales: { r: { min: 0, max: 100, ticks: { stepSize: 25 } } },
-      },
+      data: { labels, datasets: [{ label: "Sentiment mix", data, backgroundColor: "rgba(59,130,246,0.20)", borderColor: "#3b82f6", pointBackgroundColor: "#3b82f6" }] },
+      options: { plugins: { legend: { display: false } }, scales: { r: { min: 0, max: 100, ticks: { stepSize: 25 } } } },
     });
   }, [ChartLib, sentimentAxes]);
+
+  // Export brief
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const r = await fetch(`${API_BASE}/api/export/prospect-brief`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand, domain }),
+      });
+      if (!r.ok) throw new Error("export failed");
+      const blob = await r.blob();
+      downloadBlob(blob, `${rootSlug(domain)}-prospect-brief.pdf`);
+    } catch {
+      alert("Brief export is temporarily unavailable.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -427,6 +502,9 @@ function AdvertiserPage() {
   const totalAds = war.total_ads ?? 0;
   const totalSight = war.total_sightings ?? 0;
   const firstSeen = fmtDate(war.first_seen);
+  const adsPerMonth = monthly.length ? Math.round(totalAds / monthly.length) : thisMonthAds;
+
+  const channelRowsForDisplay = channelRows; // even zeros — UI handles fallback copy
 
   return (
     <WorkspaceShell title={brand}>
@@ -435,120 +513,147 @@ function AdvertiserPage() {
           <ArrowLeft size={14} /> Back to Advertisers
         </Link>
 
-        {/* SECTION 1 — Dark hero header */}
+        {/* HERO */}
         <section className="rounded-[12px] bg-zinc-950 text-white p-8 md:p-10">
           {derivedIndustry && (
             <div className="mono text-[11px] uppercase tracking-widest text-amber-300 mb-3">{derivedIndustry}</div>
           )}
           <div className="text-2xl md:text-3xl font-bold tracking-tight leading-snug">
-            <span className="text-amber-300">{brand}</span> has run{" "}
+            <span className="text-amber-300">{brand}</span> ran{" "}
             <span className="tabular-nums">{fmtNum(totalAds)}</span> ads since {firstSeen}.
             <br />
             Spotted <span className="tabular-nums">{fmtNum(totalSight)}</span>× across the open web.
-            <br />
-            <span className="text-emerald-300 capitalize">{topTheme}</span> is their #1 weapon.
+            {topTheme && (<><br /><span className="text-emerald-300 capitalize">{topTheme}</span> is their weapon.</>)}
           </div>
-          {war.insight && (
-            <p className="text-zinc-300 italic mt-4 text-base leading-relaxed">{war.insight}</p>
-          )}
+          {war.insight && <p className="text-zinc-300 italic mt-4 text-base leading-relaxed">{war.insight}</p>}
           <div className="mt-6 flex flex-wrap gap-2">
             <Pill>{fmtMoney(spend?.estimated_monthly_spend)}/mo</Pill>
             <Pill>{fmtNum(totalSight)} sightings</Pill>
             <Pill>Since {fmtMonth(war.first_seen)}</Pill>
-            <Pill>{fmtNum(thisMonthAds)} ads this month</Pill>
+            <Pill>{fmtNum(adsPerMonth)} ads/month</Pill>
           </div>
           <div className="mt-6 flex gap-3">
             <a href="#all-creatives" className="inline-flex items-center gap-2 bg-white text-zinc-900 px-4 py-2 rounded-[8px] text-sm font-semibold hover:bg-zinc-100">
-              View All Creatives ↓
+              View Creatives ↓
             </a>
             <button
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 border border-white/30 text-white px-4 py-2 rounded-[8px] text-sm font-semibold hover:bg-white/10"
+              onClick={handleExport}
+              disabled={exporting}
+              className="inline-flex items-center gap-2 border border-white/30 text-white px-4 py-2 rounded-[8px] text-sm font-semibold hover:bg-white/10 disabled:opacity-60"
             >
-              <Download size={14} /> Export PDF
+              <Download size={14} /> {exporting ? "Building…" : "Download Brief"}
             </button>
           </div>
         </section>
 
-        {/* Explain — weakness + opportunity */}
-        {(explain?.their_weakness || explain?.opportunity_for_competitors) && (
-          <section className="grid md:grid-cols-2 gap-4">
-            {explain?.their_weakness && (
-              <div className="rounded-[12px] border border-emerald-300 bg-emerald-50 p-5">
-                <div className="mono text-[10px] uppercase tracking-widest text-emerald-800">Their weakness</div>
-                <div className="mt-2 text-base text-emerald-950 leading-relaxed">
-                  ⚡ {explain.their_weakness}
-                </div>
-              </div>
-            )}
-            {explain?.opportunity_for_competitors && (
-              <div className="rounded-[12px] border border-amber-400 bg-amber-50 p-5">
-                <div className="mono text-[10px] uppercase tracking-widest text-amber-800">Your opportunity</div>
-                <div className="mt-2 text-base text-amber-950 leading-relaxed">
-                  🎯 {explain.opportunity_for_competitors}
-                </div>
-              </div>
-            )}
-          </section>
-        )}
-
-
-        {/* SECTION 2 — 3 charts */}
+        {/* SECTION 1 — 3 charts */}
         <section className="grid lg:grid-cols-3 gap-4">
           <ChartCard title="Channel Split" subtitle="Where their budget lands">
             {spend?.insight && <p className="text-gray-500 italic text-sm mb-3">{spend.insight}</p>}
-            <div className="h-72"><ChartCanvas build={buildChannel} className="!w-full !h-full" /></div>
+            <div className="h-64"><ChartCanvas build={buildChannel} className="!w-full !h-full" /></div>
+            <ul className="mt-3 space-y-1 text-xs">
+              {channelRowsForDisplay.map((c) => (
+                <li key={c.key} className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: c.colour }} />
+                    {c.label}
+                  </span>
+                  <span className={`mono tabular-nums ${c.value > 0 ? "text-zinc-900" : "text-muted-foreground italic"}`}>
+                    {c.value > 0 ? `${Math.round(c.value)}` : "Pipeline active — data building"}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </ChartCard>
 
-          <ChartCard title="Where They Show Up" subtitle="Top sites your audience sees their ads">
+          <ChartCard title="Where They Show Up" subtitle="Top publisher sites">
             {places?.insight && <p className="text-gray-500 italic text-sm mb-3">{places.insight}</p>}
-            <div className="h-72"><ChartCanvas build={buildPlaces} className="!w-full !h-full" /></div>
+            {ownDomainPlacement && (
+              <div className="mb-3 rounded-[8px] bg-amber-50 border border-amber-300 text-amber-950 text-xs px-3 py-2">
+                ⚠️ {ownDomainPlacement.pct}% retargeting own audience ({ownDomainPlacement.domain}) — low prospecting.
+              </div>
+            )}
+            <div className="h-64"><ChartCanvas build={buildPlaces} className="!w-full !h-full" /></div>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {(places?.sites ?? []).slice(0, 6).map((s) => (
-                <span key={s.domain} className={`text-[10px] mono px-2 py-0.5 rounded-full border ${SITE_LABEL_TONE[s.label ?? ""] ?? "bg-zinc-50 text-zinc-700 border-zinc-300"}`}>
-                  {s.domain} · {s.label ?? "General"}
-                </span>
-              ))}
+              {(places?.sites ?? []).slice(0, 8).map((s) => {
+                const label = s.label ?? labelSite(s.domain);
+                return (
+                  <span key={s.domain} className={`text-[10px] mono px-2 py-0.5 rounded-full border ${SITE_LABEL_TONE[label] ?? "bg-zinc-50 text-zinc-700 border-zinc-300"}`}>
+                    {s.domain} · {label}
+                  </span>
+                );
+              })}
+              {(places?.sites ?? []).length === 0 && (
+                <span className="text-xs italic text-muted-foreground">Placement data pending</span>
+              )}
             </div>
           </ChartCard>
 
           <ChartCard
             title="Creative Velocity"
-            subtitle={
-              velocityDir === "ramping" ? "↑ Ramping up"
-                : velocityDir === "retreating" ? "↓ Pulling back"
-                : "Holding steady"
-            }
+            subtitle={velocityDir === "ramping" ? "↑ Ramping up" : velocityDir === "retreating" ? "↓ Pulling back" : "Holding steady"}
           >
-            <div className="h-72"><ChartCanvas build={buildVelocity} className="!w-full !h-full" /></div>
+            <p className="text-gray-500 italic text-sm mb-3">
+              {monthly.length
+                ? `Launched ${fmtNum(thisMonthAds)} ads this month. ${velocityDir === "ramping" ? "Expect more pressure." : velocityDir === "retreating" ? "Window opening up." : "Pacing is consistent."}`
+                : "Velocity data building."}
+            </p>
+            <div className="h-64"><ChartCanvas build={buildVelocity} className="!w-full !h-full" /></div>
           </ChartCard>
         </section>
 
-        {/* SECTION 3 — Sentiment radar + Theme intelligence */}
+        {/* SECTION 2 — AI Visibility */}
+        <section className="card-flat p-6">
+          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">AI Visibility</div>
+          <div className="mt-2 flex items-baseline gap-4 flex-wrap">
+            <div className="text-5xl font-bold tabular-nums">{fmtPct(aivis?.ai_share_of_voice)}</div>
+            <div className="text-sm text-muted-foreground">
+              Appears in <span className="font-semibold text-zinc-900">{fmtPct(aivis?.ai_share_of_voice)}</span> of AI responses for{" "}
+              <span className="capitalize">{derivedIndustry || "their industry"}</span> queries.
+            </div>
+          </div>
+          {(aivis?.queries ?? []).length > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {aivis!.queries!.slice(0, 12).map((q) => (
+                <span key={q} className="text-xs px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200">
+                  “{q}”
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-3 text-xs italic text-muted-foreground">Query data pending — AI visibility index still building.</div>
+          )}
+        </section>
+
+        {/* SECTION 3 — Customer Rating */}
+        <section className="card-flat p-6">
+          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-3">Customer Rating</div>
+          <RatingRow sentiment={sentiment} />
+        </section>
+
+        {/* SECTION 4 — Sentiment radar + themes */}
         <section className="grid lg:grid-cols-2 gap-4">
           <ChartCard title="Sentiment Radar" subtitle="The emotional axes they hit">
-            <div className="h-80"><ChartCanvas build={buildRadar} className="!w-full !h-full" /></div>
+            <p className="text-gray-500 italic text-sm mb-3">
+              Strongest on <span className="font-semibold capitalize">{strongestAxis(sentimentAxes)}</span>. Tells you what tone their ads lead with.
+            </p>
+            <div className="h-72"><ChartCanvas build={buildRadar} className="!w-full !h-full" /></div>
           </ChartCard>
 
           <div className="card-flat p-6">
             <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Theme Intelligence</div>
             <h3 className="text-lg font-bold tracking-tight mt-1">What they keep saying</h3>
             <p className="text-gray-500 italic text-sm mt-2">
-              <span className="capitalize">{topTheme}</span> is their weapon — every other message orbits around it.
+              {topTheme ? <><span className="capitalize">{topTheme}</span> is their weapon — every other message orbits around it.</> : "Theme data building."}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {(war.top_themes ?? []).slice(0, 8).map((t) => (
-                <span
-                  key={t.theme}
-                  className="px-3 py-2 rounded-full border border-ink text-sm font-medium capitalize"
-                >
+                <span key={t.theme} className="px-3 py-2 rounded-full border border-ink text-sm font-medium capitalize">
                   {t.theme}
                   <span className="ml-2 mono text-[10px] text-muted-foreground">{fmtNum(t.count)} · {fmtPct(t.pct)}</span>
                 </span>
               ))}
             </div>
-
-
             <div className="mt-5 space-y-2 text-sm">
               {war.finance_offers?.[0] && (
                 <div className="bg-amber-100 border border-amber-500 text-amber-950 rounded-[8px] px-3 py-2">
@@ -564,21 +669,10 @@ function AdvertiserPage() {
                 👥 <span className="font-semibold tabular-nums">{fmtPct(war.has_people_pct)}</span> of ads feature real people
               </div>
             </div>
-
-            {colourSwatches.length > 0 && (
-              <div className="mt-4">
-                <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">Brand colours in play</div>
-                <div className="flex gap-2">
-                  {colourSwatches.map((c) => (
-                    <div key={c} className="h-8 w-8 rounded-full border border-ink/20" style={{ background: c }} title={c} />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </section>
 
-        {/* SECTION 4 — Spend breakdown */}
+        {/* SECTION 5 — Spend breakdown */}
         <section>
           <h2 className="text-xl font-bold tracking-tight mb-3">Estimated Media Spend</h2>
           {spend?.insight && <p className="text-gray-500 italic mb-4">{spend.insight}</p>}
@@ -588,13 +682,48 @@ function AdvertiserPage() {
             <StatCard label="Search" value={fmtMoney(spend?.spend_by_channel?.search)} />
             <StatCard label="Video" value={fmtMoney(spend?.spend_by_channel?.video)} />
           </div>
+          {!spend?.spend_by_channel?.meta && !spend?.spend_by_channel?.social && (
+            <div className="mt-3 inline-flex items-center gap-2 rounded-[8px] bg-amber-50 border border-amber-300 text-amber-950 text-xs px-3 py-1.5">
+              Meta: Pending — paid-social spend not yet attributed.
+            </div>
+          )}
           <p className="text-xs text-muted-foreground mt-2">
-            Estimated using Australian market rates. <span className="capitalize">{spend?.confidence ?? "low"}</span> confidence.
+            {spend?.methodology ?? "Estimated using Australian market rates."}{" "}
+            <span className="capitalize">{spend?.confidence ?? "low"}</span> confidence.
           </p>
         </section>
 
+        {/* SECTION 6 — In The News */}
+        <section>
+          <h2 className="text-xl font-bold tracking-tight mb-3">In The News</h2>
+          {(news?.articles ?? []).length === 0 ? (
+            <div className="card-flat p-6 text-sm text-muted-foreground italic">No recent coverage found.</div>
+          ) : (
+            <div className="space-y-2">
+              {(news?.articles ?? []).slice(0, 5).map((a, i) => {
+                const sent = classifySentiment(a.sentiment);
+                const tone = sent === "positive" ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                  : sent === "urgency" ? "bg-rose-50 text-rose-800 border-rose-200"
+                  : "bg-zinc-50 text-zinc-700 border-zinc-200";
+                return (
+                  <a key={i} href={a.url ?? "#"} target="_blank" rel="noopener noreferrer"
+                    className="card-flat p-4 flex items-start gap-3 hover:border-ink transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-sm leading-snug">{a.title ?? "Untitled"}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {a.source ?? "Press"} · {fmtDate(a.published_at ?? a.date)}
+                      </div>
+                    </div>
+                    <span className={`text-[10px] mono px-2 py-0.5 rounded-full border ${tone} shrink-0`}>{sent}</span>
+                    <ExternalLink size={14} className="text-muted-foreground shrink-0 mt-0.5" />
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-        {/* SECTION 5 — Seasonal clusters */}
+        {/* SECTION 7 — Seasonal */}
         {war.seasonal_clusters && Object.values(war.seasonal_clusters).some((v) => (v ?? 0) > 0) && (
           <section>
             <h2 className="text-xl font-bold tracking-tight mb-3">Seasonal Push</h2>
@@ -603,27 +732,20 @@ function AdvertiserPage() {
                 if (!v) return null;
                 const active = seasonalFilter === k;
                 return (
-                  <button
-                    key={k}
-                    onClick={() => setSeasonalFilter(active ? null : k)}
-                    className={`px-4 py-2 rounded-[8px] border text-sm font-semibold transition-colors ${
-                      active ? "bg-zinc-950 text-white border-zinc-950" : "bg-paper border-ink/30 hover:border-ink"
-                    }`}
-                  >
-                    {SEASONAL_LABEL[k] ?? k} <span className="mono text-xs opacity-70 ml-1">{v} ads</span>
+                  <button key={k} onClick={() => setSeasonalFilter(active ? null : k)}
+                    className={`px-4 py-2 rounded-[8px] border text-sm font-semibold transition-colors ${active ? "bg-zinc-950 text-white border-zinc-950" : "bg-paper border-ink/30 hover:border-ink"}`}>
+                    {SEASONAL_LABEL[k] ?? titleCase(k)} <span className="mono text-xs opacity-70 ml-1">{fmtNum(v)} ads</span>
                   </button>
                 );
               })}
               {seasonalFilter && (
-                <button onClick={() => setSeasonalFilter(null)} className="text-xs text-muted-foreground underline self-center ml-2">
-                  Clear filter
-                </button>
+                <button onClick={() => setSeasonalFilter(null)} className="text-xs text-muted-foreground underline self-center ml-2">Clear filter</button>
               )}
             </div>
           </section>
         )}
 
-        {/* SECTION 6 — Creative preview */}
+        {/* SECTION 8 — Creative grid */}
         <section id="all-creatives">
           <div className="flex items-baseline justify-between mb-3">
             <h2 className="text-xl font-bold tracking-tight">Latest Creatives</h2>
@@ -632,24 +754,25 @@ function AdvertiserPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredRecent.map((ad) => <RecentCard key={ad.id} ad={ad} brand={brand} />)}
             {filteredRecent.length === 0 && (
-              <div className="col-span-full card-flat p-8 text-center text-sm text-muted-foreground">
-                No creatives match this filter.
-              </div>
+              <div className="col-span-full card-flat p-8 text-center text-sm text-muted-foreground">No creatives match this filter.</div>
             )}
           </div>
-
           <div className="mt-6 text-center">
-            <button
-              onClick={() => askBarbs(`Show me every creative from ${brand}`)}
-              className="inline-flex items-center gap-2 bg-zinc-950 text-white px-6 py-3 rounded-[10px] text-sm font-semibold hover:bg-zinc-800"
-            >
+            <a href={`${API_BASE}/api/advertisers/${encodeURIComponent(brand)}/creatives`} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-zinc-950 text-white px-6 py-3 rounded-[10px] text-sm font-semibold hover:bg-zinc-800">
               VIEW ALL {fmtNum(totalAds)} CREATIVES →
-            </button>
+            </a>
           </div>
         </section>
       </div>
     </WorkspaceShell>
   );
+}
+
+function strongestAxis(axes: Record<string, number>): string {
+  let best = ""; let max = -1;
+  for (const [k, v] of Object.entries(axes)) if (v > max) { best = k; max = v; }
+  return best;
 }
 
 function Pill({ children }: { children: React.ReactNode }) {
@@ -679,20 +802,45 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
-function asTags(raw: Record<string, unknown> | string | null | undefined): Record<string, unknown> {
-  if (!raw) return {};
-  if (typeof raw === "string") {
-    try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
-  }
-  return raw;
+function RatingRow({ sentiment }: { sentiment: Sentiment | null }) {
+  const tp = sentiment?.trustpilot?.rating;
+  const gg = sentiment?.google?.rating;
+  const best = Math.max(tp ?? 0, gg ?? 0);
+  const verdict = best >= 4 ? "Customers love them — ads ride a tailwind."
+    : best >= 2 ? "Mixed reputation — message has to work harder."
+    : best > 0 ? "Ads are fighting uphill against weak reviews."
+    : "Customer-rating data pending.";
+  return (
+    <div className="flex flex-wrap gap-4 items-center">
+      <RatingPill label="Trustpilot" rating={tp} reviews={sentiment?.trustpilot?.reviews} />
+      <RatingPill label="Google" rating={gg} reviews={sentiment?.google?.reviews} />
+      <div className="text-sm text-muted-foreground italic">{verdict}</div>
+    </div>
+  );
 }
 
-function classifySentiment(raw: unknown): "positive" | "urgency" | "neutral" {
-  const s = (typeof raw === "string" ? raw : "").toLowerCase();
-  if (/(positive|trust|happy|joy|optimis|reassur)/.test(s)) return "positive";
-  if (/(urgen|fear|pressure|scarcit|warn|alarm|risk|limited)/.test(s)) return "urgency";
-  return "neutral";
+function RatingPill({ label, rating, reviews }: { label: string; rating?: number; reviews?: number }) {
+  if (rating == null) {
+    return (
+      <div className="rounded-[10px] border border-zinc-200 bg-zinc-50 px-4 py-2 text-xs italic text-muted-foreground">
+        {label}: data pending
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-[10px] border border-ink/20 bg-paper px-4 py-2 inline-flex items-center gap-2">
+      <Star size={14} className="fill-amber-400 text-amber-400" />
+      <span className="font-bold tabular-nums">{rating.toFixed(1)}</span>
+      <span className="text-xs text-muted-foreground">{label}{reviews ? ` · ${fmtNum(reviews)} reviews` : ""}</span>
+    </div>
+  );
 }
+
+const SENTIMENT_COPY = {
+  positive: { icon: "🟢", line: "Trust" },
+  urgency: { icon: "🔴", line: "Pressure" },
+  neutral: { icon: "⚪", line: "Awareness" },
+};
 
 function sourceBadge(ad: RecentAd): string {
   const tags = asTags(ad.ai_tags);
@@ -701,9 +849,16 @@ function sourceBadge(ad: RecentAd): string {
   if (src.includes("meta") || src.includes("facebook") || src.includes("instagram")) return "Meta";
   if (src.includes("tiktok")) return "TikTok";
   if (src.includes("linkedin")) return "LinkedIn";
-  if (src.includes("apify")) return "Apify";
-  if (src.includes("dataforseo")) return "DataForSEO";
+  if (src.includes("google") || src.includes("search")) return "Google";
   return ad.ad_format === "video" ? "Video" : "Display";
+}
+
+function formatBadge(ad: RecentAd): string {
+  const f = (ad.ad_format ?? "").toLowerCase();
+  if (f.includes("video")) return "VIDEO";
+  if (f.includes("search") || f.includes("text")) return "SEARCH";
+  if (f.includes("social")) return "SOCIAL";
+  return "DISPLAY";
 }
 
 function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
@@ -718,6 +873,8 @@ function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
   const isVideo = (ad.ad_format ?? "").toLowerCase() === "video" || !!ad.video_url;
   const sources = [ad.image_url, ad.thumbnail_url].filter((u): u is string => typeof u === "string" && u.length > 0);
   const fallbackColour = ad.primary_colours?.[0] ?? "#1f2937";
+  const fmt = formatBadge(ad);
+  const channel = sourceBadge(ad);
 
   const [srcIdx, setSrcIdx] = useState(0);
   const currentSrc = sources[srcIdx];
@@ -726,64 +883,38 @@ function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
     <div className="card-flat overflow-hidden flex flex-col">
       <div className="relative aspect-video bg-zinc-100 overflow-hidden">
         {currentSrc ? (
-          <img
-            key={currentSrc}
-            src={currentSrc}
-            alt={cta ?? brand}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={() => setSrcIdx((i) => i + 1)}
-          />
+          <img key={currentSrc} src={currentSrc} alt={cta ?? brand} className="w-full h-full object-cover" loading="lazy"
+            onError={() => setSrcIdx((i) => i + 1)} />
         ) : (
-          <div
-            className="w-full h-full grid place-items-center text-white text-center px-4 text-sm font-semibold"
-            style={{ background: fallbackColour }}
-          >
+          <div className="w-full h-full grid place-items-center text-white text-center px-4 text-sm font-semibold"
+            style={{ background: fallbackColour }}>
             {cta ?? brand}
           </div>
         )}
         {isVideo && (
-          <>
-            <div className="absolute inset-0 grid place-items-center bg-black/20 pointer-events-none">
-              <div className="bg-white/90 rounded-full p-3"><Play size={20} className="text-zinc-900" /></div>
-            </div>
-            <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded">Video</span>
-          </>
+          <div className="absolute inset-0 grid place-items-center bg-black/20 pointer-events-none">
+            <div className="bg-white/90 rounded-full p-3"><Play size={20} className="text-zinc-900" /></div>
+          </div>
         )}
-        <span className="absolute top-2 right-2 bg-black/60 text-white text-[10px] mono px-2 py-0.5 rounded">
-          {sourceBadge(ad)}
-        </span>
+        <span className="absolute top-2 left-2 bg-black/80 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded">{fmt}</span>
+        <span className="absolute top-2 right-2 bg-white/90 text-zinc-900 text-[10px] mono px-2 py-0.5 rounded">{channel}</span>
       </div>
 
       <div className="p-4 flex-1 flex flex-col gap-2">
-        <div className="text-xs text-muted-foreground">
-          {copy.icon} {copy.line}
-          {ad.ai_tags && (
-            <span className="ml-1 text-muted-foreground/70">
-              · {PLATFORM_LABEL[(ad.ad_format ?? "").toLowerCase()] ?? "Ad"}
-            </span>
-          )}
-        </div>
-
+        <div className="text-xs text-muted-foreground">{copy.icon} {copy.line}</div>
         {offer && (
           <div className="bg-amber-100 border border-amber-500 text-amber-950 rounded-[6px] px-2 py-1 text-xs font-semibold">
             💰 {offer}
           </div>
         )}
-
+        {cta && <div className="text-sm font-semibold text-zinc-900">{cta}</div>}
         <div className="text-xs text-muted-foreground">
           Spotted {fmtNum(Number(ad.sighting_count) || 0)}× since {fmtDate(ad.first_seen)}
         </div>
-
         {themes.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {themes.map((t) => (
-              <span
-                key={t}
-                className="text-[10px] mono px-2 py-0.5 rounded-full border border-ink/30"
-              >
-                {t}
-              </span>
+              <span key={t} className="text-[10px] mono px-2 py-0.5 rounded-full border border-ink/30">{t}</span>
             ))}
           </div>
         )}
