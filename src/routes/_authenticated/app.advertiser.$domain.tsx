@@ -22,6 +22,7 @@ type RecentAd = {
 };
 
 type War = {
+  advertiser?: string;
   name?: string;
   domain?: string;
   industry?: string;
@@ -60,6 +61,7 @@ type Placements = {
 
 type Channels = {
   channels?: Record<string, number>;
+  by_channel?: Record<string, number>;
   insight?: string;
 };
 
@@ -79,10 +81,25 @@ type Sentiment = {
   google?: { rating?: number; reviews?: number };
 };
 
+type AivisQuery =
+  | string
+  | {
+      query?: string;
+      text?: string;
+      rank?: number | string;
+      mention_count?: number;
+      mentions?: number;
+    };
+
+type AivisTopBrand = string | { brand?: string; name?: string; rank?: number; mentions?: number };
+
 type AiVisibility = {
   ai_share_of_voice?: number;
-  queries?: string[];
+  queries?: AivisQuery[];
+  top_brands?: AivisTopBrand[];
   industry?: string;
+  total_responses?: number;
+  mention_count?: number;
 };
 
 type AdvertiserListItem = {
