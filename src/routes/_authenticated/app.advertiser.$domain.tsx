@@ -237,27 +237,51 @@ function AdvertiserPage() {
     return "steady" as const;
   }, [monthly]);
 
-  // Sentiment radar values (0-100)
+  // Industry — derive from most common ai_tags.industry across recent_ads
+  const derivedIndustry = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const ad of war?.recent_ads ?? []) {
+      const tags = asTags(ad.ai_tags);
+      const ind = typeof tags.industry === "string" ? tags.industry.trim().toLowerCase() : "";
+      if (!ind) continue;
+      counts[ind] = (counts[ind] ?? 0) + 1;
+    }
+    let best = "";
+    let max = 0;
+    for (const [k, v] of Object.entries(counts)) {
+      if (v > max) { best = k; max = v; }
+    }
+    return best;
+  }, [war]);
+
+  // Sentiment radar values (0-100) — recalculated per-ad from war.recent_ads
   const sentimentAxes = useMemo(() => {
-    const breakdown = war?.sentiment_breakdown ?? {};
-    const totalSent = (breakdown.positive ?? 0) + (breakdown.neutral ?? 0) + (breakdown.urgency ?? 0);
-    const pct = (n?: number) => (totalSent ? Math.round(((n ?? 0) / totalSent) * 100) : 0);
-    const themes = war?.top_themes ?? [];
-    const matchPct = (keys: string[]) => {
-      let hits = 0;
-      let total = 0;
-      for (const t of themes) {
-        total += t.count;
-        if (keys.some((k) => t.theme.toLowerCase().includes(k))) hits += t.count;
-      }
-      return total ? Math.min(100, Math.round((hits / total) * 200)) : 0; // x2 to amplify niche signal
-    };
+    const ads = war?.recent_ads ?? [];
+    const total = ads.length;
+    if (!total) return { Trust: 0, Urgency: 0, Aspiration: 0, Simplicity: 0, Security: 0 };
+    let trust = 0, urgency = 0, aspiration = 0, simplicity = 0, security = 0;
+    const ASP = ["growth", "future", "opportunity", "aspirat", "achieve", "dream", "success"];
+    const SIM = ["simple", "easy", "fast", "instant", "quick"];
+    const SEC = ["security", "safe", "protect", "guard", "secure"];
+    for (const ad of ads) {
+      const tags = asTags(ad.ai_tags);
+      const sent = (typeof tags.sentiment === "string" ? tags.sentiment : "").toLowerCase();
+      if (sent === "positive") trust++;
+      if (sent === "urgency") urgency++;
+      const themes = Array.isArray(tags.themes)
+        ? (tags.themes as unknown[]).filter((x): x is string => typeof x === "string").map((s) => s.toLowerCase())
+        : [];
+      if (themes.some((t) => ASP.some((k) => t.includes(k)))) aspiration++;
+      if (themes.some((t) => SIM.some((k) => t.includes(k)))) simplicity++;
+      if (themes.some((t) => SEC.some((k) => t.includes(k)))) security++;
+    }
+    const pct = (n: number) => Math.max(0, Math.min(100, Math.round((n / total) * 100)));
     return {
-      Trust: pct(breakdown.positive),
-      Urgency: pct(breakdown.urgency),
-      Aspiration: matchPct(["aspirat", "growth", "future", "achieve", "dream", "success"]),
-      Simplicity: matchPct(["simple", "easy", "fast", "instant", "quick"]),
-      Security: matchPct(["secure", "safe", "protect", "guard"]),
+      Trust: pct(trust),
+      Urgency: pct(urgency),
+      Aspiration: pct(aspiration),
+      Simplicity: pct(simplicity),
+      Security: pct(security),
     };
   }, [war]);
 
@@ -413,8 +437,8 @@ function AdvertiserPage() {
 
         {/* SECTION 1 — Dark hero header */}
         <section className="rounded-[12px] bg-zinc-950 text-white p-8 md:p-10">
-          {explain?.one_liner && (
-            <div className="mono text-[11px] uppercase tracking-widest text-amber-300 mb-3">{explain.one_liner}</div>
+          {derivedIndustry && (
+            <div className="mono text-[11px] uppercase tracking-widest text-amber-300 mb-3">{derivedIndustry}</div>
           )}
           <div className="text-2xl md:text-3xl font-bold tracking-tight leading-snug">
             <span className="text-amber-300">{brand}</span> has run{" "}
@@ -514,14 +538,13 @@ function AdvertiserPage() {
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {(war.top_themes ?? []).slice(0, 8).map((t) => (
-                <button
+                <span
                   key={t.theme}
-                  onClick={() => askBarbs(`Show me all ${t.theme} ads from ${brand}`)}
-                  className="px-3 py-2 rounded-full border border-ink text-sm font-medium capitalize hover:bg-ink hover:text-paper transition-colors"
+                  className="px-3 py-2 rounded-full border border-ink text-sm font-medium capitalize"
                 >
                   {t.theme}
                   <span className="ml-2 mono text-[10px] text-muted-foreground">{fmtNum(t.count)} · {fmtPct(t.pct)}</span>
-                </button>
+                </span>
               ))}
             </div>
 
@@ -693,21 +716,23 @@ function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
   const cta = typeof tags.call_to_action === "string" ? tags.call_to_action : null;
   const offer = typeof tags.finance_offer === "string" ? tags.finance_offer : null;
   const isVideo = (ad.ad_format ?? "").toLowerCase() === "video" || !!ad.video_url;
-  const img = ad.image_url ?? ad.thumbnail_url ?? null;
+  const sources = [ad.image_url, ad.thumbnail_url].filter((u): u is string => typeof u === "string" && u.length > 0);
   const fallbackColour = ad.primary_colours?.[0] ?? "#1f2937";
 
-  const [imgOk, setImgOk] = useState(!!img);
+  const [srcIdx, setSrcIdx] = useState(0);
+  const currentSrc = sources[srcIdx];
 
   return (
     <div className="card-flat overflow-hidden flex flex-col">
       <div className="relative aspect-video bg-zinc-100 overflow-hidden">
-        {imgOk && img ? (
+        {currentSrc ? (
           <img
-            src={img}
+            key={currentSrc}
+            src={currentSrc}
             alt={cta ?? brand}
             className="w-full h-full object-cover"
             loading="lazy"
-            onError={() => setImgOk(false)}
+            onError={() => setSrcIdx((i) => i + 1)}
           />
         ) : (
           <div
@@ -753,13 +778,12 @@ function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
         {themes.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {themes.map((t) => (
-              <button
+              <span
                 key={t}
-                onClick={() => askBarbs(`Show me all ${t} ads from ${brand}`)}
-                className="text-[10px] mono px-2 py-0.5 rounded-full border border-ink/30 hover:bg-ink hover:text-paper"
+                className="text-[10px] mono px-2 py-0.5 rounded-full border border-ink/30"
               >
                 {t}
-              </button>
+              </span>
             ))}
           </div>
         )}

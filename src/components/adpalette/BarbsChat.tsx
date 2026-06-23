@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { MessageSquare, X, Send, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const h: Record<string, string> = { "Content-Type": "application/json" };
+  if (session?.access_token) h.Authorization = `Bearer ${session.access_token}`;
+  return h;
+}
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -62,7 +70,7 @@ export function BarbsChat() {
             try {
               const res = await fetch("/api/barbs", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: await authHeaders(),
                 body: JSON.stringify({ messages: next }),
               });
               if (!res.ok) throw new Error(await res.text());
@@ -95,7 +103,7 @@ export function BarbsChat() {
     try {
       const res = await fetch("/api/barbs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await authHeaders(),
         body: JSON.stringify({ messages: next }),
       });
       if (!res.ok) throw new Error(await res.text());
