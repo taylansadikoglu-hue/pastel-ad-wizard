@@ -42,6 +42,7 @@ type War = {
   monthly_velocity?: { month: string; ads: number }[];
   seasonal_clusters?: { eofy?: number; christmas?: number; tax?: number; back_to_school?: number };
   recent_ads?: RecentAd[];
+  insight?: string;
 };
 
 type Spend = {
@@ -50,13 +51,22 @@ type Spend = {
   spend_by_channel?: { search?: number; display?: number; video?: number; social?: number };
   confidence?: string;
   methodology?: string;
+  insight?: string;
 };
 
 type Placements = {
   brand?: string;
   total_placements?: number;
   sites?: { domain: string; count: number; pct?: number; label?: string; ad_formats?: string[] }[];
+  insight?: string;
 };
+
+type Explain = {
+  one_liner?: string;
+  their_weakness?: string;
+  opportunity_for_competitors?: string;
+};
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
