@@ -716,21 +716,23 @@ function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
   const cta = typeof tags.call_to_action === "string" ? tags.call_to_action : null;
   const offer = typeof tags.finance_offer === "string" ? tags.finance_offer : null;
   const isVideo = (ad.ad_format ?? "").toLowerCase() === "video" || !!ad.video_url;
-  const img = ad.image_url ?? ad.thumbnail_url ?? null;
+  const sources = [ad.image_url, ad.thumbnail_url].filter((u): u is string => typeof u === "string" && u.length > 0);
   const fallbackColour = ad.primary_colours?.[0] ?? "#1f2937";
 
-  const [imgOk, setImgOk] = useState(!!img);
+  const [srcIdx, setSrcIdx] = useState(0);
+  const currentSrc = sources[srcIdx];
 
   return (
     <div className="card-flat overflow-hidden flex flex-col">
       <div className="relative aspect-video bg-zinc-100 overflow-hidden">
-        {imgOk && img ? (
+        {currentSrc ? (
           <img
-            src={img}
+            key={currentSrc}
+            src={currentSrc}
             alt={cta ?? brand}
             className="w-full h-full object-cover"
             loading="lazy"
-            onError={() => setImgOk(false)}
+            onError={() => setSrcIdx((i) => i + 1)}
           />
         ) : (
           <div
@@ -776,13 +778,12 @@ function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
         {themes.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {themes.map((t) => (
-              <button
+              <span
                 key={t}
-                onClick={() => askBarbs(`Show me all ${t} ads from ${brand}`)}
-                className="text-[10px] mono px-2 py-0.5 rounded-full border border-ink/30 hover:bg-ink hover:text-paper"
+                className="text-[10px] mono px-2 py-0.5 rounded-full border border-ink/30"
               >
                 {t}
-              </button>
+              </span>
             ))}
           </div>
         )}
