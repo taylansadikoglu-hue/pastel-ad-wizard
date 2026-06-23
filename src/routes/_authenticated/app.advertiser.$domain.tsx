@@ -413,6 +413,9 @@ function AdvertiserPage() {
 
         {/* SECTION 1 — Dark hero header */}
         <section className="rounded-[12px] bg-zinc-950 text-white p-8 md:p-10">
+          {explain?.one_liner && (
+            <div className="mono text-[11px] uppercase tracking-widest text-amber-300 mb-3">{explain.one_liner}</div>
+          )}
           <div className="text-2xl md:text-3xl font-bold tracking-tight leading-snug">
             <span className="text-amber-300">{brand}</span> has run{" "}
             <span className="tabular-nums">{fmtNum(totalAds)}</span> ads since {firstSeen}.
@@ -421,11 +424,14 @@ function AdvertiserPage() {
             <br />
             <span className="text-emerald-300 capitalize">{topTheme}</span> is their #1 weapon.
           </div>
+          {war.insight && (
+            <p className="text-zinc-300 italic mt-4 text-base leading-relaxed">{war.insight}</p>
+          )}
           <div className="mt-6 flex flex-wrap gap-2">
             <Pill>{fmtMoney(spend?.estimated_monthly_spend)}/mo</Pill>
             <Pill>{fmtNum(totalSight)} sightings</Pill>
             <Pill>Since {fmtMonth(war.first_seen)}</Pill>
-            <Pill>{thisMonthAds} ads this month</Pill>
+            <Pill>{fmtNum(thisMonthAds)} ads this month</Pill>
           </div>
           <div className="mt-6 flex gap-3">
             <a href="#all-creatives" className="inline-flex items-center gap-2 bg-white text-zinc-900 px-4 py-2 rounded-[8px] text-sm font-semibold hover:bg-zinc-100">
@@ -439,6 +445,29 @@ function AdvertiserPage() {
             </button>
           </div>
         </section>
+
+        {/* Explain — weakness + opportunity */}
+        {(explain?.their_weakness || explain?.opportunity_for_competitors) && (
+          <section className="grid md:grid-cols-2 gap-4">
+            {explain?.their_weakness && (
+              <div className="rounded-[12px] border border-emerald-300 bg-emerald-50 p-5">
+                <div className="mono text-[10px] uppercase tracking-widest text-emerald-800">Their weakness</div>
+                <div className="mt-2 text-base text-emerald-950 leading-relaxed">
+                  ⚡ {explain.their_weakness}
+                </div>
+              </div>
+            )}
+            {explain?.opportunity_for_competitors && (
+              <div className="rounded-[12px] border border-amber-400 bg-amber-50 p-5">
+                <div className="mono text-[10px] uppercase tracking-widest text-amber-800">Your opportunity</div>
+                <div className="mt-2 text-base text-amber-950 leading-relaxed">
+                  🎯 {explain.opportunity_for_competitors}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
 
         {/* SECTION 2 — 3 charts */}
         <section className="grid lg:grid-cols-3 gap-4">
