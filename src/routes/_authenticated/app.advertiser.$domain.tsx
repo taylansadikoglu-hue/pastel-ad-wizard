@@ -538,7 +538,7 @@ function AdvertiserPage() {
                 </div>
               )}
               <div className="px-3 py-2 rounded-[8px] bg-zinc-50 border border-zinc-200">
-                👥 <span className="font-semibold tabular-nums">{war.has_people_pct ?? 0}%</span> of ads feature real people
+                👥 <span className="font-semibold tabular-nums">{fmtPct(war.has_people_pct)}</span> of ads feature real people
               </div>
             </div>
 
