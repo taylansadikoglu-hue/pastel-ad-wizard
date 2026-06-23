@@ -189,14 +189,14 @@ const SEASONAL_LABEL: Record<string, string> = {
   back_to_school: "Back to School",
 };
 
-// Channel donut config — canonical 6 channels
-const CHANNEL_DEFS: { key: string; label: string; colour: string; aliases: string[] }[] = [
+// Channel donut config — canonical 6 channels (Meta/TikTok/LinkedIn = pipeline pending)
+const CHANNEL_DEFS: { key: string; label: string; colour: string; aliases: string[]; pending?: boolean }[] = [
   { key: "youtube", label: "YouTube", colour: "#ef4444", aliases: ["youtube", "video"] },
   { key: "display", label: "Programmatic Display", colour: "#3b82f6", aliases: ["display", "programmatic", "image"] },
   { key: "search", label: "Google Search", colour: "#10b981", aliases: ["search", "google_search", "google"] },
-  { key: "meta", label: "Meta", colour: "#8b5cf6", aliases: ["meta", "facebook", "instagram"] },
-  { key: "tiktok", label: "TikTok", colour: "#0ea5e9", aliases: ["tiktok"] },
-  { key: "linkedin", label: "LinkedIn", colour: "#0a66c2", aliases: ["linkedin"] },
+  { key: "meta", label: "Meta", colour: "#8b5cf6", aliases: ["meta", "facebook", "instagram"], pending: true },
+  { key: "tiktok", label: "TikTok", colour: "#0ea5e9", aliases: ["tiktok"], pending: true },
+  { key: "linkedin", label: "LinkedIn", colour: "#0a66c2", aliases: ["linkedin"], pending: true },
 ];
 
 function readChannelValue(src: Record<string, number> | undefined, aliases: string[]): number {
