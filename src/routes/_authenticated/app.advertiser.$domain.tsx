@@ -860,6 +860,99 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
+function normalizeQuery(q: AivisQuery): { text: string; rank?: number; mentions?: number } {
+  if (typeof q === "string") return { text: q };
+  const text = q.query ?? q.text ?? "";
+  const rankNum = q.rank != null ? Number(q.rank) : undefined;
+  return {
+    text,
+    rank: Number.isFinite(rankNum) ? rankNum : undefined,
+    mentions: q.mention_count ?? q.mentions,
+  };
+}
+
+function normalizeBrand(b: AivisTopBrand): { name: string; rank?: number; mentions?: number } {
+  if (typeof b === "string") return { name: b };
+  return { name: b.brand ?? b.name ?? "", rank: b.rank, mentions: b.mentions };
+}
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
+
+function AiVisibilitySection({ aivis, brand, industry }: { aivis: AiVisibility | null; brand: string; industry: string }) {
+  const queries = (aivis?.queries ?? []).map(normalizeQuery).filter((q) => q.text);
+  const topBrands = (aivis?.top_brands ?? []).map(normalizeBrand).filter((b) => b.name);
+  const totalResponses = aivis?.total_responses ?? queries.length;
+  const mentioned = aivis?.mention_count
+    ?? queries.filter((q) => (q.mentions ?? 0) > 0 || (q.rank ?? 0) > 0).length;
+  const ind = industry || aivis?.industry || "their category";
+  const me = topBrands.find((b) => b.name.toLowerCase() === brand.toLowerCase());
+  const myRank = me?.rank;
+  const beat = topBrands.filter((b) => myRank != null && b.rank != null && b.rank > myRank).slice(0, 3);
+
+  if (!queries.length && !topBrands.length) {
+    return (
+      <section className="card-flat p-6">
+        <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">AI Visibility</div>
+        <div className="mt-3 text-sm italic text-muted-foreground">
+          AI visibility data pending for {brand}. Index still building.
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card-flat p-6 space-y-5">
+      <div>
+        <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">AI Visibility</div>
+        <div className="mt-2 text-lg md:text-xl font-semibold leading-snug">
+          When Australians ask AI about <span className="capitalize">{ind}</span>,{" "}
+          <span className="text-amber-700">{brand}</span> appears in{" "}
+          <span className="tabular-nums">{fmtNum(mentioned)}</span> of{" "}
+          <span className="tabular-nums">{fmtNum(totalResponses)}</span> responses.
+        </div>
+      </div>
+
+      {queries.length > 0 && (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {queries.slice(0, 9).map((q, i) => (
+            <div key={`${q.text}-${i}`} className="rounded-[10px] border border-ink/15 bg-paper p-3 flex flex-col gap-2">
+              <div className="text-sm font-medium leading-snug">“{q.text}”</div>
+              <div className="flex items-center gap-2 mt-auto">
+                {q.rank != null ? (
+                  <span className="text-[10px] mono px-2 py-0.5 rounded-full bg-zinc-950 text-white">Rank {ordinal(q.rank)}</span>
+                ) : (
+                  <span className="text-[10px] mono px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">Not ranked</span>
+                )}
+                {q.mentions != null && (
+                  <span className="text-[10px] mono text-muted-foreground">{fmtNum(q.mentions)} mentions</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {beat.length > 0 && (
+        <div className="rounded-[10px] bg-emerald-50 border border-emerald-300 text-emerald-950 px-3 py-2 text-sm">
+          Ahead of: <span className="font-semibold">{beat.map((b) => b.name).join(", ")}</span>
+        </div>
+      )}
+
+      <div className="rounded-[10px] bg-zinc-950 text-white px-4 py-3 text-sm">
+        When customers ask ChatGPT for <span className="capitalize">{ind}</span>,{" "}
+        <span className="text-amber-300 font-semibold">{brand}</span>{" "}
+        {myRank != null
+          ? <>gets recommended <span className="font-semibold">{ordinal(myRank)}</span>.</>
+          : <>is not yet in the recommended set.</>}
+      </div>
+    </section>
+  );
+}
+
 function RatingRow({ sentiment }: { sentiment: Sentiment | null }) {
   const tp = sentiment?.trustpilot?.rating;
   const gg = sentiment?.google?.rating;
