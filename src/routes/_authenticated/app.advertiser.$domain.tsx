@@ -313,6 +313,9 @@ function AdvertiserPage() {
       ]);
       if (!alive) return;
       setWar(w); setSpend(s); setPlaces(p); setChannels(c); setNews(n); setSentiment(se); setAivis(av);
+      if (w?.advertiser) setBrand(w.advertiser);
+      // eslint-disable-next-line no-console
+      console.log("war:", w, "channels:", c, "aivis:", av, "sentiment:", se);
       setLoading(false);
     })();
     return () => { alive = false; };
