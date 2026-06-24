@@ -525,26 +525,18 @@ function AdvertiserPage() {
           </div>
         </section>
 
-        {/* SECTION 1 — 3 charts */}
-        <section className="grid lg:grid-cols-3 gap-4">
-          <ChartCard title="Channel Split" subtitle="Where their budget lands">
-            {spend?.insight && <p className="text-gray-500 italic text-sm mb-3">{spend.insight}</p>}
-            <div className="h-64"><ChartCanvas build={buildChannel} className="!w-full !h-full" /></div>
-            <ul className="mt-3 space-y-1 text-xs">
-              {channelRowsForDisplay.map((c) => (
-                <li key={c.key} className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-2">
-                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: c.colour }} />
-                    {c.label}
-                  </span>
-                  <span className={`mono tabular-nums ${c.value > 0 ? "text-zinc-900" : "text-muted-foreground italic"}`}>
-                    {c.value > 0 ? `${Math.round(c.value)}` : "Pipeline active — data building"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </ChartCard>
+        {/* SECTION 1 — Channel split table (full width) */}
+        <section>
+          <ChannelSplitTable
+            brand={brand}
+            channelRows={channelRows}
+            spendByChannel={spend?.spend_by_channel}
+            insight={spend?.insight}
+          />
+        </section>
 
+        {/* SECTION 1b — Publisher sites + Velocity */}
+        <section className="grid lg:grid-cols-2 gap-4">
           <ChartCard title="Where They Show Up" subtitle="Top publisher sites">
             {places?.insight && <p className="text-gray-500 italic text-sm mb-3">{places.insight}</p>}
             {ownDomainPlacement && (
@@ -552,21 +544,9 @@ function AdvertiserPage() {
                 ⚠️ {ownDomainPlacement.pct}% retargeting own audience ({ownDomainPlacement.domain}) — low prospecting.
               </div>
             )}
-            <div className="h-[300px] w-full"><ChartCanvas build={buildPlaces} className="!w-full !h-full" /></div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {(places?.sites ?? []).slice(0, 8).map((s) => {
-                const label = s.label ?? labelSite(s.domain);
-                return (
-                  <span key={s.domain} className={`text-[10px] mono px-2 py-0.5 rounded-full border ${SITE_LABEL_TONE[label] ?? "bg-zinc-50 text-zinc-700 border-zinc-300"}`}>
-                    {s.domain} · {label}
-                  </span>
-                );
-              })}
-              {(places?.sites ?? []).length === 0 && (
-                <span className="text-xs italic text-muted-foreground">Placement data pending</span>
-              )}
-            </div>
+            <PublisherBars sites={places?.sites ?? []} />
           </ChartCard>
+
 
           <ChartCard
             title="Creative Velocity"
