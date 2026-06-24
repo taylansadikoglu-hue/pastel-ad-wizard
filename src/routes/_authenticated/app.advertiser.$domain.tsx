@@ -387,9 +387,9 @@ function AdvertiserPage() {
         return kws.some((k) => name.includes(k)) ? sum + (t.count ?? 0) : sum;
       }, 0);
     const pct = (n: number) => {
-      if (!total) return 5;
+      if (!total) return 15;
       const raw = Math.round((n / total) * 100);
-      return Math.max(5, Math.min(100, raw));
+      return Math.max(15, Math.min(100, raw));
     };
     return {
       Trust: pct(positive),
@@ -401,111 +401,12 @@ function AdvertiserPage() {
   }, [war]);
 
   const filteredRecent = useMemo(() => {
-    const all = (war?.recent_ads ?? []).slice(0, 6);
-    if (!seasonalFilter) return all;
-    const months: Record<string, number[]> = {
-      eofy: [5, 6], christmas: [11, 0], tax: [6, 7], back_to_school: [0, 1],
-    };
-    const ms = months[seasonalFilter];
-    if (!ms) return all;
-    return all.filter((a) => {
-      const t = a.first_seen ? new Date(a.first_seen).getMonth() : -1;
-      return ms.includes(t);
-    });
-  }, [war, seasonalFilter]);
+    // Seasonal pills are display-only highlights — do not filter creatives.
+    return (war?.recent_ads ?? []).slice(0, 6);
+  }, [war]);
 
   // Chart builders
-  const buildChannel = useMemo(() => (canvas: HTMLCanvasElement) => {
-    if (!ChartLib) return null;
-    const activeTotal = channelRows.filter((d) => !d.pending).reduce((s, d) => s + d.value, 0);
-    const pendingValue = Math.max(1, activeTotal * 0.05);
-    const rendered = channelRows.map((d) => ({
-      label: d.label,
-      drawValue: d.value > 0 ? d.value : pendingValue,
-      colour: d.value > 0 ? d.colour : "#d4d4d8",
-      dashed: d.value === 0,
-      realValue: d.value,
-    }));
-    const realTotal = channelRows.reduce((s, d) => s + d.value, 0) || 1;
-    return new ChartLib(canvas, {
-      type: "doughnut",
-      data: {
-        labels: rendered.map((d) => d.label),
-        datasets: [{
-          data: rendered.map((d) => d.drawValue),
-          backgroundColor: rendered.map((d) => d.colour),
-          borderColor: rendered.map((d) => d.dashed ? "#71717a" : "#ffffff"),
-          borderWidth: rendered.map((d) => d.dashed ? 2 : 1),
-          borderDash: rendered.map((d) => d.dashed ? [4, 4] : []),
-        }],
-      },
-      options: {
-        plugins: {
-          legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
-          tooltip: {
-            callbacks: {
-              label: (ctx: { dataIndex: number }) => {
-                const r = rendered[ctx.dataIndex];
-                if (r.dashed) return `${r.label}: Pipeline active`;
-                return `${r.label}: ${Math.round(r.realValue / realTotal * 100)}%`;
-              },
-            },
-          },
-        },
-        cutout: "60%",
-      },
-    });
-  }, [ChartLib, channelRows]);
 
-  const buildPlaces = useMemo(() => (canvas: HTMLCanvasElement) => {
-    if (!ChartLib) return null;
-    const sites = (places?.sites ?? []).slice(0, 10);
-    const maxVal = Math.max(1, ...sites.map((s) => s.count ?? 0));
-    return new ChartLib(canvas, {
-      type: "bar",
-      data: {
-        labels: sites.map((s) => s.domain),
-        datasets: [{
-          label: "Sightings",
-          data: sites.map((s) => Math.max(s.count ?? 0, Math.ceil(maxVal * 0.05))),
-          backgroundColor: "#3b82f6",
-          barThickness: 22,
-          minBarLength: 20,
-        }],
-      },
-      options: {
-        indexAxis: "y",
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: { padding: { right: 48 } },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx: { dataIndex: number }) => `${fmtNum(sites[ctx.dataIndex]?.count ?? 0)} sightings`,
-            },
-          },
-        },
-        scales: {
-          x: { beginAtZero: true, ticks: { font: { size: 13 } } },
-          y: { ticks: { font: { size: 13 } } },
-        },
-        animation: {
-          onComplete(this: { ctx: CanvasRenderingContext2D; getDatasetMeta: (i: number) => { data: { x: number; y: number }[] } }) {
-            const c = this.ctx;
-            c.font = "bold 13px sans-serif";
-            c.fillStyle = "#18181b";
-            c.textAlign = "left";
-            c.textBaseline = "middle";
-            const meta = this.getDatasetMeta(0);
-            meta.data.forEach((bar, i) => {
-              c.fillText(fmtNum(sites[i]?.count ?? 0), bar.x + 6, bar.y);
-            });
-          },
-        },
-      },
-    });
-  }, [ChartLib, places]);
 
   const buildVelocity = useMemo(() => (canvas: HTMLCanvasElement) => {
     if (!ChartLib) return null;
@@ -582,7 +483,7 @@ function AdvertiserPage() {
   const firstSeen = fmtDate(war.first_seen);
   const adsPerMonth = monthly.length ? Math.round(totalAds / monthly.length) : thisMonthAds;
 
-  const channelRowsForDisplay = channelRows; // even zeros — UI handles fallback copy
+  
 
   return (
     <WorkspaceShell title={brand}>
@@ -624,26 +525,18 @@ function AdvertiserPage() {
           </div>
         </section>
 
-        {/* SECTION 1 — 3 charts */}
-        <section className="grid lg:grid-cols-3 gap-4">
-          <ChartCard title="Channel Split" subtitle="Where their budget lands">
-            {spend?.insight && <p className="text-gray-500 italic text-sm mb-3">{spend.insight}</p>}
-            <div className="h-64"><ChartCanvas build={buildChannel} className="!w-full !h-full" /></div>
-            <ul className="mt-3 space-y-1 text-xs">
-              {channelRowsForDisplay.map((c) => (
-                <li key={c.key} className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-2">
-                    <span className="inline-block h-2 w-2 rounded-full" style={{ background: c.colour }} />
-                    {c.label}
-                  </span>
-                  <span className={`mono tabular-nums ${c.value > 0 ? "text-zinc-900" : "text-muted-foreground italic"}`}>
-                    {c.value > 0 ? `${Math.round(c.value)}` : "Pipeline active — data building"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </ChartCard>
+        {/* SECTION 1 — Channel split table (full width) */}
+        <section>
+          <ChannelSplitTable
+            brand={brand}
+            channelRows={channelRows}
+            spendByChannel={spend?.spend_by_channel}
+            insight={spend?.insight}
+          />
+        </section>
 
+        {/* SECTION 1b — Publisher sites + Velocity */}
+        <section className="grid lg:grid-cols-2 gap-4">
           <ChartCard title="Where They Show Up" subtitle="Top publisher sites">
             {places?.insight && <p className="text-gray-500 italic text-sm mb-3">{places.insight}</p>}
             {ownDomainPlacement && (
@@ -651,21 +544,9 @@ function AdvertiserPage() {
                 ⚠️ {ownDomainPlacement.pct}% retargeting own audience ({ownDomainPlacement.domain}) — low prospecting.
               </div>
             )}
-            <div className="h-[300px] w-full"><ChartCanvas build={buildPlaces} className="!w-full !h-full" /></div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {(places?.sites ?? []).slice(0, 8).map((s) => {
-                const label = s.label ?? labelSite(s.domain);
-                return (
-                  <span key={s.domain} className={`text-[10px] mono px-2 py-0.5 rounded-full border ${SITE_LABEL_TONE[label] ?? "bg-zinc-50 text-zinc-700 border-zinc-300"}`}>
-                    {s.domain} · {label}
-                  </span>
-                );
-              })}
-              {(places?.sites ?? []).length === 0 && (
-                <span className="text-xs italic text-muted-foreground">Placement data pending</span>
-              )}
-            </div>
+            <PublisherBars sites={places?.sites ?? []} />
           </ChartCard>
+
 
           <ChartCard
             title="Creative Velocity"
@@ -736,10 +617,13 @@ function AdvertiserPage() {
           {spend?.insight && <p className="text-gray-500 italic mb-4">{spend.insight}</p>}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard label="Total Est." value={`${fmtMoney(spend?.estimated_monthly_spend)}/mo`} accent="bg-zinc-950 text-white" />
-            <StatCard label="Programmatic" value={fmtMoney(spend?.spend_by_channel?.display)} />
-            <StatCard label="Search" value={fmtMoney(spend?.spend_by_channel?.search)} />
-            <StatCard label="Video" value={fmtMoney(spend?.spend_by_channel?.video)} />
+            <SpendCard label="Programmatic" raw={spend?.spend_by_channel?.display} />
+            <SpendCard label="Search" raw={spend?.spend_by_channel?.search} />
+            <SpendCard label="Video" raw={spend?.spend_by_channel?.video} />
           </div>
+          <p className="text-xs text-muted-foreground mt-2 italic">
+            Low = few tracked placements, not zero spend.
+          </p>
           {!spend?.spend_by_channel?.meta && !spend?.spend_by_channel?.social && (
             <div className="mt-3 inline-flex items-center gap-2 rounded-[8px] bg-amber-50 border border-amber-300 text-amber-950 text-xs px-3 py-1.5">
               Meta: Pending — paid-social spend not yet attributed.
@@ -796,9 +680,6 @@ function AdvertiserPage() {
                   </button>
                 );
               })}
-              {seasonalFilter && (
-                <button onClick={() => setSeasonalFilter(null)} className="text-xs text-muted-foreground underline self-center ml-2">Clear filter</button>
-              )}
             </div>
           </section>
         )}
@@ -860,6 +741,159 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
+function SpendCard({ label, raw }: { label: string; raw: number | undefined | null }) {
+  const n = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+  const display = n >= 1000 ? fmtMoney(n) : n > 0 ? `$${Math.round(n)} tracked` : "Pipeline";
+  const muted = n < 1000;
+  return (
+    <div className="rounded-[10px] border border-ink/15 p-4 bg-paper">
+      <div className="mono text-[10px] uppercase tracking-widest opacity-70">{label}</div>
+      <div className={`text-2xl font-bold tabular-nums mt-1 ${muted ? "text-muted-foreground" : ""}`}>{display}</div>
+    </div>
+  );
+}
+
+const CHANNEL_SPEND_MAP: Record<string, "search" | "display" | "video" | "social" | "meta" | null> = {
+  youtube: "video",
+  display: "display",
+  search: "search",
+  meta: "meta",
+  tiktok: null,
+  linkedin: null,
+};
+
+function ChannelSplitTable({
+  brand,
+  channelRows,
+  spendByChannel,
+  insight,
+}: {
+  brand: string;
+  channelRows: { key: string; label: string; colour: string; value: number; pending?: boolean }[];
+  spendByChannel?: { search?: number; display?: number; video?: number; social?: number; meta?: number };
+  insight?: string;
+}) {
+  const rowsWithSpend = channelRows.map((c) => {
+    const map = CHANNEL_SPEND_MAP[c.key];
+    const spend =
+      map === "meta"
+        ? (spendByChannel?.meta ?? spendByChannel?.social ?? 0)
+        : map
+          ? (spendByChannel?.[map] ?? 0)
+          : 0;
+    return { ...c, spend };
+  });
+  const totalSpend = rowsWithSpend.reduce((s, r) => s + (r.spend || 0), 0);
+  const active = rowsWithSpend.filter((r) => !r.pending && r.value > 0);
+  const pending = rowsWithSpend.filter((r) => r.pending || r.value === 0);
+  const top = [...active].sort((a, b) => b.spend - a.spend)[0];
+  const topPct = totalSpend > 0 && top ? Math.round((top.spend / totalSpend) * 100) : 0;
+
+  return (
+    <div className="card-flat p-5">
+      <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Channel Split</div>
+      <div className="text-sm font-semibold mt-0.5">Where their budget actually lands</div>
+      {insight && <p className="text-gray-500 italic text-sm mt-2">{insight}</p>}
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left mono text-[10px] uppercase tracking-widest text-muted-foreground border-b border-ink/10">
+              <th className="py-2 pr-3">Channel</th>
+              <th className="py-2 pr-3 text-right">Ads</th>
+              <th className="py-2 pr-3 text-right">Est. Spend</th>
+              <th className="py-2 pl-3 w-[40%]">Share of tracked spend</th>
+            </tr>
+          </thead>
+          <tbody>
+            {active.map((r) => {
+              const pct = totalSpend > 0 ? (r.spend / totalSpend) * 100 : 0;
+              return (
+                <tr key={r.key} className="border-b border-ink/5">
+                  <td className="py-2 pr-3">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: r.colour }} />
+                      <span className="font-medium">{r.label}</span>
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{fmtNum(r.value)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums font-semibold">{r.spend > 0 ? fmtMoney(r.spend) : "—"}</td>
+                  <td className="py-2 pl-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2.5 bg-zinc-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 1)}%`, background: r.colour }} />
+                      </div>
+                      <span className="mono text-[11px] tabular-nums text-muted-foreground w-12 text-right">{pct.toFixed(1)}%</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {active.length === 0 && (
+              <tr><td colSpan={4} className="py-3 text-sm italic text-muted-foreground">Channel data still building.</td></tr>
+            )}
+            {pending.length > 0 && (
+              <tr><td colSpan={4} className="pt-3"><div className="border-t border-dashed border-ink/20" /></td></tr>
+            )}
+            {pending.map((r) => (
+              <tr key={r.key}>
+                <td className="py-2 pr-3">
+                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full border border-dashed border-zinc-400" />
+                    <span className="font-medium">{r.label}</span>
+                  </span>
+                </td>
+                <td colSpan={3} className="py-2 text-xs italic text-muted-foreground">Pipeline active — hourly updates</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {top && topPct >= 60 && (
+        <div className="mt-4 rounded-[8px] bg-amber-50 border border-amber-300 text-amber-950 px-4 py-3 text-sm">
+          <span className="font-semibold tabular-nums">{topPct}%</span> of {brand}'s tracked spend is{" "}
+          <span className="font-semibold">{top.label}</span>. They are a {top.label.toLowerCase()}-first brand.
+          {pending.length > 0 && <> Zero social spend detected yet.</>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PublisherBars({ sites }: { sites: { domain: string; count: number; pct?: number; label?: string }[] }) {
+  const top = [...sites].sort((a, b) => (b.count ?? 0) - (a.count ?? 0)).slice(0, 10);
+  const max = Math.max(1, ...top.map((s) => s.count ?? 0));
+  if (top.length === 0) {
+    return <div className="text-xs italic text-muted-foreground py-6">Placement data pending</div>;
+  }
+  return (
+    <div className="space-y-2">
+      {top.map((s) => {
+        const pct = ((s.count ?? 0) / max) * 100;
+        const label = s.label ?? labelSite(s.domain);
+        const tone = SITE_LABEL_TONE[label] ?? "bg-zinc-50 text-zinc-700 border-zinc-300";
+        return (
+          <div key={s.domain} className="border border-ink/10 rounded-[8px] p-2.5 bg-paper">
+            <div className="flex items-baseline justify-between gap-2 mb-1.5">
+              <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold truncate">{s.domain}</span>
+                <span className={`text-[10px] mono px-1.5 py-0.5 rounded-full border ${tone}`}>{label}</span>
+              </div>
+              <span className="mono tabular-nums text-sm font-bold shrink-0">{fmtNum(s.count ?? 0)}</span>
+            </div>
+            <div className="w-full bg-zinc-100 rounded-full overflow-hidden" style={{ height: 10 }}>
+              <div style={{ width: `${Math.max(pct, 4)}%`, height: 10, background: "#6366f1", borderRadius: 999 }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+
 function normalizeQuery(q: AivisQuery): { text: string; rank?: number; mentions?: number } {
   if (typeof q === "string") return { text: q };
   const text = q.query ?? q.text ?? "";
@@ -886,12 +920,22 @@ function AiVisibilitySection({ aivis, brand, industry }: { aivis: AiVisibility |
   const queries = (aivis?.queries ?? []).map(normalizeQuery).filter((q) => q.text);
   const topBrands = (aivis?.top_brands ?? []).map(normalizeBrand).filter((b) => b.name);
   const totalResponses = aivis?.total_responses ?? queries.length;
-  const mentioned = aivis?.mention_count
-    ?? queries.filter((q) => (q.mentions ?? 0) > 0 || (q.rank ?? 0) > 0).length;
+  const mentionedQueries = queries.filter((q) => (q.mentions ?? 0) > 0 || (q.rank ?? 0) > 0);
+  const mentioned = aivis?.mention_count ?? mentionedQueries.length;
+  const totalMentions = queries.reduce((s, q) => s + (q.mentions ?? 0), 0);
   const ind = industry || aivis?.industry || "their category";
   const me = topBrands.find((b) => b.name.toLowerCase() === brand.toLowerCase());
   const myRank = me?.rank;
   const beat = topBrands.filter((b) => myRank != null && b.rank != null && b.rank > myRank).slice(0, 3);
+
+  // Sort: rank 1 first, then by mentions desc
+  const sortedQueries = [...queries].sort((a, b) => {
+    const ar = a.rank ?? 999;
+    const br = b.rank ?? 999;
+    if (ar !== br) return ar - br;
+    return (b.mentions ?? 0) - (a.mentions ?? 0);
+  });
+  const firstPlace = sortedQueries.filter((q) => q.rank === 1).slice(0, 5);
 
   if (!queries.length && !topBrands.length) {
     return (
@@ -912,27 +956,69 @@ function AiVisibilitySection({ aivis, brand, industry }: { aivis: AiVisibility |
           When Australians ask AI about <span className="capitalize">{ind}</span>,{" "}
           <span className="text-amber-700">{brand}</span> appears in{" "}
           <span className="tabular-nums">{fmtNum(mentioned)}</span> of{" "}
-          <span className="tabular-nums">{fmtNum(totalResponses)}</span> responses.
+          <span className="tabular-nums">{fmtNum(totalResponses)}</span> tracked queries.
         </div>
+        {totalMentions > 0 && (
+          <div className="mt-1 text-sm text-muted-foreground">
+            <span className="tabular-nums font-semibold text-zinc-800">{fmtNum(totalMentions)}</span> total mentions across{" "}
+            <span className="tabular-nums">{fmtNum(mentioned)}</span> of{" "}
+            <span className="tabular-nums">{fmtNum(totalResponses)}</span> tracked queries.
+          </div>
+        )}
       </div>
 
-      {queries.length > 0 && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {queries.slice(0, 9).map((q, i) => (
-            <div key={`${q.text}-${i}`} className="rounded-[10px] border border-ink/15 bg-paper p-3 flex flex-col gap-2">
-              <div className="text-sm font-medium leading-snug">“{q.text}”</div>
-              <div className="flex items-center gap-2 mt-auto">
-                {q.rank != null ? (
-                  <span className="text-[10px] mono px-2 py-0.5 rounded-full bg-zinc-950 text-white">Rank {ordinal(q.rank)}</span>
-                ) : (
-                  <span className="text-[10px] mono px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">Not ranked</span>
-                )}
+      {firstPlace.length > 0 && (
+        <div>
+          <div className="text-sm font-semibold mb-2">{brand} is recommended first by AI for:</div>
+          <div className="flex flex-wrap gap-2">
+            {firstPlace.map((q, i) => (
+              <span key={`fp-${i}`} className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-300 text-emerald-950 rounded-full px-3 py-1.5 text-sm">
+                <span className="mono text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded-full">#1</span>
+                <span className="font-medium">“{q.text}”</span>
                 {q.mentions != null && (
-                  <span className="text-[10px] mono text-muted-foreground">{fmtNum(q.mentions)} mentions</span>
+                  <span className="mono text-[10px] text-emerald-800">{fmtNum(q.mentions)} mentions</span>
                 )}
-              </div>
-            </div>
-          ))}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sortedQueries.length > 0 && (
+        <div>
+          <div className="text-sm font-semibold mb-2">All tracked queries</div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {sortedQueries.slice(0, 9).map((q, i) => {
+              const rank = q.rank;
+              const tone = rank === 1
+                ? "border-emerald-300 bg-emerald-50"
+                : rank != null && rank <= 3
+                  ? "border-amber-300 bg-amber-50"
+                  : rank != null
+                    ? "border-zinc-200 bg-paper"
+                    : "border-zinc-200 bg-zinc-50";
+              const pillTone = rank === 1
+                ? "bg-emerald-600 text-white"
+                : rank != null && rank <= 3
+                  ? "bg-amber-500 text-white"
+                  : rank != null
+                    ? "bg-zinc-900 text-white"
+                    : "bg-zinc-200 text-zinc-700";
+              return (
+                <div key={`q-${i}`} className={`rounded-[10px] border p-3 flex flex-col gap-2 ${tone}`}>
+                  <div className="text-sm font-medium leading-snug">“{q.text}”</div>
+                  <div className="flex items-center gap-2 mt-auto">
+                    <span className={`text-[10px] mono px-2 py-0.5 rounded-full ${pillTone}`}>
+                      {rank != null ? `Rank ${ordinal(rank)}` : "Not ranked"}
+                    </span>
+                    {q.mentions != null && (
+                      <span className="text-[10px] mono text-muted-foreground">{fmtNum(q.mentions)} mentions</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -947,7 +1033,9 @@ function AiVisibilitySection({ aivis, brand, industry }: { aivis: AiVisibility |
         <span className="text-amber-300 font-semibold">{brand}</span>{" "}
         {myRank != null
           ? <>gets recommended <span className="font-semibold">{ordinal(myRank)}</span>.</>
-          : <>is not yet in the recommended set.</>}
+          : firstPlace.length > 0
+            ? <>gets recommended <span className="font-semibold">first</span> for {firstPlace.length} of {fmtNum(totalResponses)} queries.</>
+            : <>is not yet in the recommended set.</>}
       </div>
     </section>
   );
