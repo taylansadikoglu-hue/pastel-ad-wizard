@@ -22,6 +22,7 @@ type RecentAd = {
 };
 
 type War = {
+  advertiser?: string;
   name?: string;
   domain?: string;
   industry?: string;
@@ -60,6 +61,7 @@ type Placements = {
 
 type Channels = {
   channels?: Record<string, number>;
+  by_channel?: Record<string, number>;
   insight?: string;
 };
 
@@ -79,10 +81,25 @@ type Sentiment = {
   google?: { rating?: number; reviews?: number };
 };
 
+type AivisQuery =
+  | string
+  | {
+      query?: string;
+      text?: string;
+      rank?: number | string;
+      mention_count?: number;
+      mentions?: number;
+    };
+
+type AivisTopBrand = string | { brand?: string; name?: string; rank?: number; mentions?: number };
+
 type AiVisibility = {
   ai_share_of_voice?: number;
-  queries?: string[];
+  queries?: AivisQuery[];
+  top_brands?: AivisTopBrand[];
   industry?: string;
+  total_responses?: number;
+  mention_count?: number;
 };
 
 type AdvertiserListItem = {
@@ -172,14 +189,14 @@ const SEASONAL_LABEL: Record<string, string> = {
   back_to_school: "Back to School",
 };
 
-// Channel donut config — canonical 6 channels
-const CHANNEL_DEFS: { key: string; label: string; colour: string; aliases: string[] }[] = [
+// Channel donut config — canonical 6 channels (Meta/TikTok/LinkedIn = pipeline pending)
+const CHANNEL_DEFS: { key: string; label: string; colour: string; aliases: string[]; pending?: boolean }[] = [
   { key: "youtube", label: "YouTube", colour: "#ef4444", aliases: ["youtube", "video"] },
   { key: "display", label: "Programmatic Display", colour: "#3b82f6", aliases: ["display", "programmatic", "image"] },
   { key: "search", label: "Google Search", colour: "#10b981", aliases: ["search", "google_search", "google"] },
-  { key: "meta", label: "Meta", colour: "#8b5cf6", aliases: ["meta", "facebook", "instagram"] },
-  { key: "tiktok", label: "TikTok", colour: "#0ea5e9", aliases: ["tiktok"] },
-  { key: "linkedin", label: "LinkedIn", colour: "#0a66c2", aliases: ["linkedin"] },
+  { key: "meta", label: "Meta", colour: "#8b5cf6", aliases: ["meta", "facebook", "instagram"], pending: true },
+  { key: "tiktok", label: "TikTok", colour: "#0ea5e9", aliases: ["tiktok"], pending: true },
+  { key: "linkedin", label: "LinkedIn", colour: "#0a66c2", aliases: ["linkedin"], pending: true },
 ];
 
 function readChannelValue(src: Record<string, number> | undefined, aliases: string[]): number {
@@ -296,6 +313,9 @@ function AdvertiserPage() {
       ]);
       if (!alive) return;
       setWar(w); setSpend(s); setPlaces(p); setChannels(c); setNews(n); setSentiment(se); setAivis(av);
+      if (w?.advertiser) setBrand(w.advertiser);
+      // eslint-disable-next-line no-console
+      console.log("war:", w, "channels:", c, "aivis:", av, "sentiment:", se);
       setLoading(false);
     })();
     return () => { alive = false; };
@@ -327,9 +347,13 @@ function AdvertiserPage() {
     return best || (war?.industry ?? aivis?.industry ?? "");
   }, [war, aivis]);
 
-  // Channel donut — merge /api/channels + war.channel_split → canonical 6
+  // Channel donut — merge /api/channels (by_channel + channels) + war.channel_split → canonical 6
   const channelRows = useMemo(() => {
-    const src: Record<string, number> = { ...(war?.channel_split ?? {}), ...(channels?.channels ?? {}) };
+    const src: Record<string, number> = {
+      ...(war?.channel_split ?? {}),
+      ...(channels?.channels ?? {}),
+      ...(channels?.by_channel ?? {}),
+    };
     return CHANNEL_DEFS.map((def) => ({ ...def, value: readChannelValue(src, def.aliases) }));
   }, [war, channels]);
 
@@ -348,31 +372,31 @@ function AdvertiserPage() {
     return null;
   }, [places, ownDomainRoot]);
 
-  // Sentiment radar from ai_tags
+  // Sentiment radar — Trust/Urgency from war.sentiment_breakdown; Aspiration/Simplicity/Security from themes
   const sentimentAxes = useMemo(() => {
-    const ads = war?.recent_ads ?? [];
-    const total = ads.length;
-    if (!total) return { Trust: 0, Urgency: 0, Aspiration: 0, Simplicity: 0, Security: 0 };
-    let trust = 0, urgency = 0, aspiration = 0, simplicity = 0, security = 0;
+    const total = war?.total_ads ?? war?.recent_ads?.length ?? 0;
+    const breakdown = war?.sentiment_breakdown ?? {};
+    const positive = Number(breakdown.positive ?? 0);
+    const urgencyN = Number(breakdown.urgency ?? 0);
     const ASP = ["growth", "future", "opportunity", "aspirat", "achieve", "dream", "success"];
     const SIM = ["simple", "easy", "fast", "instant", "quick"];
-    const SEC = ["security", "safe", "protect", "guard", "secure"];
-    for (const ad of ads) {
-      const tags = asTags(ad.ai_tags);
-      const sent = (typeof tags.sentiment === "string" ? tags.sentiment : "").toLowerCase();
-      if (sent === "positive") trust++;
-      if (sent === "urgency") urgency++;
-      const themes = Array.isArray(tags.themes)
-        ? (tags.themes as unknown[]).filter((x): x is string => typeof x === "string").map((s) => s.toLowerCase())
-        : [];
-      if (themes.some((t) => ASP.some((k) => t.includes(k)))) aspiration++;
-      if (themes.some((t) => SIM.some((k) => t.includes(k)))) simplicity++;
-      if (themes.some((t) => SEC.some((k) => t.includes(k)))) security++;
-    }
-    const pct = (n: number) => Math.max(0, Math.min(100, Math.round((n / total) * 100)));
+    const SEC = ["security", "safe", "protect", "guard", "secure", "trust"];
+    const matchCount = (kws: string[]) =>
+      (war?.top_themes ?? []).reduce((sum, t) => {
+        const name = (t.theme ?? "").toLowerCase();
+        return kws.some((k) => name.includes(k)) ? sum + (t.count ?? 0) : sum;
+      }, 0);
+    const pct = (n: number) => {
+      if (!total) return 5;
+      const raw = Math.round((n / total) * 100);
+      return Math.max(5, Math.min(100, raw));
+    };
     return {
-      Trust: pct(trust), Urgency: pct(urgency), Aspiration: pct(aspiration),
-      Simplicity: pct(simplicity), Security: pct(security),
+      Trust: pct(positive),
+      Urgency: pct(urgencyN),
+      Aspiration: pct(matchCount(ASP)),
+      Simplicity: pct(matchCount(SIM)),
+      Security: pct(matchCount(SEC)),
     };
   }, [war]);
 
@@ -393,23 +417,40 @@ function AdvertiserPage() {
   // Chart builders
   const buildChannel = useMemo(() => (canvas: HTMLCanvasElement) => {
     if (!ChartLib) return null;
-    const data = channelRows.filter((d) => d.value > 0);
-    const total = data.reduce((s, d) => s + d.value, 0) || 1;
-    if (!data.length) {
-      // Render placeholder ring
-      return new ChartLib(canvas, {
-        type: "doughnut",
-        data: { labels: ["Pipeline active"], datasets: [{ data: [1], backgroundColor: ["#e5e7eb"], borderWidth: 0 }] },
-        options: { plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: "60%" },
-      });
-    }
+    const activeTotal = channelRows.filter((d) => !d.pending).reduce((s, d) => s + d.value, 0);
+    const pendingValue = Math.max(1, activeTotal * 0.05);
+    const rendered = channelRows.map((d) => ({
+      label: d.label,
+      drawValue: d.value > 0 ? d.value : pendingValue,
+      colour: d.value > 0 ? d.colour : "#d4d4d8",
+      dashed: d.value === 0,
+      realValue: d.value,
+    }));
+    const realTotal = channelRows.reduce((s, d) => s + d.value, 0) || 1;
     return new ChartLib(canvas, {
       type: "doughnut",
-      data: { labels: data.map((d) => d.label), datasets: [{ data: data.map((d) => d.value), backgroundColor: data.map((d) => d.colour), borderWidth: 0 }] },
+      data: {
+        labels: rendered.map((d) => d.label),
+        datasets: [{
+          data: rendered.map((d) => d.drawValue),
+          backgroundColor: rendered.map((d) => d.colour),
+          borderColor: rendered.map((d) => d.dashed ? "#71717a" : "#ffffff"),
+          borderWidth: rendered.map((d) => d.dashed ? 2 : 1),
+          borderDash: rendered.map((d) => d.dashed ? [4, 4] : []),
+        }],
+      },
       options: {
         plugins: {
-          legend: { position: "bottom", labels: { boxWidth: 10 } },
-          tooltip: { callbacks: { label: (ctx: { label: string; raw: number }) => `${ctx.label}: ${Math.round(ctx.raw / total * 100)}%` } },
+          legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: (ctx: { dataIndex: number }) => {
+                const r = rendered[ctx.dataIndex];
+                if (r.dashed) return `${r.label}: Pipeline active`;
+                return `${r.label}: ${Math.round(r.realValue / realTotal * 100)}%`;
+              },
+            },
+          },
         },
         cutout: "60%",
       },
@@ -419,13 +460,50 @@ function AdvertiserPage() {
   const buildPlaces = useMemo(() => (canvas: HTMLCanvasElement) => {
     if (!ChartLib) return null;
     const sites = (places?.sites ?? []).slice(0, 10);
+    const maxVal = Math.max(1, ...sites.map((s) => s.count ?? 0));
     return new ChartLib(canvas, {
       type: "bar",
       data: {
         labels: sites.map((s) => s.domain),
-        datasets: [{ label: "Sightings", data: sites.map((s) => s.count), backgroundColor: "#3b82f6" }],
+        datasets: [{
+          label: "Sightings",
+          data: sites.map((s) => Math.max(s.count ?? 0, Math.ceil(maxVal * 0.05))),
+          backgroundColor: "#3b82f6",
+          barThickness: 22,
+          minBarLength: 20,
+        }],
       },
-      options: { indexAxis: "y", plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { right: 48 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx: { dataIndex: number }) => `${fmtNum(sites[ctx.dataIndex]?.count ?? 0)} sightings`,
+            },
+          },
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { font: { size: 13 } } },
+          y: { ticks: { font: { size: 13 } } },
+        },
+        animation: {
+          onComplete(this: { ctx: CanvasRenderingContext2D; getDatasetMeta: (i: number) => { data: { x: number; y: number }[] } }) {
+            const c = this.ctx;
+            c.font = "bold 13px sans-serif";
+            c.fillStyle = "#18181b";
+            c.textAlign = "left";
+            c.textBaseline = "middle";
+            const meta = this.getDatasetMeta(0);
+            meta.data.forEach((bar, i) => {
+              c.fillText(fmtNum(sites[i]?.count ?? 0), bar.x + 6, bar.y);
+            });
+          },
+        },
+      },
     });
   }, [ChartLib, places]);
 
@@ -573,7 +651,7 @@ function AdvertiserPage() {
                 ⚠️ {ownDomainPlacement.pct}% retargeting own audience ({ownDomainPlacement.domain}) — low prospecting.
               </div>
             )}
-            <div className="h-64"><ChartCanvas build={buildPlaces} className="!w-full !h-full" /></div>
+            <div className="h-[300px] w-full"><ChartCanvas build={buildPlaces} className="!w-full !h-full" /></div>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {(places?.sites ?? []).slice(0, 8).map((s) => {
                 const label = s.label ?? labelSite(s.domain);
@@ -603,27 +681,7 @@ function AdvertiserPage() {
         </section>
 
         {/* SECTION 2 — AI Visibility */}
-        <section className="card-flat p-6">
-          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">AI Visibility</div>
-          <div className="mt-2 flex items-baseline gap-4 flex-wrap">
-            <div className="text-5xl font-bold tabular-nums">{fmtPct(aivis?.ai_share_of_voice)}</div>
-            <div className="text-sm text-muted-foreground">
-              Appears in <span className="font-semibold text-zinc-900">{fmtPct(aivis?.ai_share_of_voice)}</span> of AI responses for{" "}
-              <span className="capitalize">{derivedIndustry || "their industry"}</span> queries.
-            </div>
-          </div>
-          {(aivis?.queries ?? []).length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {aivis!.queries!.slice(0, 12).map((q) => (
-                <span key={q} className="text-xs px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200">
-                  “{q}”
-                </span>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-3 text-xs italic text-muted-foreground">Query data pending — AI visibility index still building.</div>
-          )}
-        </section>
+        <AiVisibilitySection aivis={aivis} brand={brand} industry={derivedIndustry} />
 
         {/* SECTION 3 — Customer Rating */}
         <section className="card-flat p-6">
@@ -802,6 +860,99 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
+function normalizeQuery(q: AivisQuery): { text: string; rank?: number; mentions?: number } {
+  if (typeof q === "string") return { text: q };
+  const text = q.query ?? q.text ?? "";
+  const rankNum = q.rank != null ? Number(q.rank) : undefined;
+  return {
+    text,
+    rank: Number.isFinite(rankNum) ? rankNum : undefined,
+    mentions: q.mention_count ?? q.mentions,
+  };
+}
+
+function normalizeBrand(b: AivisTopBrand): { name: string; rank?: number; mentions?: number } {
+  if (typeof b === "string") return { name: b };
+  return { name: b.brand ?? b.name ?? "", rank: b.rank, mentions: b.mentions };
+}
+
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
+
+function AiVisibilitySection({ aivis, brand, industry }: { aivis: AiVisibility | null; brand: string; industry: string }) {
+  const queries = (aivis?.queries ?? []).map(normalizeQuery).filter((q) => q.text);
+  const topBrands = (aivis?.top_brands ?? []).map(normalizeBrand).filter((b) => b.name);
+  const totalResponses = aivis?.total_responses ?? queries.length;
+  const mentioned = aivis?.mention_count
+    ?? queries.filter((q) => (q.mentions ?? 0) > 0 || (q.rank ?? 0) > 0).length;
+  const ind = industry || aivis?.industry || "their category";
+  const me = topBrands.find((b) => b.name.toLowerCase() === brand.toLowerCase());
+  const myRank = me?.rank;
+  const beat = topBrands.filter((b) => myRank != null && b.rank != null && b.rank > myRank).slice(0, 3);
+
+  if (!queries.length && !topBrands.length) {
+    return (
+      <section className="card-flat p-6">
+        <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">AI Visibility</div>
+        <div className="mt-3 text-sm italic text-muted-foreground">
+          AI visibility data pending for {brand}. Index still building.
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card-flat p-6 space-y-5">
+      <div>
+        <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">AI Visibility</div>
+        <div className="mt-2 text-lg md:text-xl font-semibold leading-snug">
+          When Australians ask AI about <span className="capitalize">{ind}</span>,{" "}
+          <span className="text-amber-700">{brand}</span> appears in{" "}
+          <span className="tabular-nums">{fmtNum(mentioned)}</span> of{" "}
+          <span className="tabular-nums">{fmtNum(totalResponses)}</span> responses.
+        </div>
+      </div>
+
+      {queries.length > 0 && (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {queries.slice(0, 9).map((q, i) => (
+            <div key={`${q.text}-${i}`} className="rounded-[10px] border border-ink/15 bg-paper p-3 flex flex-col gap-2">
+              <div className="text-sm font-medium leading-snug">“{q.text}”</div>
+              <div className="flex items-center gap-2 mt-auto">
+                {q.rank != null ? (
+                  <span className="text-[10px] mono px-2 py-0.5 rounded-full bg-zinc-950 text-white">Rank {ordinal(q.rank)}</span>
+                ) : (
+                  <span className="text-[10px] mono px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">Not ranked</span>
+                )}
+                {q.mentions != null && (
+                  <span className="text-[10px] mono text-muted-foreground">{fmtNum(q.mentions)} mentions</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {beat.length > 0 && (
+        <div className="rounded-[10px] bg-emerald-50 border border-emerald-300 text-emerald-950 px-3 py-2 text-sm">
+          Ahead of: <span className="font-semibold">{beat.map((b) => b.name).join(", ")}</span>
+        </div>
+      )}
+
+      <div className="rounded-[10px] bg-zinc-950 text-white px-4 py-3 text-sm">
+        When customers ask ChatGPT for <span className="capitalize">{ind}</span>,{" "}
+        <span className="text-amber-300 font-semibold">{brand}</span>{" "}
+        {myRank != null
+          ? <>gets recommended <span className="font-semibold">{ordinal(myRank)}</span>.</>
+          : <>is not yet in the recommended set.</>}
+      </div>
+    </section>
+  );
+}
+
 function RatingRow({ sentiment }: { sentiment: Sentiment | null }) {
   const tp = sentiment?.trustpilot?.rating;
   const gg = sentiment?.google?.rating;
@@ -871,26 +1022,51 @@ function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
   const cta = typeof tags.call_to_action === "string" ? tags.call_to_action : null;
   const offer = typeof tags.finance_offer === "string" ? tags.finance_offer : null;
   const isVideo = (ad.ad_format ?? "").toLowerCase() === "video" || !!ad.video_url;
-  const sources = [ad.image_url, ad.thumbnail_url].filter((u): u is string => typeof u === "string" && u.length > 0);
-  const fallbackColour = ad.primary_colours?.[0] ?? "#1f2937";
   const fmt = formatBadge(ad);
   const channel = sourceBadge(ad);
 
-  const [srcIdx, setSrcIdx] = useState(0);
-  const currentSrc = sources[srcIdx];
+  const primarySrc = ad.image_url || ad.thumbnail_url || "";
+  const fallbackText =
+    (typeof (asTags(ad.ai_tags) as { call_to_action?: unknown }).call_to_action === "string"
+      ? ((asTags(ad.ai_tags) as { call_to_action?: string }).call_to_action as string)
+      : "") || ad.advertiser || brand;
+  const primaryColour =
+    (asTags(ad.ai_tags) as { primary_colours?: string[] }).primary_colours?.[0]
+    ?? ad.primary_colours?.[0]
+    ?? "#1a1a2e";
 
   return (
     <div className="card-flat overflow-hidden flex flex-col">
-      <div className="relative aspect-video bg-zinc-100 overflow-hidden">
-        {currentSrc ? (
-          <img key={currentSrc} src={currentSrc} alt={cta ?? brand} className="w-full h-full object-cover" loading="lazy"
-            onError={() => setSrcIdx((i) => i + 1)} />
-        ) : (
-          <div className="w-full h-full grid place-items-center text-white text-center px-4 text-sm font-semibold"
-            style={{ background: fallbackColour }}>
-            {cta ?? brand}
-          </div>
-        )}
+      <div className="relative overflow-hidden">
+        {primarySrc ? (
+          <img
+            src={primarySrc}
+            alt={cta ?? brand}
+            style={{ width: "100%", height: "200px", objectFit: "cover", display: "block" }}
+            onError={(e) => {
+              const img = e.currentTarget;
+              img.style.display = "none";
+              const next = img.nextSibling as HTMLElement | null;
+              if (next) next.style.display = "flex";
+            }}
+          />
+        ) : null}
+        <div
+          style={{
+            display: primarySrc ? "none" : "flex",
+            width: "100%",
+            height: "200px",
+            background: primaryColour,
+            alignItems: "center",
+            justifyContent: "center",
+            color: "white",
+            fontWeight: "bold",
+            padding: "20px",
+            textAlign: "center",
+          }}
+        >
+          {fallbackText}
+        </div>
         {isVideo && (
           <div className="absolute inset-0 grid place-items-center bg-black/20 pointer-events-none">
             <div className="bg-white/90 rounded-full p-3"><Play size={20} className="text-zinc-900" /></div>
