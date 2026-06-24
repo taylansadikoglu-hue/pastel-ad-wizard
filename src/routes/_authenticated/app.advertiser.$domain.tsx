@@ -920,12 +920,22 @@ function AiVisibilitySection({ aivis, brand, industry }: { aivis: AiVisibility |
   const queries = (aivis?.queries ?? []).map(normalizeQuery).filter((q) => q.text);
   const topBrands = (aivis?.top_brands ?? []).map(normalizeBrand).filter((b) => b.name);
   const totalResponses = aivis?.total_responses ?? queries.length;
-  const mentioned = aivis?.mention_count
-    ?? queries.filter((q) => (q.mentions ?? 0) > 0 || (q.rank ?? 0) > 0).length;
+  const mentionedQueries = queries.filter((q) => (q.mentions ?? 0) > 0 || (q.rank ?? 0) > 0);
+  const mentioned = aivis?.mention_count ?? mentionedQueries.length;
+  const totalMentions = queries.reduce((s, q) => s + (q.mentions ?? 0), 0);
   const ind = industry || aivis?.industry || "their category";
   const me = topBrands.find((b) => b.name.toLowerCase() === brand.toLowerCase());
   const myRank = me?.rank;
   const beat = topBrands.filter((b) => myRank != null && b.rank != null && b.rank > myRank).slice(0, 3);
+
+  // Sort: rank 1 first, then by mentions desc
+  const sortedQueries = [...queries].sort((a, b) => {
+    const ar = a.rank ?? 999;
+    const br = b.rank ?? 999;
+    if (ar !== br) return ar - br;
+    return (b.mentions ?? 0) - (a.mentions ?? 0);
+  });
+  const firstPlace = sortedQueries.filter((q) => q.rank === 1).slice(0, 5);
 
   if (!queries.length && !topBrands.length) {
     return (
@@ -946,27 +956,69 @@ function AiVisibilitySection({ aivis, brand, industry }: { aivis: AiVisibility |
           When Australians ask AI about <span className="capitalize">{ind}</span>,{" "}
           <span className="text-amber-700">{brand}</span> appears in{" "}
           <span className="tabular-nums">{fmtNum(mentioned)}</span> of{" "}
-          <span className="tabular-nums">{fmtNum(totalResponses)}</span> responses.
+          <span className="tabular-nums">{fmtNum(totalResponses)}</span> tracked queries.
         </div>
+        {totalMentions > 0 && (
+          <div className="mt-1 text-sm text-muted-foreground">
+            <span className="tabular-nums font-semibold text-zinc-800">{fmtNum(totalMentions)}</span> total mentions across{" "}
+            <span className="tabular-nums">{fmtNum(mentioned)}</span> of{" "}
+            <span className="tabular-nums">{fmtNum(totalResponses)}</span> tracked queries.
+          </div>
+        )}
       </div>
 
-      {queries.length > 0 && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {queries.slice(0, 9).map((q, i) => (
-            <div key={`${q.text}-${i}`} className="rounded-[10px] border border-ink/15 bg-paper p-3 flex flex-col gap-2">
-              <div className="text-sm font-medium leading-snug">“{q.text}”</div>
-              <div className="flex items-center gap-2 mt-auto">
-                {q.rank != null ? (
-                  <span className="text-[10px] mono px-2 py-0.5 rounded-full bg-zinc-950 text-white">Rank {ordinal(q.rank)}</span>
-                ) : (
-                  <span className="text-[10px] mono px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700 border border-zinc-200">Not ranked</span>
-                )}
+      {firstPlace.length > 0 && (
+        <div>
+          <div className="text-sm font-semibold mb-2">{brand} is recommended first by AI for:</div>
+          <div className="flex flex-wrap gap-2">
+            {firstPlace.map((q, i) => (
+              <span key={`fp-${i}`} className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-300 text-emerald-950 rounded-full px-3 py-1.5 text-sm">
+                <span className="mono text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded-full">#1</span>
+                <span className="font-medium">“{q.text}”</span>
                 {q.mentions != null && (
-                  <span className="text-[10px] mono text-muted-foreground">{fmtNum(q.mentions)} mentions</span>
+                  <span className="mono text-[10px] text-emerald-800">{fmtNum(q.mentions)} mentions</span>
                 )}
-              </div>
-            </div>
-          ))}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sortedQueries.length > 0 && (
+        <div>
+          <div className="text-sm font-semibold mb-2">All tracked queries</div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {sortedQueries.slice(0, 9).map((q, i) => {
+              const rank = q.rank;
+              const tone = rank === 1
+                ? "border-emerald-300 bg-emerald-50"
+                : rank != null && rank <= 3
+                  ? "border-amber-300 bg-amber-50"
+                  : rank != null
+                    ? "border-zinc-200 bg-paper"
+                    : "border-zinc-200 bg-zinc-50";
+              const pillTone = rank === 1
+                ? "bg-emerald-600 text-white"
+                : rank != null && rank <= 3
+                  ? "bg-amber-500 text-white"
+                  : rank != null
+                    ? "bg-zinc-900 text-white"
+                    : "bg-zinc-200 text-zinc-700";
+              return (
+                <div key={`q-${i}`} className={`rounded-[10px] border p-3 flex flex-col gap-2 ${tone}`}>
+                  <div className="text-sm font-medium leading-snug">“{q.text}”</div>
+                  <div className="flex items-center gap-2 mt-auto">
+                    <span className={`text-[10px] mono px-2 py-0.5 rounded-full ${pillTone}`}>
+                      {rank != null ? `Rank ${ordinal(rank)}` : "Not ranked"}
+                    </span>
+                    {q.mentions != null && (
+                      <span className="text-[10px] mono text-muted-foreground">{fmtNum(q.mentions)} mentions</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -981,7 +1033,9 @@ function AiVisibilitySection({ aivis, brand, industry }: { aivis: AiVisibility |
         <span className="text-amber-300 font-semibold">{brand}</span>{" "}
         {myRank != null
           ? <>gets recommended <span className="font-semibold">{ordinal(myRank)}</span>.</>
-          : <>is not yet in the recommended set.</>}
+          : firstPlace.length > 0
+            ? <>gets recommended <span className="font-semibold">first</span> for {firstPlace.length} of {fmtNum(totalResponses)} queries.</>
+            : <>is not yet in the recommended set.</>}
       </div>
     </section>
   );
