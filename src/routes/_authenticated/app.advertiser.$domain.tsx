@@ -617,10 +617,13 @@ function AdvertiserPage() {
           {spend?.insight && <p className="text-gray-500 italic mb-4">{spend.insight}</p>}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <StatCard label="Total Est." value={`${fmtMoney(spend?.estimated_monthly_spend)}/mo`} accent="bg-zinc-950 text-white" />
-            <StatCard label="Programmatic" value={fmtMoney(spend?.spend_by_channel?.display)} />
-            <StatCard label="Search" value={fmtMoney(spend?.spend_by_channel?.search)} />
-            <StatCard label="Video" value={fmtMoney(spend?.spend_by_channel?.video)} />
+            <SpendCard label="Programmatic" raw={spend?.spend_by_channel?.display} />
+            <SpendCard label="Search" raw={spend?.spend_by_channel?.search} />
+            <SpendCard label="Video" raw={spend?.spend_by_channel?.video} />
           </div>
+          <p className="text-xs text-muted-foreground mt-2 italic">
+            Low = few tracked placements, not zero spend.
+          </p>
           {!spend?.spend_by_channel?.meta && !spend?.spend_by_channel?.social && (
             <div className="mt-3 inline-flex items-center gap-2 rounded-[8px] bg-amber-50 border border-amber-300 text-amber-950 text-xs px-3 py-1.5">
               Meta: Pending — paid-social spend not yet attributed.
