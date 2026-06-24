@@ -741,6 +741,156 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
+function SpendCard({ label, raw }: { label: string; raw: number | undefined | null }) {
+  const n = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+  const display = n >= 1000 ? fmtMoney(n) : n > 0 ? `$${Math.round(n)} tracked` : "Pipeline";
+  const muted = n < 1000;
+  return (
+    <div className="rounded-[10px] border border-ink/15 p-4 bg-paper">
+      <div className="mono text-[10px] uppercase tracking-widest opacity-70">{label}</div>
+      <div className={`text-2xl font-bold tabular-nums mt-1 ${muted ? "text-muted-foreground" : ""}`}>{display}</div>
+    </div>
+  );
+}
+
+const CHANNEL_SPEND_MAP: Record<string, "search" | "display" | "video" | "social" | "meta" | null> = {
+  youtube: "video",
+  display: "display",
+  search: "search",
+  meta: "meta",
+  tiktok: null,
+  linkedin: null,
+};
+
+function ChannelSplitTable({
+  brand,
+  channelRows,
+  spendByChannel,
+  insight,
+}: {
+  brand: string;
+  channelRows: { key: string; label: string; colour: string; value: number; pending?: boolean }[];
+  spendByChannel?: { search?: number; display?: number; video?: number; social?: number; meta?: number };
+  insight?: string;
+}) {
+  const rowsWithSpend = channelRows.map((c) => {
+    const map = CHANNEL_SPEND_MAP[c.key];
+    const spend =
+      map === "meta"
+        ? (spendByChannel?.meta ?? spendByChannel?.social ?? 0)
+        : map
+          ? (spendByChannel?.[map] ?? 0)
+          : 0;
+    return { ...c, spend };
+  });
+  const totalSpend = rowsWithSpend.reduce((s, r) => s + (r.spend || 0), 0);
+  const active = rowsWithSpend.filter((r) => !r.pending && r.value > 0);
+  const pending = rowsWithSpend.filter((r) => r.pending || r.value === 0);
+  const top = [...active].sort((a, b) => b.spend - a.spend)[0];
+  const topPct = totalSpend > 0 && top ? Math.round((top.spend / totalSpend) * 100) : 0;
+
+  return (
+    <div className="card-flat p-5">
+      <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Channel Split</div>
+      <div className="text-sm font-semibold mt-0.5">Where their budget actually lands</div>
+      {insight && <p className="text-gray-500 italic text-sm mt-2">{insight}</p>}
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left mono text-[10px] uppercase tracking-widest text-muted-foreground border-b border-ink/10">
+              <th className="py-2 pr-3">Channel</th>
+              <th className="py-2 pr-3 text-right">Ads</th>
+              <th className="py-2 pr-3 text-right">Est. Spend</th>
+              <th className="py-2 pl-3 w-[40%]">Share of tracked spend</th>
+            </tr>
+          </thead>
+          <tbody>
+            {active.map((r) => {
+              const pct = totalSpend > 0 ? (r.spend / totalSpend) * 100 : 0;
+              return (
+                <tr key={r.key} className="border-b border-ink/5">
+                  <td className="py-2 pr-3">
+                    <span className="inline-flex items-center gap-2">
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: r.colour }} />
+                      <span className="font-medium">{r.label}</span>
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{fmtNum(r.value)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums font-semibold">{r.spend > 0 ? fmtMoney(r.spend) : "—"}</td>
+                  <td className="py-2 pl-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2.5 bg-zinc-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${Math.max(pct, 1)}%`, background: r.colour }} />
+                      </div>
+                      <span className="mono text-[11px] tabular-nums text-muted-foreground w-12 text-right">{pct.toFixed(1)}%</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {active.length === 0 && (
+              <tr><td colSpan={4} className="py-3 text-sm italic text-muted-foreground">Channel data still building.</td></tr>
+            )}
+            {pending.length > 0 && (
+              <tr><td colSpan={4} className="pt-3"><div className="border-t border-dashed border-ink/20" /></td></tr>
+            )}
+            {pending.map((r) => (
+              <tr key={r.key}>
+                <td className="py-2 pr-3">
+                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full border border-dashed border-zinc-400" />
+                    <span className="font-medium">{r.label}</span>
+                  </span>
+                </td>
+                <td colSpan={3} className="py-2 text-xs italic text-muted-foreground">Pipeline active — hourly updates</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {top && topPct >= 60 && (
+        <div className="mt-4 rounded-[8px] bg-amber-50 border border-amber-300 text-amber-950 px-4 py-3 text-sm">
+          <span className="font-semibold tabular-nums">{topPct}%</span> of {brand}'s tracked spend is{" "}
+          <span className="font-semibold">{top.label}</span>. They are a {top.label.toLowerCase()}-first brand.
+          {pending.length > 0 && <> Zero social spend detected yet.</>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PublisherBars({ sites }: { sites: { domain: string; count: number; pct?: number; label?: string }[] }) {
+  const top = [...sites].sort((a, b) => (b.count ?? 0) - (a.count ?? 0)).slice(0, 10);
+  const max = Math.max(1, ...top.map((s) => s.count ?? 0));
+  if (top.length === 0) {
+    return <div className="text-xs italic text-muted-foreground py-6">Placement data pending</div>;
+  }
+  return (
+    <div className="space-y-2">
+      {top.map((s) => {
+        const pct = ((s.count ?? 0) / max) * 100;
+        const label = s.label ?? labelSite(s.domain);
+        const tone = SITE_LABEL_TONE[label] ?? "bg-zinc-50 text-zinc-700 border-zinc-300";
+        return (
+          <div key={s.domain} className="border border-ink/10 rounded-[8px] p-2.5 bg-paper">
+            <div className="flex items-baseline justify-between gap-2 mb-1.5">
+              <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-semibold truncate">{s.domain}</span>
+                <span className={`text-[10px] mono px-1.5 py-0.5 rounded-full border ${tone}`}>{label}</span>
+              </div>
+              <span className="mono tabular-nums text-sm font-bold shrink-0">{fmtNum(s.count ?? 0)}</span>
+            </div>
+            <div className="w-full bg-zinc-100 rounded-full overflow-hidden" style={{ height: 10 }}>
+              <div style={{ width: `${Math.max(pct, 4)}%`, height: 10, background: "#6366f1", borderRadius: 999 }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
 function normalizeQuery(q: AivisQuery): { text: string; rank?: number; mentions?: number } {
   if (typeof q === "string") return { text: q };
   const text = q.query ?? q.text ?? "";
