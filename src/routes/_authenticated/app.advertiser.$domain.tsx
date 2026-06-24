@@ -1027,21 +1027,48 @@ function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
   const fmt = formatBadge(ad);
   const channel = sourceBadge(ad);
 
-  const [srcIdx, setSrcIdx] = useState(0);
-  const currentSrc = sources[srcIdx];
+  const primarySrc = ad.image_url || ad.thumbnail_url || "";
+  const fallbackText =
+    (typeof (asTags(ad.ai_tags) as { call_to_action?: unknown }).call_to_action === "string"
+      ? ((asTags(ad.ai_tags) as { call_to_action?: string }).call_to_action as string)
+      : "") || ad.advertiser || brand;
+  const primaryColour =
+    (asTags(ad.ai_tags) as { primary_colours?: string[] }).primary_colours?.[0]
+    ?? ad.primary_colours?.[0]
+    ?? "#1a1a2e";
 
   return (
     <div className="card-flat overflow-hidden flex flex-col">
-      <div className="relative aspect-video bg-zinc-100 overflow-hidden">
-        {currentSrc ? (
-          <img key={currentSrc} src={currentSrc} alt={cta ?? brand} className="w-full h-full object-cover" loading="lazy"
-            onError={() => setSrcIdx((i) => i + 1)} />
-        ) : (
-          <div className="w-full h-full grid place-items-center text-white text-center px-4 text-sm font-semibold"
-            style={{ background: fallbackColour }}>
-            {cta ?? brand}
-          </div>
-        )}
+      <div className="relative overflow-hidden">
+        {primarySrc ? (
+          <img
+            src={primarySrc}
+            alt={cta ?? brand}
+            style={{ width: "100%", height: "200px", objectFit: "cover", display: "block" }}
+            onError={(e) => {
+              const img = e.currentTarget;
+              img.style.display = "none";
+              const next = img.nextSibling as HTMLElement | null;
+              if (next) next.style.display = "flex";
+            }}
+          />
+        ) : null}
+        <div
+          style={{
+            display: primarySrc ? "none" : "flex",
+            width: "100%",
+            height: "200px",
+            background: primaryColour,
+            alignItems: "center",
+            justifyContent: "center",
+            color: "white",
+            fontWeight: "bold",
+            padding: "20px",
+            textAlign: "center",
+          }}
+        >
+          {fallbackText}
+        </div>
         {isVideo && (
           <div className="absolute inset-0 grid place-items-center bg-black/20 pointer-events-none">
             <div className="bg-white/90 rounded-full p-3"><Play size={20} className="text-zinc-900" /></div>
