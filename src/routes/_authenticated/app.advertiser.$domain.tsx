@@ -890,6 +890,9 @@ function PublisherBars({ sites }: { sites: { domain: string; count: number; pct?
       })}
     </div>
   );
+}
+
+
 
 function normalizeQuery(q: AivisQuery): { text: string; rank?: number; mentions?: number } {
   if (typeof q === "string") return { text: q };
