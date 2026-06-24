@@ -1022,8 +1022,6 @@ function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
   const cta = typeof tags.call_to_action === "string" ? tags.call_to_action : null;
   const offer = typeof tags.finance_offer === "string" ? tags.finance_offer : null;
   const isVideo = (ad.ad_format ?? "").toLowerCase() === "video" || !!ad.video_url;
-  const sources = [ad.image_url, ad.thumbnail_url].filter((u): u is string => typeof u === "string" && u.length > 0);
-  const fallbackColour = ad.primary_colours?.[0] ?? "#1f2937";
   const fmt = formatBadge(ad);
   const channel = sourceBadge(ad);
 
