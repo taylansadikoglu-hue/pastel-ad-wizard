@@ -189,17 +189,28 @@ type BrandDNARow = {
 
 function BrandDNAGrid() {
   const [rows, setRows] = useState<BrandDNARow[]>([]);
+  const [categories, setCategories] = useState<Record<string, string>>({});
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data } = await supabase
-        .from("brand_dna_v2")
-        .select("brand, primary_category, emotion_mix, customer_stage, primary_cta, creative_volume, dominant_emotion");
+      const [{ data }, { data: reg }] = await Promise.all([
+        supabase
+          .from("brand_dna_v2")
+          .select("brand, primary_category, emotion_mix, customer_stage, primary_cta, creative_volume, dominant_emotion"),
+        supabase.from("advertiser_registry").select("domain, category").not("category", "is", null),
+      ]);
       if (!active) return;
       const sorted = ((data ?? []) as BrandDNARow[]).sort(
         (a, b) => (Number(b.creative_volume) || 0) - (Number(a.creative_volume) || 0),
       );
+      const catMap: Record<string, string> = {};
+      for (const r of (reg ?? []) as { domain: string; category: string | null }[]) {
+        if (!r.category) continue;
+        const key = r.domain.toLowerCase().replace(/^www\./, "").split(/[./]/)[0];
+        catMap[key] = r.category;
+      }
+      setCategories(catMap);
       setRows(sorted);
       setLoaded(true);
     })();
@@ -219,6 +230,8 @@ function BrandDNAGrid() {
             .split(/[,;|]/)
             .map((s) => s.trim())
             .filter(Boolean);
+          const brandKey = (r.brand ?? "").toLowerCase().split(/[./\s]/)[0];
+          const category = brandKey ? categories[brandKey] : undefined;
           return (
             <div key={i} className="card-flat p-4">
               <div className="flex items-center justify-between mb-2">
@@ -237,6 +250,13 @@ function BrandDNAGrid() {
                   {Number(r.creative_volume) || 0} creatives
                 </span>
               </div>
+              {category && (
+                <div className="mb-2">
+                  <span className="mono text-[10px] px-1.5 py-0.5 border border-ink/40 rounded-[3px] bg-paper uppercase tracking-wide">
+                    {category}
+                  </span>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div>
                   <div className="mono text-[10px] uppercase text-muted-foreground">Primary Category</div>
