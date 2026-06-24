@@ -387,9 +387,9 @@ function AdvertiserPage() {
         return kws.some((k) => name.includes(k)) ? sum + (t.count ?? 0) : sum;
       }, 0);
     const pct = (n: number) => {
-      if (!total) return 5;
+      if (!total) return 15;
       const raw = Math.round((n / total) * 100);
-      return Math.max(5, Math.min(100, raw));
+      return Math.max(15, Math.min(100, raw));
     };
     return {
       Trust: pct(positive),
