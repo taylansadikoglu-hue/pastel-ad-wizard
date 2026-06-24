@@ -347,9 +347,13 @@ function AdvertiserPage() {
     return best || (war?.industry ?? aivis?.industry ?? "");
   }, [war, aivis]);
 
-  // Channel donut — merge /api/channels + war.channel_split → canonical 6
+  // Channel donut — merge /api/channels (by_channel + channels) + war.channel_split → canonical 6
   const channelRows = useMemo(() => {
-    const src: Record<string, number> = { ...(war?.channel_split ?? {}), ...(channels?.channels ?? {}) };
+    const src: Record<string, number> = {
+      ...(war?.channel_split ?? {}),
+      ...(channels?.channels ?? {}),
+      ...(channels?.by_channel ?? {}),
+    };
     return CHANNEL_DEFS.map((def) => ({ ...def, value: readChannelValue(src, def.aliases) }));
   }, [war, channels]);
 
