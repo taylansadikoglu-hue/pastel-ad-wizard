@@ -372,31 +372,31 @@ function AdvertiserPage() {
     return null;
   }, [places, ownDomainRoot]);
 
-  // Sentiment radar from ai_tags
+  // Sentiment radar — Trust/Urgency from war.sentiment_breakdown; Aspiration/Simplicity/Security from themes
   const sentimentAxes = useMemo(() => {
-    const ads = war?.recent_ads ?? [];
-    const total = ads.length;
-    if (!total) return { Trust: 0, Urgency: 0, Aspiration: 0, Simplicity: 0, Security: 0 };
-    let trust = 0, urgency = 0, aspiration = 0, simplicity = 0, security = 0;
+    const total = war?.total_ads ?? war?.recent_ads?.length ?? 0;
+    const breakdown = war?.sentiment_breakdown ?? {};
+    const positive = Number(breakdown.positive ?? 0);
+    const urgencyN = Number(breakdown.urgency ?? 0);
     const ASP = ["growth", "future", "opportunity", "aspirat", "achieve", "dream", "success"];
     const SIM = ["simple", "easy", "fast", "instant", "quick"];
-    const SEC = ["security", "safe", "protect", "guard", "secure"];
-    for (const ad of ads) {
-      const tags = asTags(ad.ai_tags);
-      const sent = (typeof tags.sentiment === "string" ? tags.sentiment : "").toLowerCase();
-      if (sent === "positive") trust++;
-      if (sent === "urgency") urgency++;
-      const themes = Array.isArray(tags.themes)
-        ? (tags.themes as unknown[]).filter((x): x is string => typeof x === "string").map((s) => s.toLowerCase())
-        : [];
-      if (themes.some((t) => ASP.some((k) => t.includes(k)))) aspiration++;
-      if (themes.some((t) => SIM.some((k) => t.includes(k)))) simplicity++;
-      if (themes.some((t) => SEC.some((k) => t.includes(k)))) security++;
-    }
-    const pct = (n: number) => Math.max(0, Math.min(100, Math.round((n / total) * 100)));
+    const SEC = ["security", "safe", "protect", "guard", "secure", "trust"];
+    const matchCount = (kws: string[]) =>
+      (war?.top_themes ?? []).reduce((sum, t) => {
+        const name = (t.theme ?? "").toLowerCase();
+        return kws.some((k) => name.includes(k)) ? sum + (t.count ?? 0) : sum;
+      }, 0);
+    const pct = (n: number) => {
+      if (!total) return 5;
+      const raw = Math.round((n / total) * 100);
+      return Math.max(5, Math.min(100, raw));
+    };
     return {
-      Trust: pct(trust), Urgency: pct(urgency), Aspiration: pct(aspiration),
-      Simplicity: pct(simplicity), Security: pct(security),
+      Trust: pct(positive),
+      Urgency: pct(urgencyN),
+      Aspiration: pct(matchCount(ASP)),
+      Simplicity: pct(matchCount(SIM)),
+      Security: pct(matchCount(SEC)),
     };
   }, [war]);
 
