@@ -22,10 +22,12 @@ import { Route as AuthenticatedAppPcrRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedAppDashboardRouteImport } from './routes/_authenticated/app.dashboard'
 import { Route as AuthenticatedAppCreativeRouteImport } from './routes/_authenticated/app.creative'
 import { Route as AuthenticatedAppClientsRouteImport } from './routes/_authenticated/app.clients'
+import { Route as AuthenticatedAppCategoriesRouteImport } from './routes/_authenticated/app.categories'
 import { Route as AuthenticatedAppBenchmarksRouteImport } from './routes/_authenticated/app.benchmarks'
 import { Route as AuthenticatedAppAdvisorRouteImport } from './routes/_authenticated/app.advisor'
 import { Route as AuthenticatedAppAdvertisersRouteImport } from './routes/_authenticated/app.advertisers'
 import { Route as ApiPublicHooksScanReadyRouteImport } from './routes/api/public/hooks/scan-ready'
+import { Route as AuthenticatedAppCategorySlugRouteImport } from './routes/_authenticated/app.category.$slug'
 import { Route as AuthenticatedAppAdvertiserDomainRouteImport } from './routes/_authenticated/app.advertiser.$domain'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -96,6 +98,12 @@ const AuthenticatedAppClientsRoute = AuthenticatedAppClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppCategoriesRoute =
+  AuthenticatedAppCategoriesRouteImport.update({
+    id: '/categories',
+    path: '/categories',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppBenchmarksRoute =
   AuthenticatedAppBenchmarksRouteImport.update({
     id: '/benchmarks',
@@ -118,6 +126,12 @@ const ApiPublicHooksScanReadyRoute = ApiPublicHooksScanReadyRouteImport.update({
   path: '/api/public/hooks/scan-ready',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAppCategorySlugRoute =
+  AuthenticatedAppCategorySlugRouteImport.update({
+    id: '/category/$slug',
+    path: '/category/$slug',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAdvertiserDomainRoute =
   AuthenticatedAppAdvertiserDomainRouteImport.update({
     id: '/advertiser/$domain',
@@ -135,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
+  '/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/app/clients': typeof AuthenticatedAppClientsRoute
   '/app/creative': typeof AuthenticatedAppCreativeRoute
   '/app/dashboard': typeof AuthenticatedAppDashboardRoute
@@ -142,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
+  '/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
 }
 export interface FileRoutesByTo {
@@ -154,6 +170,7 @@ export interface FileRoutesByTo {
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
+  '/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/app/clients': typeof AuthenticatedAppClientsRoute
   '/app/creative': typeof AuthenticatedAppCreativeRoute
   '/app/dashboard': typeof AuthenticatedAppDashboardRoute
@@ -161,6 +178,7 @@ export interface FileRoutesByTo {
   '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
+  '/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
 }
 export interface FileRoutesById {
@@ -175,6 +193,7 @@ export interface FileRoutesById {
   '/_authenticated/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/_authenticated/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/_authenticated/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
+  '/_authenticated/app/categories': typeof AuthenticatedAppCategoriesRoute
   '/_authenticated/app/clients': typeof AuthenticatedAppClientsRoute
   '/_authenticated/app/creative': typeof AuthenticatedAppCreativeRoute
   '/_authenticated/app/dashboard': typeof AuthenticatedAppDashboardRoute
@@ -182,6 +201,7 @@ export interface FileRoutesById {
   '/_authenticated/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
+  '/_authenticated/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
 }
 export interface FileRouteTypes {
@@ -196,6 +216,7 @@ export interface FileRouteTypes {
     | '/app/advertisers'
     | '/app/advisor'
     | '/app/benchmarks'
+    | '/app/categories'
     | '/app/clients'
     | '/app/creative'
     | '/app/dashboard'
@@ -203,6 +224,7 @@ export interface FileRouteTypes {
     | '/app/sentiment'
     | '/app/settings'
     | '/app/advertiser/$domain'
+    | '/app/category/$slug'
     | '/api/public/hooks/scan-ready'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -215,6 +237,7 @@ export interface FileRouteTypes {
     | '/app/advertisers'
     | '/app/advisor'
     | '/app/benchmarks'
+    | '/app/categories'
     | '/app/clients'
     | '/app/creative'
     | '/app/dashboard'
@@ -222,6 +245,7 @@ export interface FileRouteTypes {
     | '/app/sentiment'
     | '/app/settings'
     | '/app/advertiser/$domain'
+    | '/app/category/$slug'
     | '/api/public/hooks/scan-ready'
   id:
     | '__root__'
@@ -235,6 +259,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/advertisers'
     | '/_authenticated/app/advisor'
     | '/_authenticated/app/benchmarks'
+    | '/_authenticated/app/categories'
     | '/_authenticated/app/clients'
     | '/_authenticated/app/creative'
     | '/_authenticated/app/dashboard'
@@ -242,6 +267,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/sentiment'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/advertiser/$domain'
+    | '/_authenticated/app/category/$slug'
     | '/api/public/hooks/scan-ready'
   fileRoutesById: FileRoutesById
 }
@@ -348,6 +374,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppClientsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/categories': {
+      id: '/_authenticated/app/categories'
+      path: '/categories'
+      fullPath: '/app/categories'
+      preLoaderRoute: typeof AuthenticatedAppCategoriesRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/benchmarks': {
       id: '/_authenticated/app/benchmarks'
       path: '/benchmarks'
@@ -376,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksScanReadyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/app/category/$slug': {
+      id: '/_authenticated/app/category/$slug'
+      path: '/category/$slug'
+      fullPath: '/app/category/$slug'
+      preLoaderRoute: typeof AuthenticatedAppCategorySlugRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/advertiser/$domain': {
       id: '/_authenticated/app/advertiser/$domain'
       path: '/advertiser/$domain'
@@ -390,6 +430,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAdvertisersRoute: typeof AuthenticatedAppAdvertisersRoute
   AuthenticatedAppAdvisorRoute: typeof AuthenticatedAppAdvisorRoute
   AuthenticatedAppBenchmarksRoute: typeof AuthenticatedAppBenchmarksRoute
+  AuthenticatedAppCategoriesRoute: typeof AuthenticatedAppCategoriesRoute
   AuthenticatedAppClientsRoute: typeof AuthenticatedAppClientsRoute
   AuthenticatedAppCreativeRoute: typeof AuthenticatedAppCreativeRoute
   AuthenticatedAppDashboardRoute: typeof AuthenticatedAppDashboardRoute
@@ -397,12 +438,14 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppSentimentRoute: typeof AuthenticatedAppSentimentRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppAdvertiserDomainRoute: typeof AuthenticatedAppAdvertiserDomainRoute
+  AuthenticatedAppCategorySlugRoute: typeof AuthenticatedAppCategorySlugRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAdvertisersRoute: AuthenticatedAppAdvertisersRoute,
   AuthenticatedAppAdvisorRoute: AuthenticatedAppAdvisorRoute,
   AuthenticatedAppBenchmarksRoute: AuthenticatedAppBenchmarksRoute,
+  AuthenticatedAppCategoriesRoute: AuthenticatedAppCategoriesRoute,
   AuthenticatedAppClientsRoute: AuthenticatedAppClientsRoute,
   AuthenticatedAppCreativeRoute: AuthenticatedAppCreativeRoute,
   AuthenticatedAppDashboardRoute: AuthenticatedAppDashboardRoute,
@@ -410,6 +453,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppSentimentRoute: AuthenticatedAppSentimentRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppAdvertiserDomainRoute: AuthenticatedAppAdvertiserDomainRoute,
+  AuthenticatedAppCategorySlugRoute: AuthenticatedAppCategorySlugRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
