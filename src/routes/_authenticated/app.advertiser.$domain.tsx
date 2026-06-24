@@ -651,7 +651,7 @@ function AdvertiserPage() {
                 ⚠️ {ownDomainPlacement.pct}% retargeting own audience ({ownDomainPlacement.domain}) — low prospecting.
               </div>
             )}
-            <div className="h-64"><ChartCanvas build={buildPlaces} className="!w-full !h-full" /></div>
+            <div className="h-[300px] w-full"><ChartCanvas build={buildPlaces} className="!w-full !h-full" /></div>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {(places?.sites ?? []).slice(0, 8).map((s) => {
                 const label = s.label ?? labelSite(s.domain);
