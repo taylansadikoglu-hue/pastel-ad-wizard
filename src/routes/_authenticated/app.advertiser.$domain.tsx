@@ -483,7 +483,7 @@ function AdvertiserPage() {
   const firstSeen = fmtDate(war.first_seen);
   const adsPerMonth = monthly.length ? Math.round(totalAds / monthly.length) : thisMonthAds;
 
-  const channelRowsForDisplay = channelRows; // even zeros — UI handles fallback copy
+  
 
   return (
     <WorkspaceShell title={brand}>
