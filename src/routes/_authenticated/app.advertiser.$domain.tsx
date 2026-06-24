@@ -401,18 +401,9 @@ function AdvertiserPage() {
   }, [war]);
 
   const filteredRecent = useMemo(() => {
-    const all = (war?.recent_ads ?? []).slice(0, 6);
-    if (!seasonalFilter) return all;
-    const months: Record<string, number[]> = {
-      eofy: [5, 6], christmas: [11, 0], tax: [6, 7], back_to_school: [0, 1],
-    };
-    const ms = months[seasonalFilter];
-    if (!ms) return all;
-    return all.filter((a) => {
-      const t = a.first_seen ? new Date(a.first_seen).getMonth() : -1;
-      return ms.includes(t);
-    });
-  }, [war, seasonalFilter]);
+    // Seasonal pills are display-only highlights — do not filter creatives.
+    return (war?.recent_ads ?? []).slice(0, 6);
+  }, [war]);
 
   // Chart builders
   const buildChannel = useMemo(() => (canvas: HTMLCanvasElement) => {
