@@ -787,9 +787,6 @@ function AdvertiserPage() {
                   </button>
                 );
               })}
-              {seasonalFilter && (
-                <button onClick={() => setSeasonalFilter(null)} className="text-xs text-muted-foreground underline self-center ml-2">Clear filter</button>
-              )}
             </div>
           </section>
         )}
