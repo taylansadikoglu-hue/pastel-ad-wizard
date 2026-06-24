@@ -681,27 +681,7 @@ function AdvertiserPage() {
         </section>
 
         {/* SECTION 2 — AI Visibility */}
-        <section className="card-flat p-6">
-          <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">AI Visibility</div>
-          <div className="mt-2 flex items-baseline gap-4 flex-wrap">
-            <div className="text-5xl font-bold tabular-nums">{fmtPct(aivis?.ai_share_of_voice)}</div>
-            <div className="text-sm text-muted-foreground">
-              Appears in <span className="font-semibold text-zinc-900">{fmtPct(aivis?.ai_share_of_voice)}</span> of AI responses for{" "}
-              <span className="capitalize">{derivedIndustry || "their industry"}</span> queries.
-            </div>
-          </div>
-          {(aivis?.queries ?? []).length > 0 ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {aivis!.queries!.slice(0, 12).map((q) => (
-                <span key={q} className="text-xs px-3 py-1 rounded-full bg-zinc-100 border border-zinc-200">
-                  “{q}”
-                </span>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-3 text-xs italic text-muted-foreground">Query data pending — AI visibility index still building.</div>
-          )}
-        </section>
+        <AiVisibilitySection aivis={aivis} brand={brand} industry={derivedIndustry} />
 
         {/* SECTION 3 — Customer Rating */}
         <section className="card-flat p-6">
