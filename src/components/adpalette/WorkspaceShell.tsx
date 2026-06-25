@@ -81,18 +81,23 @@ export function WorkspaceShell({
             borderTop: "1px solid var(--hairline)",
             background: "var(--paper)",
             padding: "12px 24px",
-            display: "flex",
-            justifyContent: "space-between",
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
+            gap: 16,
             fontSize: 12,
             color: "var(--text-placeholder)",
           }}
         >
-          <span>
+          <span style={{ justifySelf: "start" }}>
             <span style={{ color: "var(--text-placeholder)" }}>revenuad</span>
             <span style={{ color: "var(--accent-gold)" }}>.</span>
+            <span style={{ marginLeft: 4 }}>signal</span>
           </span>
-          <span>© 2025 · Privacy · Terms</span>
+          <span style={{ color: "var(--text-tertiary, #9E9D94)", fontStyle: "italic" }}>
+            Less prep. Better pitches.
+          </span>
+          <span style={{ justifySelf: "end" }}>© 2026 · Privacy · Terms</span>
         </footer>
       </div>
     </ThemeProvider>

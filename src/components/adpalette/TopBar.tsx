@@ -29,11 +29,18 @@ export function TopBar({ demo = false }: { demo?: boolean }) {
 
   return (
     <header className="topbar-shell">
-      <a href="/app/dashboard" className="flex items-center select-none">
+      <a
+        href="/app/dashboard"
+        className="flex items-center select-none"
+        title="The agency world calls us R-AD."
+      >
         <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
           revenuad
         </span>
         <span style={{ fontSize: 14, fontWeight: 600, color: "var(--accent-gold)" }}>.</span>
+        <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text-secondary)", marginLeft: 6 }}>
+          signal
+        </span>
       </a>
 
       {demo && (
@@ -41,7 +48,7 @@ export function TopBar({ demo = false }: { demo?: boolean }) {
           className="pill pill-active"
           style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px" }}
         >
-          Demo account
+          R-AD Demo
         </span>
       )}
 
