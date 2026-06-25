@@ -945,8 +945,8 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 12,
-        padding: "12px 0",
+        gap: 16,
+        padding: "16px 0",
         borderBottom: "1px solid #F0EDE8",
       }}
     >
@@ -955,7 +955,7 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
           position: "relative",
           width: 56,
           height: 56,
-          borderRadius: 6,
+          borderRadius: 8,
           flexShrink: 0,
           cursor: isYouTube && ad.video_url ? "pointer" : "default",
         }}
