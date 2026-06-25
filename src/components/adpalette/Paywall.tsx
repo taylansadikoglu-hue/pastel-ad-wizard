@@ -106,7 +106,7 @@ export function Paywall({ email, onSignOut }: { email: string; onSignOut: () => 
         </div>
 
         <p className="text-center mono text-[10px] text-muted-foreground">
-          Checkout coming online — demo available now.
+          You're on R-AD Demo. Ready for the real thing?
         </p>
 
       </div>
