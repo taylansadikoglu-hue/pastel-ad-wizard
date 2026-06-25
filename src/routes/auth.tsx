@@ -9,8 +9,8 @@ import { ThemeProvider } from "@/components/adpalette/theme";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — RevenueAd" },
-      { name: "description", content: "Sign in to your RevenueAd workspace to track competitor ad spend across every channel." },
+      { title: "Sign in — RevenuAD Signal" },
+      { name: "description", content: "Sign in to R-AD. Less prep. Better pitches." },
     ],
   }),
   component: AuthPage,
@@ -72,15 +72,18 @@ function AuthPage() {
     <ThemeProvider>
       <div className="min-h-screen bg-canvas text-ink grid place-items-center px-6 py-10">
         <div className="w-full max-w-md card-flat p-6 space-y-5">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="px-1.5 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
-              <span className="mono text-[10px] font-bold">R-AD</span>
-            </div>
-            <span className="font-bold tracking-tight">RevenueAd</span>
+          <Link to="/" className="flex items-center gap-2" title="The agency world calls us R-AD.">
+            <span style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+              revenuad
+            </span>
+            <span style={{ fontSize: 16, fontWeight: 600, color: "var(--accent-gold)" }}>.</span>
+            <span style={{ fontSize: 16, fontWeight: 500, color: "var(--text-secondary)", marginLeft: 4 }}>
+              signal
+            </span>
           </Link>
           <div>
             <h1 className="text-2xl font-bold">{mode === "signin" ? "Sign in to your workspace" : "Create your workspace"}</h1>
-            <p className="text-sm text-muted-foreground mt-1">Track every competitor ad placement, live.</p>
+            <p className="text-sm text-muted-foreground mt-1">Less prep. Better pitches.</p>
           </div>
 
           <button onClick={google} disabled={loading} className="btn-flat w-full justify-center">
