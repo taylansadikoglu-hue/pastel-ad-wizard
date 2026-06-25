@@ -56,8 +56,15 @@ type War = {
   recent_ads?: RecentAd[];
   gap?: string;
   insight?: string;
-  reach_frequency?: { totalUniqueReach?: number; avgFrequency?: number };
-  spend_weight?: { byChannel?: Record<string, number> };
+  reach_frequency?: {
+    totalUniqueReach?: number;
+    avgFrequency?: number;
+    channels?: Record<string, { reach?: number; adCount?: number } | number>;
+  };
+  spend_weight?: {
+    total?: number;
+    byChannel?: Record<string, { percentage?: number; adCount?: number; spend?: number } | number>;
+  };
   creative_fatigue?: { score?: number; fatigueLabel?: string; label?: string; needsRefresh?: number; fresh?: number };
 };
 
