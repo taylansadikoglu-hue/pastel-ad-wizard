@@ -243,14 +243,15 @@ function BrandDNAGrid() {
                     params={{ domain: r.brand }}
                     className="font-bold truncate hover:underline underline-offset-2"
                   >
-                    {r.brand}
+                    {displayBrand(r.brand)}
                   </Link>
                 ) : (
                   <div className="font-bold truncate">—</div>
                 )}
-                <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">
-                  {Number(r.creative_volume) || 0} creatives
-                </span>
+                <SpendIndex level={spendLevel(Number(r.creative_volume) * 1000)} />
+              </div>
+              <div className="mb-2 mono text-[10px] text-muted-foreground uppercase tracking-wide">
+                {Number(r.creative_volume) || 0} creatives
               </div>
               {category && (
                 <div className="mb-2">
