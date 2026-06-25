@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, Inbox, Target, TrendingUp } from "lucide-react";
+import { Inbox, TrendingUp } from "lucide-react";
 import { WorkspaceShell } from "./WorkspaceShell";
 
 const API_BASE = "https://api.revenuad.com";
@@ -13,17 +13,6 @@ type PulseResp = {
   most_active_brand_today?: string;
   top_theme_today?: string;
   alerts?: { brand: string; today_sightings: number; yesterday_sightings: number; increase_pct: number }[];
-  industries?: { industry: string; ads_today: number; sightings: number; trend: string }[];
-};
-
-type BriefAd = {
-  id?: number | string;
-  image_url?: string | null;
-  video_url?: string | null;
-  advertiser?: string | null;
-  ad_format?: string | null;
-  ai_tags?: Record<string, unknown> | null;
-  last_seen?: string | null;
 };
 
 type BriefResp = {
@@ -34,14 +23,6 @@ type BriefResp = {
     most_aggressive_brand?: string;
     total_active_brands?: number;
   };
-  top_threat?: {
-    brand?: string;
-    aggression_score?: number;
-    dominant_theme?: string | null;
-    psychological_angle?: string | null;
-    latest_ad?: BriefAd;
-  };
-  whitespace?: { theme: string; competition_level: string; opportunity_score: number }[];
   win_conditions?: { gap: string; why: string; confidence: string }[];
 };
 
@@ -51,7 +32,6 @@ type SovBrand = {
   sightings: number;
   ads: number;
   sov_sightings_pct: number;
-  composite_sov: number;
 };
 
 type SovResp = {
@@ -59,6 +39,9 @@ type SovResp = {
   period_days?: number;
   brands?: SovBrand[];
 };
+
+const CATEGORIES = ["Banking", "Auto", "Telco", "Retail", "Health"] as const;
+type Category = typeof CATEGORIES[number];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -79,11 +62,37 @@ function fmtNum(n: number | undefined | null): string {
   return Math.round(n).toLocaleString();
 }
 
-const PULSE_TONE: Record<string, string> = {
-  high: "bg-amber-100 border-amber-500 text-amber-950",
-  moderate: "bg-sky-50 border-sky-500 text-sky-950",
-  low: "bg-zinc-50 border-zinc-400 text-zinc-800",
+// Proper-case brand normalisation — known acronyms and brand spellings.
+const BRAND_CASE: Record<string, string> = {
+  commbank: "CommBank",
+  commonwealthbank: "CommBank",
+  anz: "ANZ",
+  westpac: "Westpac",
+  nab: "NAB",
+  macquarie: "Macquarie",
+  "newcastle permanent": "Newcastle Permanent",
+  newcastlepermanent: "Newcastle Permanent",
+  suncorp: "Suncorp",
+  ing: "ING",
+  "me bank": "ME Bank",
+  mebank: "ME Bank",
+  bendigo: "Bendigo Bank",
+  bankwest: "Bankwest",
+  ubank: "UBank",
+  stgeorge: "St.George",
+  bom: "Bank of Melbourne",
 };
+
+function properCase(raw: string): string {
+  if (!raw) return raw;
+  const key = raw.toLowerCase().trim();
+  if (BRAND_CASE[key]) return BRAND_CASE[key];
+  // Title-case fallback
+  return raw
+    .split(/\s+/)
+    .map((w) => (w.length <= 3 && w === w.toLowerCase() === false ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
+    .join(" ");
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -92,15 +101,17 @@ export function MorningBrief() {
   const [brief, setBrief] = useState<BriefResp | null>(null);
   const [sov, setSov] = useState<SovResp | null>(null);
   const [loading, setLoading] = useState(true);
+  const [category, setCategory] = useState<Category>("Banking");
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    const slug = category.toLowerCase();
     (async () => {
       const [p, b, s] = await Promise.all([
         safeJson<PulseResp>(`${API_BASE}/api/pulse`),
-        safeJson<BriefResp>(`${API_BASE}/api/brief/banking`),
-        safeJson<SovResp>(`${API_BASE}/api/intelligence/sov-pro/banking`),
+        safeJson<BriefResp>(`${API_BASE}/api/brief/${slug}`),
+        safeJson<SovResp>(`${API_BASE}/api/intelligence/sov-pro/${slug}`),
       ]);
       if (!alive) return;
       setPulse(p);
@@ -109,7 +120,7 @@ export function MorningBrief() {
       setLoading(false);
     })();
     return () => { alive = false; };
-  }, []);
+  }, [category]);
 
   if (loading) {
     return (
@@ -119,181 +130,179 @@ export function MorningBrief() {
     );
   }
 
-  const industry = brief?.industry ?? "banking";
+  const industry = brief?.industry ?? category.toLowerCase();
   const level = (brief?.market_pulse?.activity_level ?? "moderate").toLowerCase();
-  const pulseTone = PULSE_TONE[level] ?? PULSE_TONE.moderate;
   const newToday = pulse?.new_ads_today ?? brief?.market_pulse?.new_ads_72h ?? 0;
   const mostActive = pulse?.most_active_brand_today ?? brief?.market_pulse?.most_aggressive_brand ?? "—";
 
-  const threat = brief?.top_threat;
-  const latest = threat?.latest_ad;
-  const latestImg = latest?.image_url ?? null;
   const winConditions = (brief?.win_conditions ?? []).slice(0, 3);
-  const topSov = (sov?.brands ?? []).slice(0, 6);
+  const topSov = (sov?.brands ?? []).slice(0, 10);
   const alerts = (pulse?.alerts ?? []).slice(0, 4);
 
   return (
     <WorkspaceShell title="Morning signal" subtitle="Your pitch intel, ready before the meeting.">
-      <div style={{ marginBottom: 16, fontSize: 13, color: "var(--text-secondary)" }}>
-        <strong style={{ color: "var(--ink)" }}>Share of voice</strong> · <strong style={{ color: "var(--ink)" }}>Market signal</strong>
-      </div>
       <div className="space-y-8">
-        {/* SECTION 1 — Market Pulse */}
-        <div className={`border ${pulseTone} rounded-[10px] px-6 py-4 flex items-center gap-3`}>
-          <Target size={16} className="shrink-0" />
-          <div className="text-sm md:text-base font-medium leading-snug">
-            <span className="capitalize">{industry}</span> activity is{" "}
-            <span className="font-bold capitalize">{level}</span> —{" "}
-            <span className="font-bold tabular-nums">{fmtNum(newToday)}</span> new creatives today —{" "}
-            <Link to="/app/advertiser/$domain" params={{ domain: domainSlug(mostActive) }} className="font-bold underline-offset-2 hover:underline">
-              {mostActive}
-            </Link>{" "}
-            is most aggressive
-          </div>
+        {/* A — Gold alert banner */}
+        <div
+          style={{
+            background: "#FDF6E8",
+            borderLeft: "3px solid #C9963A",
+            borderRadius: 8,
+            padding: "12px 16px",
+            fontSize: 13,
+            color: "#1C1C1A",
+            lineHeight: 1.5,
+          }}
+        >
+          <span style={{ textTransform: "capitalize" }}>{industry}</span> activity is{" "}
+          <strong style={{ textTransform: "capitalize" }}>{level}</strong> ·{" "}
+          <strong>{fmtNum(newToday)}</strong> new creatives today ·{" "}
+          <Link
+            to="/app/advertiser/$domain"
+            params={{ domain: domainSlug(mostActive) }}
+            style={{ fontWeight: 600, textDecoration: "underline", textUnderlineOffset: 2 }}
+          >
+            {properCase(mostActive)}
+          </Link>{" "}
+          is most aggressive
         </div>
 
-        {/* SECTION 2 — Top threat hero */}
-        {threat?.brand && (
-          <div className="card-flat p-8">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-5">
-                <div className="mono text-[10px] uppercase tracking-[0.18em] font-semibold text-amber-700 flex items-center gap-2">
-                  <AlertTriangle size={12} /> The Incumbent's Play
-                </div>
-                <div>
-                  <Link
-                    to="/app/advertiser/$domain"
-                    params={{ domain: domainSlug(threat.brand) }}
-                    className="text-4xl font-bold tracking-tight hover:underline underline-offset-4 inline-block"
-                  >
-                    {threat.brand}
-                  </Link>
-                  <div className="mono text-[11px] uppercase tracking-widest text-muted-foreground mt-1">
-                    {industry}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <Stat label="Aggression score" value={fmtNum(threat.aggression_score)} />
-                  <Stat label="Active brands tracked" value={fmtNum(brief?.market_pulse?.total_active_brands)} />
-                  <Stat label="New ads (72h)" value={fmtNum(brief?.market_pulse?.new_ads_72h)} />
-                  <Stat label="Dominant theme" value={threat.dominant_theme ?? "—"} />
-                </div>
-
-                {threat.psychological_angle && (
-                  <div className="bg-zinc-50 border border-zinc-200 rounded-[8px] px-4 py-3 text-sm">
-                    <span className="font-semibold">Angle:</span> {threat.psychological_angle}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                {latestImg ? (
-                  <img src={latestImg} alt={`${threat.brand} latest creative`} loading="lazy"
-                    className="w-full rounded-[8px] border border-ink/20 object-cover aspect-video bg-paper" />
-                ) : latest?.video_url ? (
-                  <a href={latest.video_url} target="_blank" rel="noreferrer"
-                    className="block aspect-video bg-zinc-900 text-white rounded-[8px] grid place-items-center text-sm font-semibold hover:bg-zinc-800">
-                    ▶ Watch latest video creative
-                  </a>
-                ) : (
-                  <div className="aspect-video bg-paper border border-ink/20 rounded-[8px] grid place-items-center text-xs text-muted-foreground">
-                    No creative preview available
-                  </div>
-                )}
-                {latest?.advertiser && (
-                  <div className="text-xs text-muted-foreground">
-                    Latest from <span className="font-medium text-foreground">{latest.advertiser}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+        {/* B — Share of voice */}
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", letterSpacing: "-0.01em" }}>
+              Share of voice
+            </h2>
+            <span style={{ fontSize: 10, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.18em" }}>
+              Last {sov?.period_days ?? 90} days
+            </span>
           </div>
-        )}
 
-        {/* SECTION 3 — Win conditions */}
-        {winConditions.length > 0 && (
-          <div>
-            <div className="flex items-baseline justify-between mb-4">
-              <h2 className="text-xl font-bold tracking-tight">Win conditions</h2>
-              <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Whitespace opportunities
-              </span>
-            </div>
-            <div className="grid md:grid-cols-3 gap-4">
-              {winConditions.map((w, i) => (
-                <div key={i} className="card-flat p-5 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Gap {i + 1}</span>
-                    <ConfidenceBadge level={w.confidence} />
-                  </div>
-                  <div className="text-lg font-bold tracking-tight capitalize">{w.gap}</div>
-                  <div className="text-sm text-muted-foreground flex-1">{w.why}</div>
-                </div>
-              ))}
-            </div>
+          {/* Category tabs */}
+          <div style={{ display: "flex", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
+            {CATEGORIES.map((c) => {
+              const active = c === category;
+              return (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  style={{
+                    padding: "4px 12px",
+                    borderRadius: 4,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    border: "none",
+                    cursor: "pointer",
+                    background: active ? "#1C1C1A" : "transparent",
+                    color: active ? "#FFFFFF" : "#6B6B62",
+                    transition: "background 120ms, color 120ms",
+                  }}
+                >
+                  {c}
+                </button>
+              );
+            })}
           </div>
-        )}
 
-        {/* SECTION 4 — Share of Voice */}
-        {topSov.length > 0 && (
-          <div>
-            <div className="flex items-baseline justify-between mb-4">
-              <h2 className="text-xl font-bold tracking-tight">Share of Voice — {industry}</h2>
-              <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Last {sov?.period_days ?? 90} days
-              </span>
-            </div>
-            <div className="card-flat overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-zinc-50 text-left">
-                  <tr>
-                    <th className="px-4 py-2 mono text-[10px] uppercase tracking-widest text-muted-foreground">#</th>
-                    <th className="px-4 py-2 mono text-[10px] uppercase tracking-widest text-muted-foreground">Brand</th>
-                    <th className="px-4 py-2 mono text-[10px] uppercase tracking-widest text-muted-foreground text-right">Sightings</th>
-                    <th className="px-4 py-2 mono text-[10px] uppercase tracking-widest text-muted-foreground text-right">Ads</th>
-                    <th className="px-4 py-2 mono text-[10px] uppercase tracking-widest text-muted-foreground text-right">SoV</th>
+          {/* SOV table */}
+          {topSov.length > 0 ? (
+            <div
+              style={{
+                background: "#FFFFFF",
+                borderRadius: 10,
+                border: "1px solid #EBE9E4",
+                overflow: "hidden",
+              }}
+            >
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: "transparent" }}>
+                    <th style={thStyle}>#</th>
+                    <th style={thStyle}>Brand</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Sightings</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>Ads</th>
+                    <th style={{ ...thStyle, textAlign: "right" }}>SOV %</th>
                   </tr>
                 </thead>
                 <tbody>
                   {topSov.map((b) => (
-                    <tr key={b.brand} className="border-t border-zinc-100">
-                      <td className="px-4 py-2 mono text-muted-foreground">{b.rank}</td>
-                      <td className="px-4 py-2">
-                        <Link to="/app/advertiser/$domain" params={{ domain: domainSlug(b.brand) }} className="font-semibold hover:underline">
-                          {b.brand}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2 text-right tabular-nums">{fmtNum(b.sightings)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{fmtNum(b.ads)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums font-semibold">{b.sov_sightings_pct.toFixed(1)}%</td>
-                    </tr>
+                    <SovRow key={b.brand} brand={b} />
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
-
-        {/* SECTION 5 — Velocity alerts */}
-        {alerts.length > 0 && (
-          <div>
-            <div className="flex items-baseline justify-between mb-4">
-              <h2 className="text-xl font-bold tracking-tight">Brands accelerating today</h2>
-              <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground">vs yesterday</span>
+          ) : (
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #EBE9E4",
+                borderRadius: 10,
+                padding: 32,
+                textAlign: "center",
+                color: "#6B6B62",
+                fontSize: 13,
+              }}
+            >
+              Signal incoming for {category}. R-AD is on it.
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {alerts.map((a) => (
-                <div key={a.brand} className="card-flat p-4 flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp size={14} className="text-emerald-600" />
-                    <Link to="/app/advertiser/$domain" params={{ domain: domainSlug(a.brand) }} className="font-semibold hover:underline">
-                      {a.brand}
-                    </Link>
+          )}
+        </div>
+
+        {/* C — Win conditions */}
+        {winConditions.length > 0 && (
+          <div>
+            <h2 style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 12, letterSpacing: "-0.01em" }}>
+              Win conditions
+            </h2>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: 12,
+              }}
+            >
+              {winConditions.map((w, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: "#FFFFFF",
+                    border: "1px solid #EBE9E4",
+                    borderRadius: 10,
+                    padding: 20,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
+                  <span
+                    style={{
+                      alignSelf: "flex-start",
+                      background: "#FDF6E8",
+                      border: "1px solid #E8D5A0",
+                      color: "#A07830",
+                      fontSize: 10,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      padding: "2px 10px",
+                      borderRadius: 999,
+                    }}
+                  >
+                    Opportunity
+                  </span>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: "#1C1C1A",
+                      textTransform: "capitalize",
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {w.gap}
                   </div>
-                  <div className="text-2xl font-bold tabular-nums">+{Math.round(a.increase_pct).toLocaleString()}%</div>
-                  <div className="text-xs text-muted-foreground tabular-nums">
-                    {fmtNum(a.today_sightings)} sightings today · {fmtNum(a.yesterday_sightings)} yesterday
+                  <div style={{ fontSize: 13, fontWeight: 400, color: "#6B6B62", lineHeight: 1.5 }}>
+                    {w.why}
                   </div>
                 </div>
               ))}
@@ -301,7 +310,52 @@ export function MorningBrief() {
           </div>
         )}
 
-        {!threat?.brand && winConditions.length === 0 && topSov.length === 0 && (
+        {/* Velocity alerts (kept — purely numeric, no $) */}
+        {alerts.length > 0 && (
+          <div>
+            <h2 style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 12, letterSpacing: "-0.01em" }}>
+              Brands accelerating today
+            </h2>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gap: 12,
+              }}
+            >
+              {alerts.map((a) => (
+                <div
+                  key={a.brand}
+                  style={{
+                    background: "#FFFFFF",
+                    border: "1px solid #EBE9E4",
+                    borderRadius: 10,
+                    padding: 16,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <TrendingUp size={14} style={{ color: "#0F8A4F" }} />
+                    <Link
+                      to="/app/advertiser/$domain"
+                      params={{ domain: domainSlug(a.brand) }}
+                      style={{ fontWeight: 600, fontSize: 13, color: "#1C1C1A" }}
+                    >
+                      {properCase(a.brand)}
+                    </Link>
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#1C1C1A" }}>
+                    +{Math.round(a.increase_pct).toLocaleString()}%
+                  </div>
+                  <div style={{ fontSize: 11, color: "#6B6B62", marginTop: 2 }}>
+                    {fmtNum(a.today_sightings)} today · {fmtNum(a.yesterday_sightings)} yesterday
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {winConditions.length === 0 && topSov.length === 0 && (
           <div className="card-flat p-12 text-center">
             <Inbox size={28} className="mx-auto text-muted-foreground mb-3" />
             <div className="text-base font-semibold tracking-tight">R-AD is on it.</div>
@@ -315,24 +369,60 @@ export function MorningBrief() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+const thStyle: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 600,
+  color: "#9E9D94",
+  textTransform: "uppercase",
+  letterSpacing: "0.12em",
+  textAlign: "left",
+  padding: "10px 16px",
+  borderBottom: "1px solid #EBE9E4",
+};
+
+function SovRow({ brand }: { brand: SovBrand }) {
+  const [hover, setHover] = useState(false);
+  const isTop = brand.rank === 1;
   return (
-    <div>
-      <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className="font-semibold mt-1 capitalize">{value}</div>
-    </div>
+    <tr
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        background: hover ? "#F0EDE8" : "transparent",
+        borderLeft: isTop ? "2px solid #C9963A" : "2px solid transparent",
+        transition: "background 100ms",
+      }}
+    >
+      <td style={tdStyle}>
+        <span style={{ color: isTop ? "#C9963A" : "#9E9D94", fontWeight: isTop ? 600 : 400 }}>
+          {brand.rank}
+        </span>
+      </td>
+      <td style={tdStyle}>
+        <Link
+          to="/app/advertiser/$domain"
+          params={{ domain: domainSlug(brand.brand) }}
+          style={{ fontWeight: 600, color: "#1C1C1A", textDecoration: "none" }}
+        >
+          {properCase(brand.brand)}
+        </Link>
+      </td>
+      <td style={{ ...tdStyle, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+        {fmtNum(brand.sightings)}
+      </td>
+      <td style={{ ...tdStyle, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+        {fmtNum(brand.ads)}
+      </td>
+      <td style={{ ...tdStyle, textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+        {brand.sov_sightings_pct.toFixed(1)}%
+      </td>
+    </tr>
   );
 }
 
-function ConfidenceBadge({ level }: { level: string }) {
-  const k = (level ?? "").toLowerCase();
-  const cls =
-    k === "high" ? "border-emerald-600 text-emerald-700 bg-emerald-50"
-      : k === "medium" ? "border-amber-500 text-amber-800 bg-amber-50"
-        : "border-muted-foreground text-muted-foreground";
-  return (
-    <span className={`text-[10px] mono uppercase tracking-widest px-2 py-0.5 rounded-full border ${cls}`}>
-      {level || "low"}
-    </span>
-  );
-}
+const tdStyle: React.CSSProperties = {
+  padding: "12px 16px",
+  fontSize: 13,
+  color: "#1C1C1A",
+  borderTop: "1px solid #F2F0EB",
+};
