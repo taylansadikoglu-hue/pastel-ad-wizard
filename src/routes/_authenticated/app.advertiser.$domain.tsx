@@ -535,17 +535,26 @@ function AdvertiserPage() {
           </div>
 
 
-          {/* B — Intel strip */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+          {/* B — Intel strip (5 cards) */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
             <MetricCard
               value={totalAds.toLocaleString()}
               label="Active ads"
               trend={adsThisWeek > 0 ? `↑ ${adsThisWeek} this week` : null}
             />
             <MetricCard
-              value={totalSight.toLocaleString()}
-              label="Sightings"
-              trend={null}
+              value={fmtReach(Number(war.reach_frequency?.totalUniqueReach ?? 0))}
+              label="Est. reach"
+              trend="Unique Australians"
+            />
+            <MetricCard
+              value={
+                war.reach_frequency?.avgFrequency != null && Number.isFinite(Number(war.reach_frequency.avgFrequency))
+                  ? Number(war.reach_frequency.avgFrequency).toFixed(1) + "×"
+                  : "—"
+              }
+              label="Avg. frequency"
+              trend="Times seen per person"
             />
             <div style={{ ...metricCardStyle, alignItems: "flex-start", padding: 18 }}>
               <SpendIndex
@@ -560,6 +569,102 @@ function AdvertiserPage() {
             />
           </div>
           <SpendLegend />
+
+          {/* B2 — Channel mix */}
+          {(() => {
+            const byChannel = war.spend_weight?.byChannel ?? {};
+            const channelCounts: Record<string, number> = {};
+            for (const part of [war.channels, war.channel_split, channels?.channels, channels?.by_channel]) {
+              const c = toChannelCounts(part);
+              for (const [k, v] of Object.entries(c)) channelCounts[k] = (channelCounts[k] ?? 0) + v;
+            }
+            const rows = CHANNEL_MIX.map((c) => {
+              let spendVal = 0;
+              for (const a of c.aliases) {
+                const v = byChannel[a] ?? byChannel[a.replace(/\s+/g, "_")] ?? byChannel[a.replace(/\s+/g, "")];
+                if (typeof v === "number") spendVal += v;
+              }
+              const ads = readChannelValue(channelCounts, c.aliases);
+              return { ...c, spendVal, ads };
+            });
+            const totalSpend = rows.reduce((s, r) => s + r.spendVal, 0);
+            const dominant = totalSpend > 0 ? rows.find((r) => r.spendVal / totalSpend > 0.6) : null;
+            return (
+              <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Channel mix</div>
+                <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 14 }}>Where the budget flows</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {rows.map((r) => {
+                    const pct = totalSpend > 0 ? (r.spendVal / totalSpend) * 100 : 0;
+                    const empty = pct <= 0;
+                    return (
+                      <div key={r.key} style={{ display: "grid", gridTemplateColumns: "150px 1fr 56px 70px", alignItems: "center", gap: 12, opacity: empty ? 0.5 : 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, color: "#1C1C1A" }}>
+                          <r.Icon size={16} style={{ color: empty ? "#C4C2BA" : r.colour }} />
+                          {r.label}
+                        </div>
+                        <div style={{ height: 8, background: "#F0EDE8", borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{ width: mounted ? `${pct}%` : "0%", height: "100%", background: "#C9963A", transition: "width 600ms ease-out" }} />
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: empty ? "#C4C2BA" : "#1C1C1A", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                          {empty ? "—" : `${pct.toFixed(0)}%`}
+                        </div>
+                        <div style={{ fontSize: 11, color: empty ? "#C4C2BA" : "#9E9D94", textAlign: "right" }}>
+                          {empty ? "No data" : `${r.ads} ad${r.ads === 1 ? "" : "s"}`}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {dominant && (
+                  <div style={{ marginTop: 14, background: "#FDF6E8", borderLeft: "2px solid #C9963A", padding: "8px 12px", borderRadius: 4, fontSize: 12, color: "#6B6B62" }}>
+                    {brand} is heavily concentrated on {dominant.label}. Single-channel dependency is a vulnerability.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* B3 — Creative health (fatigue) */}
+          {(() => {
+            const cf = war.creative_fatigue ?? {};
+            const score = Math.max(0, Math.min(100, Number(cf.score ?? 0)));
+            const tier = score <= 30 ? "fresh" : score <= 60 ? "maturing" : "fatigued";
+            const tierColour = tier === "fresh" ? "#2D7D46" : tier === "maturing" ? "#C9963A" : "#C0392B";
+            const label = cf.fatigueLabel ?? cf.label ?? (tier === "fresh" ? "Fresh" : tier === "maturing" ? "Maturing" : "Fatigued");
+            const needsRefresh = Number(cf.needsRefresh ?? 0);
+            const fresh = Number(cf.fresh ?? 0);
+            const callout =
+              tier === "fatigued"
+                ? { bg: "#FFF0EE", border: "#C0392B", title: "⚡ Attack window", titleColour: "#C0392B", body: "Their creative is showing fatigue signals. Audiences are tuning out. Now is the time to outspend them with fresh messaging." }
+                : tier === "maturing"
+                  ? { bg: "#FDF6E8", border: "#C9963A", title: "⏱ Watch this space", titleColour: "#A07830", body: "Portfolio is maturing. They'll need a refresh within 60–90 days. Plan your counter-move now." }
+                  : { bg: "#F0F9F4", border: "#2D7D46", title: "✓ Actively investing", titleColour: "#2D7D46", body: "Fresh creative signals active investment. They're in growth mode. Match their energy or find the gaps they're missing." };
+            return (
+              <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Creative health</div>
+                <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 16 }}>How fresh is their ad portfolio?</div>
+                <div style={{ display: "grid", gridTemplateColumns: "40fr 60fr", gap: 24, alignItems: "center" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 80, height: 80, borderRadius: "50%", border: `4px solid ${tierColour}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 600, color: "#1C1C1A" }}>
+                      {score}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: tierColour }}>{label}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
+                      <div style={{ fontSize: 12, color: "#6B6B62" }}>{needsRefresh} ad{needsRefresh === 1 ? "" : "s"} need refresh</div>
+                      <div style={{ fontSize: 12, color: "#2D7D46" }}>{fresh} fresh creative{fresh === 1 ? "" : "s"}</div>
+                    </div>
+                  </div>
+                  <div style={{ background: callout.bg, borderLeft: `2px solid ${callout.border}`, padding: 12, borderRadius: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: callout.titleColour, marginBottom: 6 }}>{callout.title}</div>
+                    <div style={{ fontSize: 12, color: "#6B6B62", lineHeight: 1.5 }}>{callout.body}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+
 
           {/* C — Channel presence */}
           <Card title="Channel presence">
