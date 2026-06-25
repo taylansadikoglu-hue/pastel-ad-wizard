@@ -1496,7 +1496,7 @@ function AdvertisersPage() {
           <TabsContent value={activeAdvertiser} className="mt-3">
             {loading ? (
               <div className="card-flat p-10 text-center text-sm text-muted-foreground">
-                Loading creatives…
+                Reading signal…
               </div>
             ) : filtered.length === 0 ? (
               <div className="card-flat p-10 text-center text-sm text-muted-foreground">
