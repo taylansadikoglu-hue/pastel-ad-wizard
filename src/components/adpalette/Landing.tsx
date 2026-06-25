@@ -258,7 +258,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
           <MetricCard value="18,000+" label="Ads tracked" sub="YouTube, Search & Display" />
           <MetricCard value="1,173" label="Brands monitored" sub="Across 30 AU categories" />
           <MetricCard value="30" label="Categories" sub="Banking to automotive" />
-          <MetricCard value="$199" label="Per month" sub="vs $2,000+ for Nielsen" />
+          <MetricCard value="$199" label="Per month" sub="Flat rate. No contracts." />
         </div>
 
         {/* EMPATHY BANNER */}
@@ -295,7 +295,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
             </p>
           </div>
           <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8 }}>
-            {["No analyst hours needed", "No Nielsen subscription", "No more guessing"].map((line) => (
+            {["No analyst hours needed", "No annual contracts", "No more guessing"].map((line) => (
               <li key={line} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#1C1C1A" }}>
                 <Check size={14} color="#C9963A" strokeWidth={1.5} />
                 {line}
@@ -323,7 +323,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               Every channel your competitors are hiding on.
             </h2>
             <p style={{ marginTop: 16, fontSize: 15, color: "#6B6B62", lineHeight: 1.6 }}>
-              Nielsen shows you TV from last quarter. R-AD shows you what went live on YouTube this morning.
+              Legacy tools show you TV from last quarter. R-AD shows you what went live on YouTube this morning.
             </p>
           </div>
           <div
@@ -664,7 +664,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               {[
                 { t: "30 categories tracked", b: "Banking · Auto · Telco · Retail · Health and 25 more" },
                 { t: "Fresh signal daily", b: "Updated every morning at 3am AEST" },
-                { t: "10× cheaper than category tools", b: "Nielsen: $2,000+ per category per month. R-AD: $199 flat." },
+                { t: "Built for independent agencies", b: "Flat $199 a month. No category fees. No annual contract." },
               ].map((s, i) => (
                 <div
                   key={s.t}
