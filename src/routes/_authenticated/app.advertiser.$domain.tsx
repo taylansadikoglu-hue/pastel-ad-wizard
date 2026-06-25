@@ -1104,7 +1104,7 @@ function NewsRow({ item }: { item: NewsItem }) {
       {item.source && (
         <div
           style={{
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: 600,
             color: "#C9963A",
             textTransform: "uppercase",
