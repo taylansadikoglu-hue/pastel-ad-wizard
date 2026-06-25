@@ -312,9 +312,10 @@ function HeroStat({ label, value, divider }: { label: string; value: string; div
 
 // ─── Threats ──────────────────────────────────────────────────────────────────
 
-function ThreatsSection({ strongest, emerging, strategic, topTheme, categoryLabel }: {
+function ThreatsSection({ strongest, emerging, emergingFallback, strategic, topTheme, categoryLabel }: {
   strongest?: SovBrand;
   emerging?: { brand: string; today_sightings: number; increase_pct: number };
+  emergingFallback?: SovBrand;
   strategic?: SovBrand;
   topTheme: string;
   categoryLabel: string;
@@ -336,13 +337,23 @@ function ThreatsSection({ strongest, emerging, strategic, topTheme, categoryLabe
     trend: "Rising",
     insight: `Holds ${strongest.sov_sightings_pct.toFixed(1)}% share of voice in ${categoryLabel}.`,
   });
-  if (emerging) threats.push({
-    kind: "emerging", brand: emerging.brand,
-    score: Math.min(99, Math.round(40 + Math.min(emerging.increase_pct, 50))),
-    demand: fmtNum(emerging.today_sightings), creative: `+${Math.round(emerging.increase_pct)}%`,
-    trend: "Rising",
-    insight: `Accelerating fast — sightings up ${Math.round(emerging.increase_pct)}% vs yesterday.`,
-  });
+  if (emerging) {
+    threats.push({
+      kind: "emerging", brand: emerging.brand,
+      score: Math.min(99, Math.round(40 + Math.min(emerging.increase_pct, 50))),
+      demand: fmtNum(emerging.today_sightings), creative: `+${Math.round(emerging.increase_pct)}%`,
+      trend: "Rising",
+      insight: `Accelerating fast — sightings up ${Math.round(emerging.increase_pct)}% vs yesterday.`,
+    });
+  } else if (emergingFallback) {
+    threats.push({
+      kind: "emerging", brand: emergingFallback.brand,
+      score: Math.min(99, Math.round(35 + emergingFallback.sov_sightings_pct * 0.7)),
+      demand: fmtNum(emergingFallback.sightings), creative: fmtNum(emergingFallback.ads),
+      trend: "Stable",
+      insight: `Building presence in ${categoryLabel} — ${emergingFallback.sov_sightings_pct.toFixed(1)}% share.`,
+    });
+  }
   if (strategic) threats.push({
     kind: "strategic", brand: strategic.brand,
     score: Math.min(99, Math.round(45 + strategic.sov_sightings_pct * 0.6)),
@@ -361,6 +372,7 @@ function ThreatsSection({ strongest, emerging, strategic, topTheme, categoryLabe
     </section>
   );
 }
+
 
 function ThreatCard({ t }: { t: { kind: "strongest" | "emerging" | "strategic"; brand: string; score: number; demand: number | string; creative: number | string; trend: "Rising" | "Stable" | "Falling"; insight: string } }) {
   const badge = {
