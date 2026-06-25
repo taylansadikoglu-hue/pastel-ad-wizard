@@ -149,7 +149,7 @@ function CategoryDetailPage() {
       subtitle={`${brandRows.length} brands competing · ${totalAds.toLocaleString()} ads tracked · Est. $${totalSpend.toLocaleString()}/mo total`}
     >
       {!loaded ? (
-        <div className="card-flat p-8 text-center text-sm text-muted-foreground">Loading market intelligence…</div>
+        <div className="card-flat p-8 text-center text-sm text-muted-foreground">R-AD is on it. Reading the category…</div>
       ) : brandRows.length === 0 ? (
         <div className="card-flat p-12 text-center">
           <div className="text-sm text-muted-foreground">No brands indexed for this category yet.</div>
