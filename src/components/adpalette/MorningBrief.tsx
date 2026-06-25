@@ -447,3 +447,142 @@ const tdStyle: React.CSSProperties = {
   color: "#1C1C1A",
   borderTop: "1px solid #F2F0EB",
 };
+
+// ─── This week's signal ───────────────────────────────────────────────────────
+
+function ThisWeeksSignal({
+  category,
+  mostActive,
+  newToday,
+  topTheme,
+  topBrand,
+  winCondition,
+}: {
+  category: string;
+  mostActive: string;
+  newToday: number;
+  topTheme: string | null;
+  topBrand: SovBrand | null;
+  winCondition: { gap: string; why: string; confidence: string } | null;
+}) {
+  const cards: Array<{
+    icon: React.ReactNode;
+    label: string;
+    title: string;
+    stat: string;
+    sub: string;
+    href: string;
+    hrefParams?: { domain: string };
+  }> = [];
+
+  if (mostActive && mostActive !== "—") {
+    cards.push({
+      icon: <TrendingUp size={16} style={{ color: "#C9963A" }} />,
+      label: `MOST ACTIVE · ${category.toUpperCase()}`,
+      title: properCase(mostActive),
+      stat: `${fmtNum(newToday)} new ads this week`,
+      sub: topTheme ? `Running ${topTheme} messaging` : "Across multiple channels",
+      href: "/app/advertiser/$domain",
+      hrefParams: { domain: domainSlug(mostActive) },
+    });
+  }
+
+  if (topBrand) {
+    cards.push({
+      icon: <Clock size={16} style={{ color: "#C9963A" }} />,
+      label: "ENDURANCE SIGNAL",
+      title: properCase(topBrand.brand),
+      stat: `${fmtNum(topBrand.ads)} ads in flight`,
+      sub: `${fmtNum(topBrand.sightings)} sightings — still going strong`,
+      href: "/app/advertiser/$domain",
+      hrefParams: { domain: domainSlug(topBrand.brand) },
+    });
+  }
+
+  if (winCondition) {
+    const n = (winCondition.why.match(/\d+/) ?? ["1"])[0];
+    const count = parseInt(n, 10) || 1;
+    const copy =
+      count === 0
+        ? `No brand in ${category} is running ${winCondition.gap} messaging. Unclaimed territory.`
+        : count === 1
+          ? `Only one brand owns ${winCondition.gap} in ${category}. Room to compete — and room to dominate.`
+          : `${winCondition.gap} is being used by only ${count} brands in ${category}. Your client could own this message — no one has claimed it yet.`;
+    cards.push({
+      icon: <Target size={16} style={{ color: "#C9963A" }} />,
+      label: "WHITESPACE",
+      title: winCondition.gap,
+      stat: count === 0 ? "Unclaimed" : `${count} brand${count === 1 ? "" : "s"} using it`,
+      sub: copy,
+      href: "/app/categories",
+    });
+  }
+
+  if (!cards.length) return null;
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 12, letterSpacing: "-0.01em" }}>
+        This week's signal
+      </h2>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: 12,
+        }}
+      >
+        {cards.map((c, i) => (
+          <div
+            key={i}
+            style={{
+              background: "#FFFFFF",
+              border: "1px solid #EBE9E4",
+              borderRadius: 10,
+              padding: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {c.icon}
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "#A07830",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                {c.label}
+              </span>
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: "#1C1C1A", lineHeight: 1.25, textTransform: "capitalize" }}>
+              {c.title}
+            </div>
+            <div style={{ fontSize: 13, color: "#6B6B62" }}>{c.stat}</div>
+            <div style={{ fontSize: 12, color: "#9E9D94", lineHeight: 1.5 }}>{c.sub}</div>
+            {c.hrefParams ? (
+              <Link
+                to={c.href}
+                params={c.hrefParams}
+                style={{ fontSize: 11, color: "#C9963A", marginTop: "auto", textDecoration: "none", fontWeight: 500 }}
+              >
+                See full signal →
+              </Link>
+            ) : (
+              <Link
+                to={c.href}
+                style={{ fontSize: 11, color: "#C9963A", marginTop: "auto", textDecoration: "none", fontWeight: 500 }}
+              >
+                Explore this gap →
+              </Link>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
