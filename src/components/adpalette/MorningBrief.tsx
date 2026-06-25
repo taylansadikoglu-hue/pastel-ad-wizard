@@ -102,10 +102,11 @@ export function MorningBrief() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    const slug = category.toLowerCase();
+    const cat = CATEGORIES.find((c) => c.key === category)!;
+    const slug = cat.slug;
     (async () => {
       const [p, b, s] = await Promise.all([
-        safeJson<PulseResp>(`${API_BASE}/api/pulse`),
+        safeJson<PulseResp>(`${API_BASE}/api/pulse?category=${slug}`),
         safeJson<BriefResp>(`${API_BASE}/api/brief/${slug}`),
         safeJson<SovResp>(`${API_BASE}/api/intelligence/sov-pro/${slug}`),
       ]);
@@ -126,19 +127,30 @@ export function MorningBrief() {
     );
   }
 
+  // Scope alerts to current category brands (client-side filter)
+  const brands = sov?.brands ?? [];
+  const brandKeys = new Set(brands.map((b) => b.brand.toLowerCase().replace(/\s+/g, "")));
+  const allAlerts = (pulse?.alerts ?? []);
+  const alerts = brandKeys.size > 0
+    ? allAlerts.filter((a) => brandKeys.has(a.brand.toLowerCase().replace(/\s+/g, "")))
+    : allAlerts;
+
   const newToday = pulse?.new_ads_today ?? brief?.market_pulse?.new_ads_72h ?? 0;
-  const mostActive = pulse?.most_active_brand_today ?? brief?.market_pulse?.most_aggressive_brand ?? "";
+  const mostActiveRaw = brief?.market_pulse?.most_aggressive_brand ?? pulse?.most_active_brand_today ?? "";
+  // Only use most_active if it belongs to the category
+  const mostActive = brandKeys.size === 0 || brandKeys.has(mostActiveRaw.toLowerCase().replace(/\s+/g, ""))
+    ? mostActiveRaw
+    : (brands[0]?.brand ?? "");
   const topTheme = pulse?.top_theme_today ?? "";
   const level = (brief?.market_pulse?.activity_level ?? "moderate").toLowerCase();
-  const brands = sov?.brands ?? [];
-  const totalBrands = brief?.market_pulse?.total_active_brands ?? brands.length;
-  const alerts = (pulse?.alerts ?? []);
+  const totalBrands = brands.length || (brief?.market_pulse?.total_active_brands ?? 0);
   const winConditions = (brief?.win_conditions ?? []).slice(0, 4);
 
-  // Synthesize threats from SOV + alerts
+  // Always show 3 threat cards — fallback to 3rd SOV
   const strongest = brands[0];
   const strategic = brands[1];
-  const emerging = alerts.sort((a, b) => b.increase_pct - a.increase_pct)[0];
+  const emergingAlert = alerts.sort((a, b) => b.increase_pct - a.increase_pct)[0];
+  const emergingFallback = brands[2];
 
   return (
     <WorkspaceShell title="">
