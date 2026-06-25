@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -47,7 +48,8 @@ type War = {
   last_seen?: string;
   ads_this_week?: number;
   spend_signal?: number;
-  channel_split?: Record<string, number>;
+  channel_split?: Record<string, number> | string[];
+  channels?: Record<string, number> | string[];
   top_themes?: { theme: string; count: number; pct: number }[];
   sentiment_breakdown?: { positive?: number; neutral?: number; urgency?: number };
   recent_ads?: RecentAd[];
@@ -58,8 +60,8 @@ type War = {
 type Spend = { estimated_monthly_spend?: number };
 
 type Channels = {
-  channels?: Record<string, number>;
-  by_channel?: Record<string, number>;
+  channels?: Record<string, number> | string[];
+  by_channel?: Record<string, number> | string[];
   channel_last_seen?: Record<string, string>;
 };
 
@@ -119,18 +121,41 @@ function proxyImage(url: string): string {
 
 const CHANNELS: { key: string; label: string; aliases: string[]; Icon: typeof SearchIcon }[] = [
   { key: "youtube", label: "YouTube", aliases: ["youtube", "video"], Icon: Youtube },
-  { key: "search", label: "Search", aliases: ["search", "google_search", "google"], Icon: SearchIcon },
-  { key: "display", label: "Display", aliases: ["display", "programmatic", "image"], Icon: ImageIcon },
+  { key: "search", label: "Search", aliases: ["search", "google search", "google_search", "google"], Icon: SearchIcon },
+  { key: "display", label: "Display", aliases: ["display", "google display", "google_display", "programmatic", "image"], Icon: ImageIcon },
   { key: "meta", label: "Meta", aliases: ["meta", "facebook", "instagram"], Icon: Facebook },
   { key: "tiktok", label: "TikTok", aliases: ["tiktok"], Icon: Music2 },
   { key: "linkedin", label: "LinkedIn", aliases: ["linkedin"], Icon: Linkedin },
 ];
 
+// Normalize any channel source (array of strings OR object of counts) into a counts map.
+function toChannelCounts(src: Record<string, number> | string[] | undefined): Record<string, number> {
+  if (!src) return {};
+  if (Array.isArray(src)) {
+    const out: Record<string, number> = {};
+    for (const raw of src) {
+      const k = String(raw ?? "").toLowerCase().trim();
+      if (!k || k === "null") continue;
+      out[k] = (out[k] ?? 0) + 1;
+    }
+    return out;
+  }
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(src)) {
+    const key = String(k ?? "").toLowerCase().trim();
+    const n = Number(v);
+    if (!key || key === "null" || !Number.isFinite(n)) continue;
+    out[key] = (out[key] ?? 0) + n;
+  }
+  return out;
+}
+
 function readChannelValue(src: Record<string, number> | undefined, aliases: string[]): number {
   if (!src) return 0;
   let total = 0;
   for (const a of aliases) {
-    if (typeof src[a] === "number") total += src[a];
+    const v = src[a];
+    if (typeof v === "number") total += v;
   }
   return total;
 }
@@ -194,18 +219,30 @@ function AdvertiserPage() {
   }, [domain]);
 
   const channelData = useMemo(() => {
-    const src: Record<string, number> = {
-      ...(war?.channel_split ?? {}),
-      ...(channels?.channels ?? {}),
-      ...(channels?.by_channel ?? {}),
-    };
+    const merged: Record<string, number> = {};
+    for (const part of [war?.channels, war?.channel_split, channels?.channels, channels?.by_channel]) {
+      const counts = toChannelCounts(part);
+      for (const [k, v] of Object.entries(counts)) merged[k] = (merged[k] ?? 0) + v;
+    }
     const lastSeenMap = channels?.channel_last_seen ?? {};
     return CHANNELS.map((c) => {
-      const value = readChannelValue(src, c.aliases);
+      const value = readChannelValue(merged, c.aliases);
       const lastSeen = c.aliases.map((a) => lastSeenMap[a]).find(Boolean) ?? null;
-      return { ...c, active: value > 0, lastSeen };
+      return { ...c, active: value > 0, count: value, lastSeen };
     });
   }, [war, channels]);
+
+  // Demo mode detection
+  const search = (useSearch({ strict: false }) as { demo?: string | boolean }) ?? {};
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
+  }, []);
+  const demoMode = useMemo(() => {
+    const q = String(search.demo ?? "").toLowerCase();
+    if (q === "true" || q === "1") return true;
+    return userEmail === "demo@revenuad.com";
+  }, [search.demo, userEmail]);
 
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
   const totalSight = war?.total_sightings ?? 0;
