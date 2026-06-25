@@ -113,8 +113,8 @@ export function MorningBrief() {
 
   if (loading) {
     return (
-      <WorkspaceShell title="Morning Brief" subtitle="Your pitch intel, ready before the meeting.">
-        <div className="card-flat p-12 text-center text-sm text-muted-foreground">Loading brief…</div>
+      <WorkspaceShell title="Morning signal" subtitle="Your pitch intel, ready before the meeting.">
+        <div className="card-flat p-12 text-center text-sm text-muted-foreground">Reading signal…</div>
       </WorkspaceShell>
     );
   }
@@ -133,7 +133,10 @@ export function MorningBrief() {
   const alerts = (pulse?.alerts ?? []).slice(0, 4);
 
   return (
-    <WorkspaceShell title="Morning Brief" subtitle="Your pitch intel, ready before the meeting.">
+    <WorkspaceShell title="Morning signal" subtitle="Your pitch intel, ready before the meeting.">
+      <div style={{ marginBottom: 16, fontSize: 13, color: "var(--text-secondary)" }}>
+        <strong style={{ color: "var(--ink)" }}>Share of voice</strong> · <strong style={{ color: "var(--ink)" }}>Market signal</strong>
+      </div>
       <div className="space-y-8">
         {/* SECTION 1 — Market Pulse */}
         <div className={`border ${pulseTone} rounded-[10px] px-6 py-4 flex items-center gap-3`}>
@@ -301,9 +304,9 @@ export function MorningBrief() {
         {!threat?.brand && winConditions.length === 0 && topSov.length === 0 && (
           <div className="card-flat p-12 text-center">
             <Inbox size={28} className="mx-auto text-muted-foreground mb-3" />
-            <div className="text-base font-semibold tracking-tight">No signal yet</div>
+            <div className="text-base font-semibold tracking-tight">R-AD is on it.</div>
             <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-              The next scan will populate your morning brief. Check back after fresh creatives land.
+              We're reading the signal. First results land within 24 hours.
             </p>
           </div>
         )}

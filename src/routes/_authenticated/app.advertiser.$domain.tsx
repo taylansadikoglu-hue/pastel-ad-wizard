@@ -455,23 +455,32 @@ function AdvertiserPage() {
     }
   };
 
+  const updatedAgo = (() => {
+    const ts = war?.last_seen;
+    if (!ts) return null;
+    const diffH = Math.max(1, Math.floor((Date.now() - new Date(ts).getTime()) / 3_600_000));
+    return diffH < 24 ? `${diffH}h ago` : `${Math.floor(diffH / 24)}d ago`;
+  })();
+  const warSubtitle = `War room · ${brand}${updatedAgo ? ` · Updated ${updatedAgo}` : ""}`;
+
   if (loading) {
     return (
-      <WorkspaceShell title={brand}>
-        <div className="card-flat p-12 text-center text-sm text-muted-foreground">Loading war room…</div>
+      <WorkspaceShell title={brand} subtitle={warSubtitle}>
+        <div className="card-flat p-12 text-center text-sm text-muted-foreground">Reading signal…</div>
       </WorkspaceShell>
     );
   }
 
   if (!war) {
     return (
-      <WorkspaceShell title={brand}>
+      <WorkspaceShell title={brand} subtitle={warSubtitle}>
         <div className="space-y-4">
           <Link to="/app/advertisers" className="inline-flex items-center gap-2 text-sm hover:underline">
             <ArrowLeft size={14} /> Back to Advertisers
           </Link>
           <div className="card-flat p-12 text-center text-sm text-muted-foreground">
-            No intelligence available for {brand} yet.
+            <div className="text-base font-semibold tracking-tight text-ink mb-1">R-AD is on it.</div>
+            We're reading the signal for {brand}. First results within 24 hours.
           </div>
         </div>
       </WorkspaceShell>
@@ -865,7 +874,7 @@ function PublisherBars({ sites }: { sites: { domain: string; count: number; pct?
   const top = [...sites].sort((a, b) => (b.count ?? 0) - (a.count ?? 0)).slice(0, 10);
   const max = Math.max(1, ...top.map((s) => s.count ?? 0));
   if (top.length === 0) {
-    return <div className="text-xs italic text-muted-foreground py-6">Placement data pending</div>;
+    return <div className="text-xs italic text-muted-foreground py-6">R-AD hasn't detected publisher activity yet. We scan daily.</div>;
   }
   return (
     <div className="space-y-2">
@@ -942,7 +951,7 @@ function AiVisibilitySection({ aivis, brand, industry }: { aivis: AiVisibility |
       <section className="card-flat p-6">
         <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">AI Visibility</div>
         <div className="mt-3 text-sm italic text-muted-foreground">
-          AI visibility data pending for {brand}. Index still building.
+          Signal incoming. R-AD is building the AI visibility index for {brand}.
         </div>
       </section>
     );
@@ -1048,7 +1057,7 @@ function RatingRow({ sentiment }: { sentiment: Sentiment | null }) {
   const verdict = best >= 4 ? "Customers love them — ads ride a tailwind."
     : best >= 2 ? "Mixed reputation — message has to work harder."
     : best > 0 ? "Ads are fighting uphill against weak reviews."
-    : "Customer-rating data pending.";
+    : "R-AD is gathering customer reviews. Signal incoming.";
   return (
     <div className="flex flex-wrap gap-4 items-center">
       <RatingPill label="Trustpilot" rating={tp} reviews={sentiment?.trustpilot?.reviews} />
@@ -1062,7 +1071,7 @@ function RatingPill({ label, rating, reviews }: { label: string; rating?: number
   if (rating == null) {
     return (
       <div className="rounded-[10px] border border-zinc-200 bg-zinc-50 px-4 py-2 text-xs italic text-muted-foreground">
-        {label}: data pending
+        {label}: signal incoming
       </div>
     );
   }
