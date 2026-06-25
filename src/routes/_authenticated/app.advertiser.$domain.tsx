@@ -457,8 +457,11 @@ function AdvertiserPage() {
               label="Sightings"
               trend={null}
             />
-            <div style={{ ...metricCardStyle, alignItems: "flex-start" }}>
-              <SpendIndex spend={spend?.estimated_monthly_spend ?? 0} />
+            <div style={{ ...metricCardStyle, alignItems: "flex-start", padding: 18 }}>
+              <SpendIndex
+                level={typeof war.spend_signal === "number" && war.spend_signal > 0 ? war.spend_signal : undefined}
+                spend={spend?.estimated_monthly_spend ?? 0}
+              />
             </div>
             <MetricCard
               value={daysRunning.toLocaleString()}
@@ -470,35 +473,36 @@ function AdvertiserPage() {
 
           {/* C — Channel presence */}
           <Card title="Channel presence">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
               {channelData.map((c) => (
-                <div key={c.key} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <div key={c.key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <div
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 6,
-                      padding: "6px 12px",
-                      borderRadius: 6,
-                      fontSize: 11,
+                      gap: 8,
+                      padding: "8px 16px",
+                      borderRadius: 8,
+                      fontSize: 12,
                       fontWeight: 500,
                       background: c.active ? "#FDF6E8" : "#F7F6F3",
                       border: `1px solid ${c.active ? "#C9963A" : "#EBE9E4"}`,
                       color: c.active ? "#A07830" : "#C4C2BA",
                     }}
                   >
-                    <c.Icon size={12} style={{ color: c.active ? "#C9963A" : "#C4C2BA" }} />
+                    <c.Icon size={14} style={{ color: c.active ? "#C9963A" : "#C4C2BA" }} />
                     {c.label}
                   </div>
                   {c.active && c.lastSeen && (
                     <div style={{ fontSize: 10, color: "#9E9D94", paddingLeft: 4 }}>
-                      ↑ since {fmtDate(c.lastSeen)}
+                      Active since {fmtDate(c.lastSeen)}
                     </div>
                   )}
                 </div>
               ))}
             </div>
           </Card>
+
 
           {/* D — Creative intelligence */}
           <Card title="What they're saying">
