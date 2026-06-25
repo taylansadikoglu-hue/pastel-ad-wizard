@@ -77,15 +77,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "RevenuAD — Competitive Ad Intelligence" },
-      { name: "description", content: "Track competitor advertising across every channel. Built for independent agencies." },
-      { property: "og:title", content: "RevenuAD — Competitive Ad Intelligence" },
-      { property: "og:description", content: "Track competitor advertising across every channel. Built for independent agencies." },
+      { title: "RevenuAD Signal — Competitive Ad Intelligence" },
+      { name: "description", content: "Less prep. Better pitches. Track every competitor ad across YouTube, Search, Display and Meta." },
+      { property: "og:title", content: "RevenuAD Signal — Competitive Ad Intelligence" },
+      { property: "og:description", content: "Less prep. Better pitches. Track every competitor ad across YouTube, Search, Display and Meta." },
       { property: "og:type", content: "website" },
-      { property: "og:site_name", content: "RevenuAD" },
+      { property: "og:site_name", content: "RevenuAD Signal" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "RevenuAD — Competitive Ad Intelligence" },
-      { name: "twitter:description", content: "Track competitor advertising across every channel. Built for independent agencies." },
+      { name: "twitter:title", content: "RevenuAD Signal — Competitive Ad Intelligence" },
+      { name: "twitter:description", content: "Less prep. Better pitches. Track every competitor ad across YouTube, Search, Display and Meta." },
     ],
 
     links: [
@@ -116,6 +116,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 import { Toaster } from "@/components/ui/sonner";
+import { DemoFeedback } from "@/components/adpalette/DemoFeedback";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -125,6 +126,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster position="bottom-right" />
+      <DemoFeedback />
     </QueryClientProvider>
   );
 }
