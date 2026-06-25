@@ -895,11 +895,11 @@ function AdvertiserPage() {
             <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
               {[
                 { k: "all", l: "All" },
-                { k: "youtube", l: "YouTube" },
-                { k: "search", l: "Search" },
-                { k: "display", l: "Display" },
-                { k: "programmatic", l: "Programmatic" },
-                { k: "meta", l: "Meta" },
+                { k: "YouTube", l: "YouTube" },
+                { k: "Search", l: "Search" },
+                { k: "Display", l: "Display" },
+                { k: "Meta", l: "Meta" },
+                { k: "TikTok", l: "TikTok" },
               ].map((t) => {
                 const active = channelFilter === t.k;
                 return (
