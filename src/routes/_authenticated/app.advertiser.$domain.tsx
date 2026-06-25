@@ -29,6 +29,7 @@ type RecentAd = {
   thumbnail_url?: string | null;
   ad_format?: string | null;
   channel?: string | null;
+  channel_platform?: string | null;
   advertiser?: string | null;
   first_seen?: string | null;
   last_seen?: string | null;
@@ -55,6 +56,9 @@ type War = {
   recent_ads?: RecentAd[];
   gap?: string;
   insight?: string;
+  reach_frequency?: { totalUniqueReach?: number; avgFrequency?: number };
+  spend_weight?: { byChannel?: Record<string, number> };
+  creative_fatigue?: { score?: number; fatigueLabel?: string; label?: string; needsRefresh?: number; fresh?: number };
 };
 
 type Spend = { estimated_monthly_spend?: number };
