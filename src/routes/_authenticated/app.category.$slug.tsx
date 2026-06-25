@@ -149,7 +149,7 @@ function CategoryDetailPage() {
       subtitle={`${brandRows.length} brands competing · ${totalAds.toLocaleString()} ads tracked · Est. $${totalSpend.toLocaleString()}/mo total`}
     >
       {!loaded ? (
-        <div className="card-flat p-8 text-center text-sm text-muted-foreground">Loading market intelligence…</div>
+        <div className="card-flat p-8 text-center text-sm text-muted-foreground">R-AD is on it. Reading the category…</div>
       ) : brandRows.length === 0 ? (
         <div className="card-flat p-12 text-center">
           <div className="text-sm text-muted-foreground">No brands indexed for this category yet.</div>
@@ -246,20 +246,20 @@ function CategoryDetailPage() {
             <InsightCard
               label="Dominant message"
               value={dominantTheme ? dominantTheme[0] : "—"}
-              detail={dominantTheme ? `${dominantTheme[1]} brands using it` : "No data"}
-              tone="bg-emerald-50 border-emerald-300"
+              detail={dominantTheme ? `${dominantTheme[1]} brands using it` : "Signal incoming"}
+              tone="bg-violet-50 border-violet-300"
             />
             <InsightCard
-              label="Most contested"
+              label="Contested ground"
               value={contestedTheme ? contestedTheme[0] : "—"}
-              detail={contestedTheme ? `${contestedTheme[1]} brands fighting for it` : "No data"}
+              detail={contestedTheme ? `${contestedTheme[1]} brands fighting for it` : "Signal incoming"}
               tone="bg-amber-50 border-amber-300"
             />
             <InsightCard
               label="Whitespace"
               value={whitespaceTheme ? whitespaceTheme[0] : "—"}
-              detail={whitespaceTheme ? `Only ${whitespaceTheme[1]} brand uses this` : "No data"}
-              tone="bg-violet-50 border-violet-300"
+              detail={whitespaceTheme ? `Only ${whitespaceTheme[1]} brand uses this` : "Not detected"}
+              tone="bg-emerald-50 border-emerald-300"
             />
           </div>
 

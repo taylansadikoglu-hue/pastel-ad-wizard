@@ -68,7 +68,7 @@ function ClientsPage() {
         </div>
 
         {loading ? (
-          <div className="card-flat p-12 text-center text-sm text-muted-foreground">Loading clients…</div>
+          <div className="card-flat p-12 text-center text-sm text-muted-foreground">Reading signal…</div>
         ) : filtered.length === 0 ? (
           <div className="card-flat p-12 text-center">
             <Users size={28} className="mx-auto text-muted-foreground mb-3" />

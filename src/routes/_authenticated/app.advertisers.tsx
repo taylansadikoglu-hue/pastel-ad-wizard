@@ -1455,7 +1455,7 @@ function AdvertisersPage() {
               <div className="flex flex-col">
                 <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-muted-foreground px-4 py-2 border-b border-ink/10">{title}</div>
                 {rows.length === 0 ? (
-                  <div className="px-4 py-3 text-xs text-muted-foreground/60">No data</div>
+                  <div className="px-4 py-3 text-xs text-muted-foreground/60">Signal incoming</div>
                 ) : (
                   <ul className="divide-y divide-ink/5">
                     {rows.map(([label, count], i) => (
@@ -1496,7 +1496,7 @@ function AdvertisersPage() {
           <TabsContent value={activeAdvertiser} className="mt-3">
             {loading ? (
               <div className="card-flat p-10 text-center text-sm text-muted-foreground">
-                Loading creatives…
+                Reading signal…
               </div>
             ) : filtered.length === 0 ? (
               <div className="card-flat p-10 text-center text-sm text-muted-foreground">
