@@ -626,22 +626,18 @@ function AdvertiserPage() {
           {/* B2 — Channel mix */}
           {(() => {
             const byChannel = (war.spend_weight?.byChannel ?? {}) as Record<string, { percentage?: number; adCount?: number; spend?: number } | number>;
-            const fallbackCounts: Record<string, number> = {};
-            for (const part of [war.channels, war.channel_split, channels?.channels, channels?.by_channel]) {
-              const c = toChannelCounts(part);
-              for (const [k, v] of Object.entries(c)) fallbackCounts[k] = (fallbackCounts[k] ?? 0) + v;
+            // Fallback ad counts from war.channels (object array shape)
+            const warList = warChannelList(war);
+            const badgeCounts: Record<string, number> = {};
+            for (const entry of warList) {
+              const badge = normaliseToBadge(entry.channel ?? entry.name);
+              if (!badge) continue;
+              badgeCounts[badge] = (badgeCounts[badge] ?? 0) + Number(entry.ad_count ?? entry.count ?? 0);
             }
-            const pickEntry = (aliases: string[]) => {
-              for (const a of aliases) {
-                for (const k of [a, a.replace(/\s+/g, "_"), a.replace(/\s+/g, "")]) {
-                  const v = byChannel[k];
-                  if (v != null) return v;
-                }
-              }
-              return undefined;
-            };
             const rows = CHANNEL_MIX.map((c) => {
-              const entry = pickEntry(c.aliases);
+              // FIX 1: byChannel keys are exact ("YouTube","Display","Search","Meta",
+              // "TikTok","LinkedIn","Programmatic") — match c.label directly.
+              const entry = byChannel[c.label];
               let pct = 0;
               let ads = 0;
               if (entry != null) {
@@ -651,10 +647,11 @@ function AdvertiserPage() {
                   ads = Number(entry.adCount ?? 0);
                 }
               }
-              if (!ads) ads = readChannelValue(fallbackCounts, c.aliases);
+              if (!ads) ads = badgeCounts[c.label] ?? 0;
               return { ...c, pct, ads };
             });
             const dominant = rows.find((r) => r.pct > 60);
+
             return (
               <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 20 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Channel mix</div>
