@@ -140,12 +140,12 @@ export function MorningBrief() {
     ? allAlerts.filter((a) => brandKeys.has(a.brand.toLowerCase().replace(/\s+/g, "")))
     : allAlerts;
 
-  const newToday = pulse?.new_ads_today ?? brief?.market_pulse?.new_ads_72h ?? 0;
-  const mostActiveRaw = brief?.market_pulse?.most_aggressive_brand ?? pulse?.most_active_brand_today ?? "";
-  // Only use most_active if it belongs to the category
-  const mostActive = brandKeys.size === 0 || brandKeys.has(mostActiveRaw.toLowerCase().replace(/\s+/g, ""))
-    ? mostActiveRaw
-    : (brands[0]?.brand ?? "");
+  const newToday = brief?.market_pulse?.new_ads_72h ?? pulse?.new_ads_today ?? 0;
+  // Category-scoped: trust brief endpoint only; never fall back to global pulse
+  const mostActiveRaw = brief?.market_pulse?.most_aggressive_brand ?? "";
+  const mostActive = !mostActiveRaw || (brandKeys.size > 0 && !brandKeys.has(mostActiveRaw.toLowerCase().replace(/\s+/g, "")))
+    ? (brands[0]?.brand ?? "")
+    : mostActiveRaw;
   const topTheme = pulse?.top_theme_today ?? "";
   const level = (brief?.market_pulse?.activity_level ?? "moderate").toLowerCase();
   const totalBrands = brands.length || (brief?.market_pulse?.total_active_brands ?? 0);
