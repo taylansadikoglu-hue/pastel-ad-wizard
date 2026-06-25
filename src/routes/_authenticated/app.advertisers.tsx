@@ -66,10 +66,10 @@ function initialsOf(name: string): string {
 
 function formatSightings(n: number | undefined | null): string {
   const v = Number(n);
-  if (!Number.isFinite(v) || v <= 0) return "0 sightings";
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(v >= 10_000_000 ? 0 : 1)}M sightings`;
-  if (v >= 1_000) return `${(v / 1_000).toFixed(v >= 10_000 ? 0 : 1)}K sightings`;
-  return `${v} sightings`;
+  if (!Number.isFinite(v) || v <= 0) return "0 impressions";
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(v >= 10_000_000 ? 0 : 1)}M impressions`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(v >= 10_000 ? 0 : 1)}K impressions`;
+  return `${v} impressions`;
 }
 
 function getChannels(a: Advertiser): string[] {
@@ -370,7 +370,7 @@ function FeaturedCard({ brand }: { brand: FeaturedBrand }) {
   const activeCount = CHANNELS.filter((c) => isChannelActive(c.aliases, present)).length;
   const themes = getThemes(brand).slice(0, 5);
   const spend = Number(brand.spend_signal ?? 0);
-  const sightings = Number(brand.sighting_count ?? brand.total_sightings ?? 0);
+  const impressions = Number(brand.sighting_count ?? brand.total_sightings ?? 0);
 
   return (
     <Link
