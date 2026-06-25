@@ -903,14 +903,20 @@ function AdvertiserPage() {
 
           {/* E — Opportunity */}
           {(() => {
-            const inactive = channelData.filter((c) => !c.active);
+            // FIX 4: derive missing channels from war.channels (normalised), not channelData ordering.
+            const ALL_BADGES = ["YouTube", "Search", "Display", "Meta", "TikTok", "LinkedIn"];
+            const activeBadges = warChannelList(war)
+              .map((c) => normaliseToBadge(c.channel ?? c.name))
+              .filter((b): b is string => Boolean(b));
+            const missingChannels = ALL_BADGES.filter((ch) => !activeBadges.includes(ch));
             const top = themes[0];
             const second = themes[1];
             const audienceLabel = demographics[0]?.label ?? "Their core audience";
             let body: string;
-            if (inactive.length > 0) {
-              const ch = inactive[0].label;
-              body = `${brand} has no presence on ${ch}. ${audienceLabel.replace(/^./, (s) => s.toUpperCase())} is uncontested. First mover wins here.`;
+            if (missingChannels.length > 0) {
+              body = `${brand} has no presence on ${missingChannels[0]}. ${audienceLabel.replace(/^./, (s) => s.toUpperCase())} is uncontested. First mover wins here.`;
+            } else if (activeBadges.length > 0) {
+              body = `${brand} is active across all major channels. The gap is in messaging — not distribution.`;
             } else if (top && second) {
               body = `${brand} owns ${top} in ${category}. The gap is ${second} — only a handful of competitors use it.`;
             } else if (top) {
@@ -918,6 +924,7 @@ function AdvertiserPage() {
             } else {
               body = war.gap ?? war.insight ?? `${brand}'s positioning is still forming. Watch for the first repeated theme to set the angle.`;
             }
+
             return (
               <div
                 style={{
