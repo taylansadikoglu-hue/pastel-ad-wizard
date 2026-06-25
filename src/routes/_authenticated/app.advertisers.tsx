@@ -414,8 +414,7 @@ function normalizeDomain(raw: string | null | undefined): string {
 }
 
 function brandFromDomain(domain: string) {
-  const root = normalizeDomain(domain).split(/[./]/)[0] ?? domain;
-  return root.charAt(0).toUpperCase() + root.slice(1);
+  return displayBrand(domain);
 }
 
 function normalizeChannel(c: string): "Meta" | "Google" {
