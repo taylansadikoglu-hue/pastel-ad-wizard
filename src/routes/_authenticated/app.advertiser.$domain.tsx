@@ -50,7 +50,8 @@ type War = {
   ads_this_week?: number;
   spend_signal?: number;
   channel_split?: Record<string, number> | string[];
-  channels?: Record<string, number> | string[];
+  channels?: Record<string, number> | string[] | { channel?: string; name?: string; ad_count?: number; count?: number; last_seen?: string }[];
+
   top_themes?: { theme: string; count: number; pct: number }[];
   sentiment_breakdown?: { positive?: number; neutral?: number; urgency?: number };
   recent_ads?: RecentAd[];
@@ -199,6 +200,27 @@ function readChannelValue(src: Record<string, number> | undefined, aliases: stri
   return total;
 }
 
+// Normalise any raw channel label (from war.channels[].channel) → badge name.
+function normaliseToBadge(ch: unknown): string | null {
+  const r = String(ch ?? "").toLowerCase();
+  if (!r) return null;
+  if (r.includes("youtube")) return "YouTube";
+  if (r.includes("search")) return "Search";
+  if (r.includes("display") || r.includes("programmatic")) return "Display";
+  if (r.includes("meta") || r.includes("facebook") || r.includes("instagram")) return "Meta";
+  if (r.includes("tiktok")) return "TikTok";
+  if (r.includes("linkedin")) return "LinkedIn";
+  return null;
+}
+
+type WarChannelEntry = { channel?: string; name?: string; ad_count?: number; count?: number; last_seen?: string };
+function warChannelList(war: { channels?: unknown } | null | undefined): WarChannelEntry[] {
+  const c = war?.channels;
+  if (Array.isArray(c) && c.length && typeof c[0] === "object") return c as WarChannelEntry[];
+  return [];
+}
+
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function AdvertiserPage() {
@@ -266,18 +288,34 @@ function AdvertiserPage() {
   }, [domain]);
 
   const channelData = useMemo(() => {
-    const merged: Record<string, number> = {};
-    for (const part of [war?.channels, war?.channel_split, channels?.channels, channels?.by_channel]) {
-      const counts = toChannelCounts(part);
-      for (const [k, v] of Object.entries(counts)) merged[k] = (merged[k] ?? 0) + v;
+    const list = warChannelList(war);
+    // Fallback for older shapes (string[] / count map)
+    const fallback: Record<string, number> = {};
+    if (!list.length) {
+      for (const part of [war?.channels as unknown, war?.channel_split as unknown, channels?.channels as unknown, channels?.by_channel as unknown]) {
+        const counts = toChannelCounts(part as Record<string, number> | string[] | undefined);
+        for (const [k, v] of Object.entries(counts)) fallback[k] = (fallback[k] ?? 0) + v;
+      }
     }
     const lastSeenMap = channels?.channel_last_seen ?? {};
     return CHANNELS.map((c) => {
-      const value = readChannelValue(merged, c.aliases);
-      const lastSeen = c.aliases.map((a) => lastSeenMap[a]).find(Boolean) ?? null;
-      return { ...c, active: value > 0, count: value, lastSeen };
+      let count = 0;
+      let lastSeen: string | null = null;
+      if (list.length) {
+        for (const entry of list) {
+          if (normaliseToBadge(entry.channel ?? entry.name) === c.label) {
+            count += Number(entry.ad_count ?? entry.count ?? 0);
+            if (entry.last_seen && !lastSeen) lastSeen = entry.last_seen;
+          }
+        }
+      } else {
+        count = readChannelValue(fallback, c.aliases);
+      }
+      if (!lastSeen) lastSeen = c.aliases.map((a) => lastSeenMap[a]).find(Boolean) ?? null;
+      return { ...c, active: count > 0, count, lastSeen };
     });
   }, [war, channels]);
+
 
   // Demo mode detection
   const search = (useSearch({ strict: false }) as { demo?: string | boolean }) ?? {};
@@ -303,11 +341,13 @@ function AdvertiserPage() {
   const firstAd = war?.recent_ads?.[0];
   const firstTags = asTags(firstAd?.ai_tags);
   const themes: string[] = (() => {
+    // FIX 3: war.top_themes is up to 40 items — surface first 8.
     const fromWar = (war?.top_themes ?? []).map((t) => t.theme).filter(Boolean);
-    if (fromWar.length) return fromWar.slice(0, 6);
+    if (fromWar.length) return fromWar.slice(0, 8);
     const t = firstTags.themes;
-    return Array.isArray(t) ? (t as string[]).slice(0, 6) : [];
+    return Array.isArray(t) ? (t as string[]).slice(0, 8) : [];
   })();
+
   const primaryCta = (firstTags.call_to_action as string | undefined) ?? "—";
   const sentimentRaw = (firstTags.sentiment as string | undefined) ?? "";
   const sentimentColor =
@@ -588,22 +628,18 @@ function AdvertiserPage() {
           {/* B2 — Channel mix */}
           {(() => {
             const byChannel = (war.spend_weight?.byChannel ?? {}) as Record<string, { percentage?: number; adCount?: number; spend?: number } | number>;
-            const fallbackCounts: Record<string, number> = {};
-            for (const part of [war.channels, war.channel_split, channels?.channels, channels?.by_channel]) {
-              const c = toChannelCounts(part);
-              for (const [k, v] of Object.entries(c)) fallbackCounts[k] = (fallbackCounts[k] ?? 0) + v;
+            // Fallback ad counts from war.channels (object array shape)
+            const warList = warChannelList(war);
+            const badgeCounts: Record<string, number> = {};
+            for (const entry of warList) {
+              const badge = normaliseToBadge(entry.channel ?? entry.name);
+              if (!badge) continue;
+              badgeCounts[badge] = (badgeCounts[badge] ?? 0) + Number(entry.ad_count ?? entry.count ?? 0);
             }
-            const pickEntry = (aliases: string[]) => {
-              for (const a of aliases) {
-                for (const k of [a, a.replace(/\s+/g, "_"), a.replace(/\s+/g, "")]) {
-                  const v = byChannel[k];
-                  if (v != null) return v;
-                }
-              }
-              return undefined;
-            };
             const rows = CHANNEL_MIX.map((c) => {
-              const entry = pickEntry(c.aliases);
+              // FIX 1: byChannel keys are exact ("YouTube","Display","Search","Meta",
+              // "TikTok","LinkedIn","Programmatic") — match c.label directly.
+              const entry = byChannel[c.label];
               let pct = 0;
               let ads = 0;
               if (entry != null) {
@@ -613,10 +649,11 @@ function AdvertiserPage() {
                   ads = Number(entry.adCount ?? 0);
                 }
               }
-              if (!ads) ads = readChannelValue(fallbackCounts, c.aliases);
+              if (!ads) ads = badgeCounts[c.label] ?? 0;
               return { ...c, pct, ads };
             });
             const dominant = rows.find((r) => r.pct > 60);
+
             return (
               <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 20 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Channel mix</div>
@@ -866,14 +903,20 @@ function AdvertiserPage() {
 
           {/* E — Opportunity */}
           {(() => {
-            const inactive = channelData.filter((c) => !c.active);
+            // FIX 4: derive missing channels from war.channels (normalised), not channelData ordering.
+            const ALL_BADGES = ["YouTube", "Search", "Display", "Meta", "TikTok", "LinkedIn"];
+            const activeBadges = warChannelList(war)
+              .map((c) => normaliseToBadge(c.channel ?? c.name))
+              .filter((b): b is string => Boolean(b));
+            const missingChannels = ALL_BADGES.filter((ch) => !activeBadges.includes(ch));
             const top = themes[0];
             const second = themes[1];
             const audienceLabel = demographics[0]?.label ?? "Their core audience";
             let body: string;
-            if (inactive.length > 0) {
-              const ch = inactive[0].label;
-              body = `${brand} has no presence on ${ch}. ${audienceLabel.replace(/^./, (s) => s.toUpperCase())} is uncontested. First mover wins here.`;
+            if (missingChannels.length > 0) {
+              body = `${brand} has no presence on ${missingChannels[0]}. ${audienceLabel.replace(/^./, (s) => s.toUpperCase())} is uncontested. First mover wins here.`;
+            } else if (activeBadges.length > 0) {
+              body = `${brand} is active across all major channels. The gap is in messaging — not distribution.`;
             } else if (top && second) {
               body = `${brand} owns ${top} in ${category}. The gap is ${second} — only a handful of competitors use it.`;
             } else if (top) {
@@ -881,6 +924,7 @@ function AdvertiserPage() {
             } else {
               body = war.gap ?? war.insight ?? `${brand}'s positioning is still forming. Watch for the first repeated theme to set the angle.`;
             }
+
             return (
               <div
                 style={{
