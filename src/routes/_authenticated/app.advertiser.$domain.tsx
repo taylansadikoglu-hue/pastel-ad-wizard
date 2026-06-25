@@ -417,6 +417,28 @@ function AdvertiserPage() {
         <ArrowLeft size={14} /> Back to Advertisers
       </Link>
 
+      {demoMode && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            background: "#FDF6E8",
+            borderBottom: "1px solid #E8D5A0",
+            padding: "8px 24px",
+            margin: "0 -24px 16px",
+            fontSize: 12,
+            color: "#6B6B62",
+          }}
+        >
+          <span>Viewing demo data · Sign up to track any competitor</span>
+          <Link to="/auth" style={{ color: "#C9963A", fontSize: 12, fontWeight: 500, textDecoration: "none" }}>
+            Start free trial →
+          </Link>
+        </div>
+      )}
+
       <div
         style={{
           display: "grid",
@@ -530,9 +552,10 @@ function AdvertiserPage() {
                     <c.Icon size={14} style={{ color: c.active ? "#C9963A" : "#C4C2BA" }} />
                     {c.label}
                   </div>
-                  {c.active && c.lastSeen && (
+                  {c.active && (
                     <div style={{ fontSize: 10, color: "#9E9D94", paddingLeft: 4 }}>
-                      Active since {fmtDate(c.lastSeen)}
+                      {c.count > 0 ? `${c.count} ad${c.count === 1 ? "" : "s"}` : ""}
+                      {c.lastSeen ? `${c.count > 0 ? " · " : ""}Active since ${fmtDate(c.lastSeen)}` : ""}
                     </div>
                   )}
                 </div>
