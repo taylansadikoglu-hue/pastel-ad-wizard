@@ -228,7 +228,7 @@ export function AdMap() {
           <StatCard
             label="Most Active Brand"
             value={mostActive?.brand ?? (loading ? "—" : "n/a")}
-            hint={mostActive ? `${fmt(mostActive.total_sightings)} sightings` : undefined}
+            hint={mostActive ? `${fmt(mostActive.total_sightings)} impressions` : undefined}
             icon={Trophy}
           />
         </section>

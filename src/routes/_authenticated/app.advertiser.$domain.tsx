@@ -29,6 +29,7 @@ type RecentAd = {
   thumbnail_url?: string | null;
   ad_format?: string | null;
   channel?: string | null;
+  channel_platform?: string | null;
   advertiser?: string | null;
   first_seen?: string | null;
   last_seen?: string | null;
@@ -55,6 +56,9 @@ type War = {
   recent_ads?: RecentAd[];
   gap?: string;
   insight?: string;
+  reach_frequency?: { totalUniqueReach?: number; avgFrequency?: number };
+  spend_weight?: { byChannel?: Record<string, number> };
+  creative_fatigue?: { score?: number; fatigueLabel?: string; label?: string; needsRefresh?: number; fresh?: number };
 };
 
 type Spend = { estimated_monthly_spend?: number };
@@ -116,6 +120,34 @@ function proxyImage(url: string): string {
   }
   return url;
 }
+
+// Format reach numbers per spec.
+function fmtReach(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return `${Math.round(n)}`;
+}
+
+// Channel mix — all 7 always.
+const CHANNEL_MIX: { key: string; label: string; aliases: string[]; colour: string; Icon: typeof SearchIcon }[] = [
+  { key: "youtube", label: "YouTube", aliases: ["youtube"], colour: "#FF0000", Icon: Youtube },
+  { key: "search", label: "Search", aliases: ["search", "google search", "google_search"], colour: "#4285F4", Icon: SearchIcon },
+  { key: "display", label: "Display", aliases: ["display", "google display", "google_display"], colour: "#C9963A", Icon: ImageIcon },
+  { key: "meta", label: "Meta", aliases: ["meta", "facebook", "instagram"], colour: "#1877F2", Icon: Facebook },
+  { key: "tiktok", label: "TikTok", aliases: ["tiktok"], colour: "#25F4EE", Icon: Music2 },
+  { key: "linkedin", label: "LinkedIn", aliases: ["linkedin"], colour: "#0A66C2", Icon: Linkedin },
+  { key: "programmatic", label: "Programmatic", aliases: ["programmatic", "dco"], colour: "#6B6B62", Icon: ImageIcon },
+];
+
+// Recent-ads tab filter map (spec).
+const CHANNEL_TAB_MAP: Record<string, string[]> = {
+  YouTube: ["YouTube", "youtube"],
+  Search: ["Google Search", "search"],
+  Display: ["Google Display", "Programmatic", "DCO", "display", "programmatic"],
+  Meta: ["Meta", "Facebook", "Instagram", "meta", "facebook"],
+  TikTok: ["TikTok", "tiktok"],
+};
 
 // ─── Channel config ───────────────────────────────────────────────────────────
 
@@ -245,7 +277,7 @@ function AdvertiserPage() {
   }, [search.demo, userEmail]);
 
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
-  const totalSight = war?.total_sightings ?? 0;
+  void (war?.total_sightings ?? 0);
   const adsThisWeek = war?.ads_this_week ?? 0;
   const daysRunning = useMemo(() => {
     if (!war?.first_seen) return 0;
@@ -330,24 +362,23 @@ function AdvertiserPage() {
     };
   }, [war?.recent_ads]);
 
-  // Channel filter for recent ads
+  // Channel filter for recent ads — uses ad.channel_platform per spec.
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const filteredAds = useMemo(() => {
     const ads = war?.recent_ads ?? [];
     if (channelFilter === "all") return ads;
+    const aliases = CHANNEL_TAB_MAP[channelFilter] ?? [];
     return ads.filter((ad) => {
-      const ch = (ad.channel ?? "").toLowerCase();
-      const tags = asTags(ad.ai_tags);
-      const tagCh = String(tags.channel ?? "").toLowerCase();
-      const all = `${ch} ${tagCh}`;
-      if (channelFilter === "youtube") return /youtube|video/.test(all);
-      if (channelFilter === "search") return /search|google/.test(all) && !/youtube/.test(all);
-      if (channelFilter === "display") return /display|image|banner/.test(all);
-      if (channelFilter === "programmatic") return /programmatic|dsp/.test(all);
-      if (channelFilter === "meta") return /meta|facebook|instagram/.test(all);
-      return true;
+      const platform = String(ad.channel_platform ?? ad.channel ?? "").toLowerCase();
+      const tagCh = String(asTags(ad.ai_tags).channel ?? "").toLowerCase();
+      const hay = `${platform} ${tagCh}`;
+      return aliases.some((v) => hay.includes(v.toLowerCase()));
     });
   }, [war?.recent_ads, channelFilter]);
+
+  // Mount flag for spend-bar animation.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setMounted(true), 50); return () => clearTimeout(t); }, [war]);
 
   // Debug: log API responses to see what's coming back
   useEffect(() => {
@@ -504,17 +535,26 @@ function AdvertiserPage() {
           </div>
 
 
-          {/* B — Intel strip */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+          {/* B — Intel strip (5 cards) */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
             <MetricCard
               value={totalAds.toLocaleString()}
               label="Active ads"
               trend={adsThisWeek > 0 ? `↑ ${adsThisWeek} this week` : null}
             />
             <MetricCard
-              value={totalSight.toLocaleString()}
-              label="Sightings"
-              trend={null}
+              value={fmtReach(Number(war.reach_frequency?.totalUniqueReach ?? 0))}
+              label="Est. reach"
+              trend="Unique Australians"
+            />
+            <MetricCard
+              value={
+                war.reach_frequency?.avgFrequency != null && Number.isFinite(Number(war.reach_frequency.avgFrequency))
+                  ? Number(war.reach_frequency.avgFrequency).toFixed(1) + "×"
+                  : "—"
+              }
+              label="Avg. frequency"
+              trend="Times seen per person"
             />
             <div style={{ ...metricCardStyle, alignItems: "flex-start", padding: 18 }}>
               <SpendIndex
@@ -529,6 +569,102 @@ function AdvertiserPage() {
             />
           </div>
           <SpendLegend />
+
+          {/* B2 — Channel mix */}
+          {(() => {
+            const byChannel = war.spend_weight?.byChannel ?? {};
+            const channelCounts: Record<string, number> = {};
+            for (const part of [war.channels, war.channel_split, channels?.channels, channels?.by_channel]) {
+              const c = toChannelCounts(part);
+              for (const [k, v] of Object.entries(c)) channelCounts[k] = (channelCounts[k] ?? 0) + v;
+            }
+            const rows = CHANNEL_MIX.map((c) => {
+              let spendVal = 0;
+              for (const a of c.aliases) {
+                const v = byChannel[a] ?? byChannel[a.replace(/\s+/g, "_")] ?? byChannel[a.replace(/\s+/g, "")];
+                if (typeof v === "number") spendVal += v;
+              }
+              const ads = readChannelValue(channelCounts, c.aliases);
+              return { ...c, spendVal, ads };
+            });
+            const totalSpend = rows.reduce((s, r) => s + r.spendVal, 0);
+            const dominant = totalSpend > 0 ? rows.find((r) => r.spendVal / totalSpend > 0.6) : null;
+            return (
+              <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Channel mix</div>
+                <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 14 }}>Where the budget flows</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {rows.map((r) => {
+                    const pct = totalSpend > 0 ? (r.spendVal / totalSpend) * 100 : 0;
+                    const empty = pct <= 0;
+                    return (
+                      <div key={r.key} style={{ display: "grid", gridTemplateColumns: "150px 1fr 56px 70px", alignItems: "center", gap: 12, opacity: empty ? 0.5 : 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, color: "#1C1C1A" }}>
+                          <r.Icon size={16} style={{ color: empty ? "#C4C2BA" : r.colour }} />
+                          {r.label}
+                        </div>
+                        <div style={{ height: 8, background: "#F0EDE8", borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{ width: mounted ? `${pct}%` : "0%", height: "100%", background: "#C9963A", transition: "width 600ms ease-out" }} />
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: empty ? "#C4C2BA" : "#1C1C1A", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                          {empty ? "—" : `${pct.toFixed(0)}%`}
+                        </div>
+                        <div style={{ fontSize: 11, color: empty ? "#C4C2BA" : "#9E9D94", textAlign: "right" }}>
+                          {empty ? "No data" : `${r.ads} ad${r.ads === 1 ? "" : "s"}`}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {dominant && (
+                  <div style={{ marginTop: 14, background: "#FDF6E8", borderLeft: "2px solid #C9963A", padding: "8px 12px", borderRadius: 4, fontSize: 12, color: "#6B6B62" }}>
+                    {brand} is heavily concentrated on {dominant.label}. Single-channel dependency is a vulnerability.
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* B3 — Creative health (fatigue) */}
+          {(() => {
+            const cf = war.creative_fatigue ?? {};
+            const score = Math.max(0, Math.min(100, Number(cf.score ?? 0)));
+            const tier = score <= 30 ? "fresh" : score <= 60 ? "maturing" : "fatigued";
+            const tierColour = tier === "fresh" ? "#2D7D46" : tier === "maturing" ? "#C9963A" : "#C0392B";
+            const label = cf.fatigueLabel ?? cf.label ?? (tier === "fresh" ? "Fresh" : tier === "maturing" ? "Maturing" : "Fatigued");
+            const needsRefresh = Number(cf.needsRefresh ?? 0);
+            const fresh = Number(cf.fresh ?? 0);
+            const callout =
+              tier === "fatigued"
+                ? { bg: "#FFF0EE", border: "#C0392B", title: "⚡ Attack window", titleColour: "#C0392B", body: "Their creative is showing fatigue signals. Audiences are tuning out. Now is the time to outspend them with fresh messaging." }
+                : tier === "maturing"
+                  ? { bg: "#FDF6E8", border: "#C9963A", title: "⏱ Watch this space", titleColour: "#A07830", body: "Portfolio is maturing. They'll need a refresh within 60–90 days. Plan your counter-move now." }
+                  : { bg: "#F0F9F4", border: "#2D7D46", title: "✓ Actively investing", titleColour: "#2D7D46", body: "Fresh creative signals active investment. They're in growth mode. Match their energy or find the gaps they're missing." };
+            return (
+              <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Creative health</div>
+                <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 16 }}>How fresh is their ad portfolio?</div>
+                <div style={{ display: "grid", gridTemplateColumns: "40fr 60fr", gap: 24, alignItems: "center" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 80, height: 80, borderRadius: "50%", border: `4px solid ${tierColour}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 600, color: "#1C1C1A" }}>
+                      {score}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: tierColour }}>{label}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
+                      <div style={{ fontSize: 12, color: "#6B6B62" }}>{needsRefresh} ad{needsRefresh === 1 ? "" : "s"} need refresh</div>
+                      <div style={{ fontSize: 12, color: "#2D7D46" }}>{fresh} fresh creative{fresh === 1 ? "" : "s"}</div>
+                    </div>
+                  </div>
+                  <div style={{ background: callout.bg, borderLeft: `2px solid ${callout.border}`, padding: 12, borderRadius: 6 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: callout.titleColour, marginBottom: 6 }}>{callout.title}</div>
+                    <div style={{ fontSize: 12, color: "#6B6B62", lineHeight: 1.5 }}>{callout.body}</div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+
 
           {/* C — Channel presence */}
           <Card title="Channel presence">
@@ -759,11 +895,11 @@ function AdvertiserPage() {
             <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
               {[
                 { k: "all", l: "All" },
-                { k: "youtube", l: "YouTube" },
-                { k: "search", l: "Search" },
-                { k: "display", l: "Display" },
-                { k: "programmatic", l: "Programmatic" },
-                { k: "meta", l: "Meta" },
+                { k: "YouTube", l: "YouTube" },
+                { k: "Search", l: "Search" },
+                { k: "Display", l: "Display" },
+                { k: "Meta", l: "Meta" },
+                { k: "TikTok", l: "TikTok" },
               ].map((t) => {
                 const active = channelFilter === t.k;
                 return (
@@ -982,11 +1118,22 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
     const t = tags.themes;
     return Array.isArray(t) ? (t as string[]).slice(0, 2) : [];
   })();
-  const channel = (ad.channel ?? (tags.channel as string | undefined) ?? "").trim();
+  const channel = (ad.channel_platform ?? ad.channel ?? (tags.channel as string | undefined) ?? "").trim();
   const channelLow = channel.toLowerCase();
   const isYouTube = /youtube|video/.test(channelLow);
   const isDisplay = /display|programmatic|banner/.test(channelLow);
   const channelInitial = (channel || brand).charAt(0).toUpperCase();
+  // Channel-coloured placeholder (never grey, never black) — match Channel mix palette.
+  const placeholderColour = (() => {
+    if (/youtube/.test(channelLow)) return "#FF0000";
+    if (/search/.test(channelLow)) return "#4285F4";
+    if (/display/.test(channelLow)) return "#C9963A";
+    if (/meta|facebook|instagram/.test(channelLow)) return "#1877F2";
+    if (/tiktok/.test(channelLow)) return "#25F4EE";
+    if (/linkedin/.test(channelLow)) return "#0A66C2";
+    if (/programmatic/.test(channelLow)) return "#6B6B62";
+    return "#C9963A";
+  })();
 
   // Thumbnail fallback hierarchy: thumbnail_url → YouTube derived → image_url (proxied)
   let imgSrc: string | null = ad.thumbnail_url ?? null;
@@ -1041,8 +1188,8 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
             position: "absolute",
             inset: 0,
             borderRadius: 6,
-            background: "#F0EDE8",
-            color: "#9E9D94",
+            background: placeholderColour,
+            color: "#FFFFFF",
             fontSize: 14,
             fontWeight: 600,
             alignItems: "center",
@@ -1121,7 +1268,7 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
         <div style={{ fontSize: 12, color: "#6B6B62" }}>
           {ad.first_seen ? formatTimeAgo(ad.first_seen) : "—"}
           {ad.last_seen ? ` → ${formatTimeAgo(ad.last_seen)}` : ""}
-          {sightings > 0 && ` · ${sightings.toLocaleString()} sightings`}
+          {sightings > 0 && ` · ${sightings.toLocaleString()} impressions`}
         </div>
       </div>
       {themes.length > 0 && (

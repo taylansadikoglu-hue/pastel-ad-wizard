@@ -86,7 +86,7 @@ export function SpendIndex({ level, spend, showCaption = true }: Props) {
           </div>
           <div style={{ opacity: 0.85 }}>Estimated range: {tier.range}</div>
           <div style={{ opacity: 0.6, fontSize: 11, marginTop: 4, whiteSpace: "normal", maxWidth: 240 }}>
-            Based on ad frequency, placement signals and sighting data.
+            Based on ad frequency, placement signals and impression data.
           </div>
         </div>
       )}
