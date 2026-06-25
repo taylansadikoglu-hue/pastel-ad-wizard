@@ -277,7 +277,7 @@ function AdvertiserPage() {
   }, [search.demo, userEmail]);
 
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
-  const totalSight = war?.total_sightings ?? 0;
+  void (war?.total_sightings ?? 0);
   const adsThisWeek = war?.ads_this_week ?? 0;
   const daysRunning = useMemo(() => {
     if (!war?.first_seen) return 0;
