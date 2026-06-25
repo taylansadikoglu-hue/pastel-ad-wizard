@@ -200,7 +200,7 @@ function CategoryDetailPage() {
                         </>
                       ) : (
                         <span className="font-semibold truncate select-none" style={{ filter: "blur(4px)" }}>
-                          {r.brand}
+                          {displayBrand(r.brand)}
                         </span>
                       )}
                     </div>
@@ -209,8 +209,8 @@ function CategoryDetailPage() {
                     <div className="font-semibold">{r.sov.toFixed(1)}%</div>
 
                     {/* SPEND */}
-                    <div className="mono text-[12px]">
-                      {sub ? `$${r.spend.toLocaleString()}` : <span style={{ filter: "blur(4px)" }}>██████</span>}
+                    <div>
+                      {sub ? <SpendIndex level={spendLevel(r.spend)} label="" /> : <span style={{ filter: "blur(4px)" }}>●●●○○</span>}
                     </div>
 
                     {/* TREND */}
