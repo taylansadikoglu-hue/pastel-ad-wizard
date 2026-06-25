@@ -117,7 +117,35 @@ function youtubeId(url: string): string | null {
 function proxyImage(url: string): string {
   if (/(?:fbcdn\.net|googlesyndication\.com|doubleclick\.net)/.test(url)) {
     return `https://api.revenuad.com/api/proxy/image?url=${encodeURIComponent(url)}`;
-  }
+}
+
+// Format reach numbers per spec.
+function fmtReach(n: number): string {
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+  return `${Math.round(n)}`;
+}
+
+// Channel mix — all 7 always.
+const CHANNEL_MIX: { key: string; label: string; aliases: string[]; colour: string; Icon: typeof SearchIcon }[] = [
+  { key: "youtube", label: "YouTube", aliases: ["youtube"], colour: "#FF0000", Icon: Youtube },
+  { key: "search", label: "Search", aliases: ["search", "google search", "google_search"], colour: "#4285F4", Icon: SearchIcon },
+  { key: "display", label: "Display", aliases: ["display", "google display", "google_display"], colour: "#C9963A", Icon: ImageIcon },
+  { key: "meta", label: "Meta", aliases: ["meta", "facebook", "instagram"], colour: "#1877F2", Icon: Facebook },
+  { key: "tiktok", label: "TikTok", aliases: ["tiktok"], colour: "#25F4EE", Icon: Music2 },
+  { key: "linkedin", label: "LinkedIn", aliases: ["linkedin"], colour: "#0A66C2", Icon: Linkedin },
+  { key: "programmatic", label: "Programmatic", aliases: ["programmatic", "dco"], colour: "#6B6B62", Icon: ImageIcon },
+];
+
+// Recent-ads tab filter map (spec).
+const CHANNEL_TAB_MAP: Record<string, string[]> = {
+  YouTube: ["YouTube", "youtube"],
+  Search: ["Google Search", "search"],
+  Display: ["Google Display", "Programmatic", "DCO", "display", "programmatic"],
+  Meta: ["Meta", "Facebook", "Instagram", "meta", "facebook"],
+  TikTok: ["TikTok", "tiktok"],
+};
   return url;
 }
 
