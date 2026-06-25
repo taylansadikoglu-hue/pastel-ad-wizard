@@ -50,7 +50,8 @@ type War = {
   ads_this_week?: number;
   spend_signal?: number;
   channel_split?: Record<string, number> | string[];
-  channels?: Record<string, number> | string[];
+  channels?: Record<string, number> | string[] | { channel?: string; name?: string; ad_count?: number; count?: number; last_seen?: string }[];
+
   top_themes?: { theme: string; count: number; pct: number }[];
   sentiment_breakdown?: { positive?: number; neutral?: number; urgency?: number };
   recent_ads?: RecentAd[];
