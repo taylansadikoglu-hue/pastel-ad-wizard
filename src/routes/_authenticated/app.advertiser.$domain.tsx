@@ -13,7 +13,7 @@ import {
   Linkedin,
 } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
-import { SpendIndex } from "@/components/adpalette/SpendIndex";
+import { SpendIndex, SpendLegend } from "@/components/adpalette/SpendIndex";
 import { displayBrand, spendLevel } from "@/utils/brandDisplay";
 import { formatTimeAgo } from "@/utils/timeAgo";
 
@@ -98,6 +98,20 @@ function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + (parts[1][0] ?? "")).toUpperCase();
+}
+
+// Extract YouTube video ID from common URL shapes.
+function youtubeId(url: string): string | null {
+  const m = url.match(/(?:v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{6,})/);
+  return m ? m[1] : null;
+}
+
+// Proxy CDN images that browsers can't load directly.
+function proxyImage(url: string): string {
+  if (/(?:fbcdn\.net|googlesyndication\.com|doubleclick\.net)/.test(url)) {
+    return `https://api.revenuad.com/api/proxy/image?url=${encodeURIComponent(url)}`;
+  }
+  return url;
 }
 
 // ─── Channel config ───────────────────────────────────────────────────────────
@@ -216,17 +230,91 @@ function AdvertiserPage() {
       : /negative|fear|urgen/i.test(sentimentRaw) ? "#C0392B"
       : "#9E9D94";
 
-  const demographics: { label: string; value: number }[] = (() => {
-    const raw = firstTags.demographics as Record<string, unknown> | undefined;
-    if (!raw || typeof raw !== "object") return [];
-    return Object.entries(raw)
-      .map(([label, v]) => {
-        const num = typeof v === "number" ? v : Number(v);
-        return { label, value: Number.isFinite(num) ? Math.max(0, Math.min(100, num <= 1 ? num * 100 : num)) : 0 };
-      })
-      .filter((d) => d.value > 0)
-      .slice(0, 5);
-  })();
+  // Aggregate demographics across all recent_ads (fallback when firstAd is empty)
+  const demographics: { label: string; value: number }[] = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const ad of war?.recent_ads ?? []) {
+      const t = asTags(ad.ai_tags);
+      const raw = t.demographics;
+      if (Array.isArray(raw)) {
+        for (const tag of raw) {
+          if (typeof tag === "string" && tag.trim()) {
+            counts.set(tag, (counts.get(tag) ?? 0) + 1);
+          }
+        }
+      } else if (raw && typeof raw === "object") {
+        for (const [k, v] of Object.entries(raw)) {
+          const num = typeof v === "number" ? v : Number(v);
+          if (Number.isFinite(num) && num > 0) {
+            counts.set(k, (counts.get(k) ?? 0) + num);
+          }
+        }
+      } else if (typeof raw === "string" && raw.trim()) {
+        counts.set(raw, (counts.get(raw) ?? 0) + 1);
+      }
+    }
+    const max = Math.max(1, ...counts.values());
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([label, value]) => ({ label, value: (value / max) * 100 }));
+  }, [war?.recent_ads]);
+
+  // Creative analysis (AI read)
+  const creativeAnalysis = useMemo(() => {
+    const ads = war?.recent_ads ?? [];
+    const colours = new Map<string, number>();
+    const emotions = new Map<string, number>();
+    let hasPeople = 0, hasLogo = 0, peopleCounted = 0, logoCounted = 0;
+    const durations: number[] = [];
+    for (const ad of ads) {
+      const t = asTags(ad.ai_tags);
+      const pc = t.primary_colours;
+      if (Array.isArray(pc) && typeof pc[0] === "string") {
+        colours.set(pc[0], (colours.get(pc[0]) ?? 0) + 1);
+      }
+      const s = t.sentiment ?? t.dominant_emotion;
+      if (typeof s === "string" && s.trim()) emotions.set(s, (emotions.get(s) ?? 0) + 1);
+      if (typeof t.has_people === "boolean") { peopleCounted++; if (t.has_people) hasPeople++; }
+      if (typeof t.has_logo === "boolean") { logoCounted++; if (t.has_logo) hasLogo++; }
+      const d = Number(t.ad_duration_seconds);
+      if (Number.isFinite(d) && d > 0) durations.push(d);
+    }
+    const topColour = [...colours.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const topEmotion = [...emotions.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const avgDur = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null;
+    return {
+      colour: topColour,
+      emotion: topEmotion,
+      hasPeople: peopleCounted > 0 ? hasPeople / peopleCounted >= 0.5 : null,
+      hasLogo: logoCounted > 0 ? hasLogo / logoCounted >= 0.5 : null,
+      avgDuration: avgDur,
+    };
+  }, [war?.recent_ads]);
+
+  // Channel filter for recent ads
+  const [channelFilter, setChannelFilter] = useState<string>("all");
+  const filteredAds = useMemo(() => {
+    const ads = war?.recent_ads ?? [];
+    if (channelFilter === "all") return ads;
+    return ads.filter((ad) => {
+      const ch = (ad.channel ?? "").toLowerCase();
+      const tags = asTags(ad.ai_tags);
+      const tagCh = String(tags.channel ?? "").toLowerCase();
+      const all = `${ch} ${tagCh}`;
+      if (channelFilter === "youtube") return /youtube|video/.test(all);
+      if (channelFilter === "search") return /search|google/.test(all) && !/youtube/.test(all);
+      if (channelFilter === "display") return /display|image|banner/.test(all);
+      if (channelFilter === "programmatic") return /programmatic|dsp/.test(all);
+      if (channelFilter === "meta") return /meta|facebook|instagram/.test(all);
+      return true;
+    });
+  }, [war?.recent_ads, channelFilter]);
+
+  // Debug: log API responses to see what's coming back
+  useEffect(() => {
+    if (war) console.log("[WarRoom]", { war, channels, spend, news });
+  }, [war, channels, spend, news]);
 
   const category = war?.category ?? war?.industry ?? "—";
   const updatedAgo = formatTimeAgo(war?.last_seen ?? null);
@@ -367,8 +455,8 @@ function AdvertiserPage() {
               label="Sightings"
               trend={null}
             />
-            <div style={metricCardStyle}>
-              <SpendIndex level={spendLevel(spend?.estimated_monthly_spend ?? 0)} label="Spend signal" />
+            <div style={{ ...metricCardStyle, alignItems: "flex-start" }}>
+              <SpendIndex spend={spend?.estimated_monthly_spend ?? 0} />
             </div>
             <MetricCard
               value={daysRunning.toLocaleString()}
@@ -376,6 +464,7 @@ function AdvertiserPage() {
               trend={war.first_seen ? `Since ${fmtDate(war.first_seen)}` : null}
             />
           </div>
+          <SpendLegend />
 
           {/* C — Channel presence */}
           <Card title="Channel presence">
@@ -476,6 +565,56 @@ function AdvertiserPage() {
                 </Field>
               </div>
             </div>
+
+            {/* Creative analysis */}
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #F0EDE8" }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "#9E9D94",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  marginBottom: 10,
+                }}
+              >
+                AI creative read
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {creativeAnalysis.colour && (
+                  <CreativePill>
+                    <span
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: 3,
+                        background: creativeAnalysis.colour,
+                        border: "1px solid rgba(0,0,0,0.1)",
+                        display: "inline-block",
+                      }}
+                    />
+                    Primary colour
+                  </CreativePill>
+                )}
+                {creativeAnalysis.emotion && (
+                  <CreativePill>
+                    <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.emotion}</span>
+                  </CreativePill>
+                )}
+                {creativeAnalysis.hasPeople !== null && (
+                  <CreativePill>People: {creativeAnalysis.hasPeople ? "Yes" : "No"}</CreativePill>
+                )}
+                {creativeAnalysis.hasLogo !== null && (
+                  <CreativePill>Logo: {creativeAnalysis.hasLogo ? "Yes" : "No"}</CreativePill>
+                )}
+                {creativeAnalysis.avgDuration && (
+                  <CreativePill>~{creativeAnalysis.avgDuration}s avg</CreativePill>
+                )}
+                {!creativeAnalysis.colour && !creativeAnalysis.emotion && creativeAnalysis.hasPeople === null && (
+                  <span style={{ fontSize: 12, color: "#9E9D94" }}>Signal incoming</span>
+                )}
+              </div>
+            </div>
           </Card>
 
           {/* E — Gap callout */}
@@ -509,14 +648,45 @@ function AdvertiserPage() {
 
           {/* F — Recent ads */}
           <Card title="Recent ads">
-            {war.recent_ads?.length ? (
+            {/* Channel filter tabs */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
+              {[
+                { k: "all", l: "All" },
+                { k: "youtube", l: "YouTube" },
+                { k: "search", l: "Search" },
+                { k: "display", l: "Display" },
+                { k: "programmatic", l: "Programmatic" },
+                { k: "meta", l: "Meta" },
+              ].map((t) => {
+                const active = channelFilter === t.k;
+                return (
+                  <button
+                    key={t.k}
+                    onClick={() => setChannelFilter(t.k)}
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      border: "none",
+                      cursor: "pointer",
+                      background: active ? "#1C1C1A" : "transparent",
+                      color: active ? "#FFFFFF" : "#6B6B62",
+                    }}
+                  >
+                    {t.l}
+                  </button>
+                );
+              })}
+            </div>
+            {filteredAds.length ? (
               <div style={{ display: "flex", flexDirection: "column" }}>
-                {war.recent_ads.slice(0, 8).map((ad, i) => (
+                {filteredAds.slice(0, 8).map((ad, i) => (
                   <RecentAdRow key={ad.id ?? i} ad={ad} brand={brand} />
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: 13, color: "#9E9D94" }}>Signal incoming.</div>
+              <div style={{ fontSize: 13, color: "#9E9D94" }}>No ads match this filter.</div>
             )}
           </Card>
         </div>
@@ -677,6 +847,27 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function CreativePill({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: 11,
+        fontWeight: 500,
+        padding: "4px 10px",
+        borderRadius: 999,
+        background: "#F7F6F3",
+        border: "1px solid #EBE9E4",
+        color: "#1C1C1A",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
   const tags = asTags(ad.ai_tags);
   const themes = (() => {
@@ -684,9 +875,23 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
     return Array.isArray(t) ? (t as string[]).slice(0, 2) : [];
   })();
   const channel = (ad.channel ?? (tags.channel as string | undefined) ?? "").trim();
+  const channelLow = channel.toLowerCase();
+  const isYouTube = /youtube|video/.test(channelLow);
+  const isDisplay = /display|programmatic|banner/.test(channelLow);
   const channelInitial = (channel || brand).charAt(0).toUpperCase();
-  const img = ad.image_url ?? ad.thumbnail_url ?? null;
+
+  // Thumbnail fallback hierarchy: thumbnail_url → YouTube derived → image_url (proxied)
+  let imgSrc: string | null = ad.thumbnail_url ?? null;
+  if (!imgSrc && ad.video_url) {
+    const id = youtubeId(ad.video_url);
+    if (id) imgSrc = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+  }
+  if (!imgSrc && ad.image_url) imgSrc = proxyImage(ad.image_url);
+
   const sightings = Number(ad.sighting_count ?? 0);
+  const openVideo = () => {
+    if (ad.video_url) window.open(ad.video_url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div
@@ -698,38 +903,77 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
         borderBottom: "1px solid #F0EDE8",
       }}
     >
-      {img ? (
-        <img
-          src={img}
-          alt=""
-          style={{ width: 48, height: 48, borderRadius: 6, objectFit: "cover", flexShrink: 0, background: "#F0EDE8" }}
-          onError={(e) => {
-            const t = e.currentTarget;
-            t.style.display = "none";
-            const fb = t.nextSibling as HTMLElement | null;
-            if (fb) fb.style.display = "flex";
-          }}
-        />
-      ) : null}
       <div
         style={{
-          display: img ? "none" : "flex",
-          width: 48,
-          height: 48,
+          position: "relative",
+          width: 56,
+          height: 56,
           borderRadius: 6,
-          background: "#F0EDE8",
-          color: "#9E9D94",
-          fontSize: 14,
-          fontWeight: 600,
-          alignItems: "center",
-          justifyContent: "center",
           flexShrink: 0,
+          cursor: isYouTube && ad.video_url ? "pointer" : "default",
         }}
+        onClick={isYouTube ? openVideo : undefined}
       >
-        {channelInitial}
+        {imgSrc ? (
+          <img
+            src={imgSrc}
+            alt=""
+            style={{ width: "100%", height: "100%", borderRadius: 6, objectFit: "cover", background: "#F0EDE8", display: "block" }}
+            onError={(e) => {
+              const t = e.currentTarget;
+              t.style.display = "none";
+              const fb = t.nextSibling as HTMLElement | null;
+              if (fb) fb.style.display = "flex";
+            }}
+          />
+        ) : null}
+        <div
+          style={{
+            display: imgSrc ? "none" : "flex",
+            position: "absolute",
+            inset: 0,
+            borderRadius: 6,
+            background: "#F0EDE8",
+            color: "#9E9D94",
+            fontSize: 14,
+            fontWeight: 600,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {channelInitial}
+        </div>
+        {isYouTube && ad.video_url && imgSrc && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none",
+            }}
+          >
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                background: "rgba(0,0,0,0.5)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#FFF",
+                fontSize: 10,
+              }}
+            >
+              ▶
+            </div>
+          </div>
+        )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 2 }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 2, flexWrap: "wrap" }}>
           {ad.ad_format && (
             <span
               style={{
@@ -744,6 +988,22 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
               }}
             >
               {ad.ad_format}
+            </span>
+          )}
+          {isDisplay && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "#A07830",
+                background: "#FDF6E8",
+                padding: "2px 6px",
+                borderRadius: 4,
+              }}
+            >
+              Display
             </span>
           )}
           {channel && (
