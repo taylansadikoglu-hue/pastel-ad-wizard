@@ -1132,7 +1132,7 @@ function NewsRow({ item }: { item: NewsItem }) {
         {item.title ?? "Untitled"}
       </div>
       {ts && (
-        <div style={{ fontSize: 11, color: "#9E9D94", marginTop: 4 }}>
+        <div style={{ fontSize: 12, color: "#9E9D94", marginTop: 4 }}>
           {formatTimeAgo(ts)}
         </div>
       )}
