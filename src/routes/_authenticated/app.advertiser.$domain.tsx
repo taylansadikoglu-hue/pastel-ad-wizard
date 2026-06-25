@@ -230,17 +230,91 @@ function AdvertiserPage() {
       : /negative|fear|urgen/i.test(sentimentRaw) ? "#C0392B"
       : "#9E9D94";
 
-  const demographics: { label: string; value: number }[] = (() => {
-    const raw = firstTags.demographics as Record<string, unknown> | undefined;
-    if (!raw || typeof raw !== "object") return [];
-    return Object.entries(raw)
-      .map(([label, v]) => {
-        const num = typeof v === "number" ? v : Number(v);
-        return { label, value: Number.isFinite(num) ? Math.max(0, Math.min(100, num <= 1 ? num * 100 : num)) : 0 };
-      })
-      .filter((d) => d.value > 0)
-      .slice(0, 5);
-  })();
+  // Aggregate demographics across all recent_ads (fallback when firstAd is empty)
+  const demographics: { label: string; value: number }[] = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const ad of war?.recent_ads ?? []) {
+      const t = asTags(ad.ai_tags);
+      const raw = t.demographics;
+      if (Array.isArray(raw)) {
+        for (const tag of raw) {
+          if (typeof tag === "string" && tag.trim()) {
+            counts.set(tag, (counts.get(tag) ?? 0) + 1);
+          }
+        }
+      } else if (raw && typeof raw === "object") {
+        for (const [k, v] of Object.entries(raw)) {
+          const num = typeof v === "number" ? v : Number(v);
+          if (Number.isFinite(num) && num > 0) {
+            counts.set(k, (counts.get(k) ?? 0) + num);
+          }
+        }
+      } else if (typeof raw === "string" && raw.trim()) {
+        counts.set(raw, (counts.get(raw) ?? 0) + 1);
+      }
+    }
+    const max = Math.max(1, ...counts.values());
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([label, value]) => ({ label, value: (value / max) * 100 }));
+  }, [war?.recent_ads]);
+
+  // Creative analysis (AI read)
+  const creativeAnalysis = useMemo(() => {
+    const ads = war?.recent_ads ?? [];
+    const colours = new Map<string, number>();
+    const emotions = new Map<string, number>();
+    let hasPeople = 0, hasLogo = 0, peopleCounted = 0, logoCounted = 0;
+    const durations: number[] = [];
+    for (const ad of ads) {
+      const t = asTags(ad.ai_tags);
+      const pc = t.primary_colours;
+      if (Array.isArray(pc) && typeof pc[0] === "string") {
+        colours.set(pc[0], (colours.get(pc[0]) ?? 0) + 1);
+      }
+      const s = t.sentiment ?? t.dominant_emotion;
+      if (typeof s === "string" && s.trim()) emotions.set(s, (emotions.get(s) ?? 0) + 1);
+      if (typeof t.has_people === "boolean") { peopleCounted++; if (t.has_people) hasPeople++; }
+      if (typeof t.has_logo === "boolean") { logoCounted++; if (t.has_logo) hasLogo++; }
+      const d = Number(t.ad_duration_seconds);
+      if (Number.isFinite(d) && d > 0) durations.push(d);
+    }
+    const topColour = [...colours.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const topEmotion = [...emotions.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const avgDur = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null;
+    return {
+      colour: topColour,
+      emotion: topEmotion,
+      hasPeople: peopleCounted > 0 ? hasPeople / peopleCounted >= 0.5 : null,
+      hasLogo: logoCounted > 0 ? hasLogo / logoCounted >= 0.5 : null,
+      avgDuration: avgDur,
+    };
+  }, [war?.recent_ads]);
+
+  // Channel filter for recent ads
+  const [channelFilter, setChannelFilter] = useState<string>("all");
+  const filteredAds = useMemo(() => {
+    const ads = war?.recent_ads ?? [];
+    if (channelFilter === "all") return ads;
+    return ads.filter((ad) => {
+      const ch = (ad.channel ?? "").toLowerCase();
+      const tags = asTags(ad.ai_tags);
+      const tagCh = String(tags.channel ?? "").toLowerCase();
+      const all = `${ch} ${tagCh}`;
+      if (channelFilter === "youtube") return /youtube|video/.test(all);
+      if (channelFilter === "search") return /search|google/.test(all) && !/youtube/.test(all);
+      if (channelFilter === "display") return /display|image|banner/.test(all);
+      if (channelFilter === "programmatic") return /programmatic|dsp/.test(all);
+      if (channelFilter === "meta") return /meta|facebook|instagram/.test(all);
+      return true;
+    });
+  }, [war?.recent_ads, channelFilter]);
+
+  // Debug: log API responses to see what's coming back
+  useEffect(() => {
+    if (war) console.log("[WarRoom]", { war, channels, spend, news });
+  }, [war, channels, spend, news]);
 
   const category = war?.category ?? war?.industry ?? "—";
   const updatedAgo = formatTimeAgo(war?.last_seen ?? null);
