@@ -818,11 +818,11 @@ function AdvertiserPage() {
 
 const metricCardStyle: React.CSSProperties = {
   background: "#F0EDE8",
-  borderRadius: 8,
-  padding: 16,
+  borderRadius: 10,
+  padding: 18,
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: 6,
   minWidth: 0,
 };
 
@@ -839,24 +839,25 @@ const emptyCard: React.CSSProperties = {
 function MetricCard({ value, label, trend }: { value: string; label: string; trend: string | null }) {
   return (
     <div style={metricCardStyle}>
-      <div style={{ fontSize: 24, fontWeight: 600, color: "#1C1C1A", lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 28, fontWeight: 600, color: "#1C1C1A", lineHeight: 1, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums" }}>{value}</div>
       <div
         style={{
           fontSize: 11,
           fontWeight: 500,
           color: "#9E9D94",
           textTransform: "uppercase",
-          letterSpacing: "0.06em",
+          letterSpacing: "0.08em",
         }}
       >
         {label}
       </div>
       {trend && (
-        <div style={{ fontSize: 11, color: "#2D7D46", marginTop: 2 }}>{trend}</div>
+        <div style={{ fontSize: 12, color: "#2D7D46", marginTop: 2 }}>{trend}</div>
       )}
     </div>
   );
 }
+
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
