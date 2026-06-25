@@ -1139,7 +1139,8 @@ const NAV_ITEMS = [
 export function SidebarNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <nav className="p-2 space-y-1 flex-1">
+    <nav style={{ padding: "4px 8px" }} className="space-y-0.5 flex-1">
+      <div className="nav-section-label" style={{ marginBottom: 8, marginTop: 4 }}>Workspace</div>
       {NAV_ITEMS.map((item) => {
         const active =
           pathname === item.href ||
@@ -1149,12 +1150,13 @@ export function SidebarNav() {
           <Link
             key={item.label}
             to={item.href}
-            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-[4px] text-sm font-medium border-2 ${active ? "border-ink bg-secondary shadow-flat-sm" : "border-transparent hover:border-ink"}`}
+            className={`nav-item ${active ? "nav-item-active" : ""}`}
           >
-            <item.icon size={15} /> {item.label}
+            <item.icon size={15} strokeWidth={1.5} /> {item.label}
           </Link>
         );
       })}
     </nav>
   );
 }
+
