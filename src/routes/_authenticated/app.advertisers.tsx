@@ -406,7 +406,7 @@ function FeaturedCard({ brand }: { brand: FeaturedBrand }) {
         </div>
 
         <div style={{ fontSize: 13, color: "#6B6B62", fontWeight: 500 }}>
-          {formatSightings(sightings)}
+          {formatSightings(impressions)}
         </div>
 
         {themes.length > 0 && (
