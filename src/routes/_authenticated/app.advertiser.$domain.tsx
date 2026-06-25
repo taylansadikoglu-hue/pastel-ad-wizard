@@ -239,17 +239,25 @@ function AdvertiserPage() {
       setBrand(resolved);
 
       const b = encodeURIComponent(resolved);
-      const [w, s, c, n] = await Promise.all([
-        safe<War>(`${API_BASE}/api/advertisers/${b}`),
-        safe<Spend>(`${API_BASE}/api/spend/${b}`),
-        safe<Channels>(`${API_BASE}/api/channels/${b}`),
-        safe<News>(`${API_BASE}/api/news/${b}`),
-      ]);
+      // Single warroom endpoint returns everything (reach_frequency, spend_weight,
+      // creative_fatigue, channels, recent_ads, news, etc.) — fall back to domain.
+      let w = await safe<War & { news?: News["articles"] | News }>(
+        `${API_BASE}/api/advertisers/${b}/warroom`
+      );
+      if (!w) {
+        w = await safe<War & { news?: News["articles"] | News }>(
+          `${API_BASE}/api/advertisers/${encodeURIComponent(domain)}/warroom`
+        );
+      }
       if (!alive) return;
       setWar(w);
-      setSpend(s);
-      setChannels(c);
-      setNews(n);
+      setSpend(null);
+      setChannels(null);
+      const newsField = (w as { news?: unknown } | null)?.news;
+      const newsValue: News | null = Array.isArray(newsField)
+        ? ({ articles: newsField } as News)
+        : (newsField as News | undefined) ?? null;
+      setNews(newsValue);
       if (w?.advertiser) setBrand(displayBrand(w.advertiser));
       setLoading(false);
       setNewsLoading(false);
