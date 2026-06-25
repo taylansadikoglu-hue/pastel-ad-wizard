@@ -46,6 +46,7 @@ type War = {
   first_seen?: string;
   last_seen?: string;
   ads_this_week?: number;
+  spend_signal?: number;
   channel_split?: Record<string, number>;
   top_themes?: { theme: string; count: number; pct: number }[];
   sentiment_breakdown?: { positive?: number; neutral?: number; urgency?: number };
