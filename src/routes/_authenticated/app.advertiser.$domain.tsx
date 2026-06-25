@@ -117,6 +117,8 @@ function youtubeId(url: string): string | null {
 function proxyImage(url: string): string {
   if (/(?:fbcdn\.net|googlesyndication\.com|doubleclick\.net)/.test(url)) {
     return `https://api.revenuad.com/api/proxy/image?url=${encodeURIComponent(url)}`;
+  }
+  return url;
 }
 
 // Format reach numbers per spec.
@@ -146,8 +148,6 @@ const CHANNEL_TAB_MAP: Record<string, string[]> = {
   Meta: ["Meta", "Facebook", "Instagram", "meta", "facebook"],
   TikTok: ["TikTok", "tiktok"],
 };
-  return url;
-}
 
 // ─── Channel config ───────────────────────────────────────────────────────────
 
