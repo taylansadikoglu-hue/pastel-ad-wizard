@@ -281,9 +281,8 @@ export function MorningBrief() {
                       <div style={{ fontSize: 13, color: "#6B6B62", lineHeight: 1.5, marginBottom: 14 }}>
                         You're seeing the top 3. Agency Signal shows all competitors, their spend index, and trend direction.
                       </div>
-                      <Link
-                        to="/"
-                        hash="pricing"
+                      <a
+                        href="/#pricing"
                         style={{
                           display: "inline-block",
                           background: "#C9963A",
@@ -296,7 +295,7 @@ export function MorningBrief() {
                         }}
                       >
                         Upgrade to Agency Signal →
-                      </Link>
+                      </a>
                     </div>
                   </div>
                 </div>
