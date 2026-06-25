@@ -391,15 +391,15 @@ function AdvertiserPage() {
         {/* LEFT — main intel */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
           {/* A — Brand header */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, paddingBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 4 }}>
             <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 8,
+                width: 44,
+                height: 44,
+                borderRadius: 10,
                 background: "#FDF6E8",
                 color: "#C9963A",
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: 600,
                 display: "flex",
                 alignItems: "center",
@@ -410,8 +410,8 @@ function AdvertiserPage() {
               {initialsOf(brand)}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 22, fontWeight: 600, color: "#1C1C1A", lineHeight: 1.2 }}>{brand}</div>
-              <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 2 }}>
+              <div style={{ fontSize: 24, fontWeight: 600, color: "#1C1C1A", lineHeight: 1.2 }}>{brand}</div>
+              <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 3 }}>
                 {category} · {totalAds} ads
                 {updatedAgo && ` · Updated ${updatedAgo}`}
               </div>
@@ -425,8 +425,8 @@ function AdvertiserPage() {
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: 7,
-                  padding: "8px 18px",
-                  fontSize: 13,
+                  padding: "10px 20px",
+                  fontSize: 14,
                   fontWeight: 500,
                   display: "inline-flex",
                   alignItems: "center",
@@ -435,7 +435,7 @@ function AdvertiserPage() {
                   opacity: exporting ? 0.7 : 1,
                 }}
               >
-                {exporting ? <Loader2 size={14} className="animate-spin" /> : <Presentation size={14} />}
+                {exporting ? <Loader2 size={16} className="animate-spin" /> : <Presentation size={16} />}
                 {exporting ? "Building deck…" : "Export slides"}
               </button>
               {exportError && (
@@ -443,6 +443,7 @@ function AdvertiserPage() {
               )}
             </div>
           </div>
+
 
           {/* B — Intel strip */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
