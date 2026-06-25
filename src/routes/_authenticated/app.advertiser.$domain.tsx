@@ -287,18 +287,34 @@ function AdvertiserPage() {
   }, [domain]);
 
   const channelData = useMemo(() => {
-    const merged: Record<string, number> = {};
-    for (const part of [war?.channels, war?.channel_split, channels?.channels, channels?.by_channel]) {
-      const counts = toChannelCounts(part);
-      for (const [k, v] of Object.entries(counts)) merged[k] = (merged[k] ?? 0) + v;
+    const list = warChannelList(war);
+    // Fallback for older shapes (string[] / count map)
+    const fallback: Record<string, number> = {};
+    if (!list.length) {
+      for (const part of [war?.channels as unknown, war?.channel_split as unknown, channels?.channels as unknown, channels?.by_channel as unknown]) {
+        const counts = toChannelCounts(part as Record<string, number> | string[] | undefined);
+        for (const [k, v] of Object.entries(counts)) fallback[k] = (fallback[k] ?? 0) + v;
+      }
     }
     const lastSeenMap = channels?.channel_last_seen ?? {};
     return CHANNELS.map((c) => {
-      const value = readChannelValue(merged, c.aliases);
-      const lastSeen = c.aliases.map((a) => lastSeenMap[a]).find(Boolean) ?? null;
-      return { ...c, active: value > 0, count: value, lastSeen };
+      let count = 0;
+      let lastSeen: string | null = null;
+      if (list.length) {
+        for (const entry of list) {
+          if (normaliseToBadge(entry.channel ?? entry.name) === c.label) {
+            count += Number(entry.ad_count ?? entry.count ?? 0);
+            if (entry.last_seen && !lastSeen) lastSeen = entry.last_seen;
+          }
+        }
+      } else {
+        count = readChannelValue(fallback, c.aliases);
+      }
+      if (!lastSeen) lastSeen = c.aliases.map((a) => lastSeenMap[a]).find(Boolean) ?? null;
+      return { ...c, active: count > 0, count, lastSeen };
     });
   }, [war, channels]);
+
 
   // Demo mode detection
   const search = (useSearch({ strict: false }) as { demo?: string | boolean }) ?? {};
