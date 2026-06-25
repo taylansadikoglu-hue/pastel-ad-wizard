@@ -296,26 +296,66 @@ function BrandDNAGrid() {
 }
 
 
+export function SpendIndex({ level }: { level: number }) {
+  const lvl = Math.max(0, Math.min(5, Math.round(level)));
+  return (
+    <div>
+      <div style={{ letterSpacing: "3px", color: "#C9963A", fontSize: 16, lineHeight: 1 }}>
+        {"●".repeat(lvl)}
+        <span style={{ color: "#E8E5DE" }}>{"○".repeat(5 - lvl)}</span>
+      </div>
+      <div
+        style={{
+          fontSize: 10,
+          color: "#9E9D94",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          marginTop: 2,
+        }}
+      >
+        Spend index
+      </div>
+    </div>
+  );
+}
+
+export function spendLevel(spend: number | null | undefined): number {
+  const n = Number(spend);
+  if (!Number.isFinite(n) || n <= 0) return 1;
+  if (n < 1_000) return 2;
+  if (n < 10_000) return 3;
+  if (n < 100_000) return 4;
+  return 5;
+}
+
 function BrandMetricBlocks({ row }: { row: Row }) {
   const spend = row.estimated_monthly_spend;
   const kw = row.total_paid_keywords;
   const cpc = row.average_cpc;
   const cards = [
     {
-      label: "Est. Monthly Search Acquisition Share",
-      value: spend != null ? `AUD ${AUD.format(Number(spend))}` : "—",
+      label: "Estimated Spend Intensity",
+      node: <SpendIndex level={spendLevel(spend)} />,
       subtext:
-        "Proprietary market indexing indicates the target is maintaining a high-priority budget pacing to dominate top-of-funnel Australian visibility share.",
+        "R-AD's market index of how aggressively this brand is buying paid Australian visibility.",
     },
     {
       label: "Active High-Intent Paid Target Keywords",
-      value: kw != null ? NUM.format(Number(kw)) : "—",
+      node: (
+        <div className="text-3xl font-bold tracking-tight text-ink leading-none mt-1">
+          {kw != null ? NUM.format(Number(kw)) : "—"}
+        </div>
+      ),
       subtext:
         "Total unique high-yield search vectors currently captured across active local acquisition clusters.",
     },
     {
       label: "Average Calculated Cost-Per-Click Rate",
-      value: cpc != null ? `AUD ${AUD_DEC.format(Number(cpc))}` : "—",
+      node: (
+        <div className="text-3xl font-bold tracking-tight text-ink leading-none mt-1">
+          {cpc != null ? AUD_DEC.format(Number(cpc)) : "—"}
+        </div>
+      ),
       subtext:
         "Aggregated valuation price-point required to anchor placement tracking parameters across the Australian market landscape.",
     },
@@ -331,9 +371,7 @@ function BrandMetricBlocks({ row }: { row: Row }) {
           <div className="mono text-[10px] uppercase tracking-[0.14em] font-bold text-ink/70">
             {c.label}
           </div>
-          <div className="text-3xl font-bold tracking-tight text-ink leading-none mt-1">
-            {c.value}
-          </div>
+          <div className="mt-1">{c.node}</div>
           <div className="h-px bg-ink/15 my-1" />
           <p className="text-[11px] leading-relaxed text-muted-foreground">{c.subtext}</p>
         </div>
