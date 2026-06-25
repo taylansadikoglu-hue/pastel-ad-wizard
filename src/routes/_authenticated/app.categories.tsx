@@ -36,6 +36,7 @@ export function categorySlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
+import { displayBrand } from "@/utils/brandDisplay";
 function brandFromDomain(d: string): string {
   const root = (d ?? "").replace(/^www\./, "").split(/[./]/)[0] ?? d;
   return root.charAt(0).toUpperCase() + root.slice(1);
