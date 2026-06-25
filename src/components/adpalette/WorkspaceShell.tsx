@@ -3,9 +3,21 @@ import { useNavigate } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 import { ThemeProvider } from "./theme";
 import { SidebarNav } from "./Dashboard";
+import { TopBar } from "./TopBar";
 import { supabase } from "@/integrations/supabase/client";
 
-export function WorkspaceShell({ title, subtitle, children }: { title: string; subtitle?: string; children?: ReactNode }) {
+/** Linen app shell — TopBar (52px) + Sidebar (200px) + main canvas. */
+export function WorkspaceShell({
+  title,
+  subtitle,
+  children,
+  demo = false,
+}: {
+  title: string;
+  subtitle?: string;
+  children?: ReactNode;
+  demo?: boolean;
+}) {
   const navigate = useNavigate();
   const logout = async () => {
     await supabase.auth.signOut();
@@ -14,38 +26,74 @@ export function WorkspaceShell({ title, subtitle, children }: { title: string; s
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-canvas text-ink flex">
-        <aside className="w-64 shrink-0 border-r border-ink bg-paper/60 backdrop-blur-sm flex flex-col">
-          <div className="px-5 py-5 border-b border-ink flex items-center gap-3">
-            <div className="w-9 h-9 rounded-[10px] bg-primary grid place-items-center">
-              <span className="mono text-[11px] font-bold">R-AD</span>
+      <div className="min-h-screen flex flex-col" style={{ background: "var(--canvas)" }}>
+        <TopBar demo={demo} />
+        <div className="flex flex-1 min-h-0">
+          <aside
+            className="shrink-0 flex flex-col"
+            style={{
+              width: 200,
+              background: "var(--paper)",
+              borderRight: "1px solid var(--hairline)",
+            }}
+          >
+            <div className="flex-1 py-4">
+              <SidebarNav />
             </div>
-            <div>
-              <div className="font-semibold leading-tight tracking-tight">RevenueAd</div>
-              <div className="mono text-[10px] text-muted-foreground uppercase tracking-widest">Workspace</div>
+            <button
+              onClick={logout}
+              className="nav-item"
+              style={{ margin: "0 8px 12px", border: "none", background: "none", cursor: "pointer", width: "auto" }}
+            >
+              <LogOut size={15} strokeWidth={1.5} /> Sign out
+            </button>
+          </aside>
+
+          <main
+            className="flex-1 min-w-0 overflow-auto"
+            style={{ padding: "28px 32px" }}
+          >
+            <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+              {(title || subtitle) && (
+                <header style={{ marginBottom: 24 }}>
+                  {title && <h1>{title}</h1>}
+                  {subtitle && (
+                    <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 6 }}>
+                      {subtitle}
+                    </p>
+                  )}
+                </header>
+              )}
+              {children ?? (
+                <div className="card-linen">
+                  <div className="label-eyebrow">Module</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, marginTop: 6 }}>{title}</div>
+                  <p style={{ color: "var(--text-secondary)", marginTop: 4 }}>
+                    Section is provisioning. Live data wires up shortly.
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
-          <SidebarNav />
-          <button onClick={logout} className="m-4 btn-flat justify-start">
-            <LogOut size={14} /> Sign out
-          </button>
-        </aside>
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="border-b border-ink bg-paper/70 backdrop-blur-sm px-10 py-8">
-            <div className="mono text-[10px] text-muted-foreground uppercase tracking-widest">Workspace</div>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight mt-2">{title}</h1>
-            {subtitle && <p className="text-base text-muted-foreground mt-2 max-w-3xl leading-relaxed">{subtitle}</p>}
-          </header>
-          <main className="flex-1 overflow-auto px-10 py-10">
-            {children ?? (
-              <div className="card-flat p-12 text-center">
-                <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">Module scaffold</div>
-                <div className="text-xl font-semibold mt-3 tracking-tight">{title} workspace is provisioning.</div>
-                <p className="text-sm text-muted-foreground mt-2">Live data wiring lands in the next sprint.</p>
-              </div>
-            )}
           </main>
         </div>
+        <footer
+          style={{
+            borderTop: "1px solid var(--hairline)",
+            background: "var(--paper)",
+            padding: "12px 24px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontSize: 12,
+            color: "var(--text-placeholder)",
+          }}
+        >
+          <span>
+            <span style={{ color: "var(--text-placeholder)" }}>revenuad</span>
+            <span style={{ color: "var(--accent-gold)" }}>.</span>
+          </span>
+          <span>© 2025 · Privacy · Terms</span>
+        </footer>
       </div>
     </ThemeProvider>
   );
