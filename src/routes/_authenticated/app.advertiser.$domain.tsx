@@ -1117,7 +1117,7 @@ function NewsRow({ item }: { item: NewsItem }) {
       )}
       <div
         style={{
-          fontSize: 13,
+          fontSize: 14,
           fontWeight: 500,
           color: "#1C1C1A",
           lineHeight: 1.35,
