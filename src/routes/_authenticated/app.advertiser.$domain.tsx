@@ -648,14 +648,45 @@ function AdvertiserPage() {
 
           {/* F — Recent ads */}
           <Card title="Recent ads">
-            {war.recent_ads?.length ? (
+            {/* Channel filter tabs */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
+              {[
+                { k: "all", l: "All" },
+                { k: "youtube", l: "YouTube" },
+                { k: "search", l: "Search" },
+                { k: "display", l: "Display" },
+                { k: "programmatic", l: "Programmatic" },
+                { k: "meta", l: "Meta" },
+              ].map((t) => {
+                const active = channelFilter === t.k;
+                return (
+                  <button
+                    key={t.k}
+                    onClick={() => setChannelFilter(t.k)}
+                    style={{
+                      padding: "4px 12px",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      border: "none",
+                      cursor: "pointer",
+                      background: active ? "#1C1C1A" : "transparent",
+                      color: active ? "#FFFFFF" : "#6B6B62",
+                    }}
+                  >
+                    {t.l}
+                  </button>
+                );
+              })}
+            </div>
+            {filteredAds.length ? (
               <div style={{ display: "flex", flexDirection: "column" }}>
-                {war.recent_ads.slice(0, 8).map((ad, i) => (
+                {filteredAds.slice(0, 8).map((ad, i) => (
                   <RecentAdRow key={ad.id ?? i} ad={ad} brand={brand} />
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: 13, color: "#9E9D94" }}>Signal incoming.</div>
+              <div style={{ fontSize: 13, color: "#9E9D94" }}>No ads match this filter.</div>
             )}
           </Card>
         </div>
