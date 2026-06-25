@@ -199,6 +199,27 @@ function readChannelValue(src: Record<string, number> | undefined, aliases: stri
   return total;
 }
 
+// Normalise any raw channel label (from war.channels[].channel) → badge name.
+function normaliseToBadge(ch: unknown): string | null {
+  const r = String(ch ?? "").toLowerCase();
+  if (!r) return null;
+  if (r.includes("youtube")) return "YouTube";
+  if (r.includes("search")) return "Search";
+  if (r.includes("display") || r.includes("programmatic")) return "Display";
+  if (r.includes("meta") || r.includes("facebook") || r.includes("instagram")) return "Meta";
+  if (r.includes("tiktok")) return "TikTok";
+  if (r.includes("linkedin")) return "LinkedIn";
+  return null;
+}
+
+type WarChannelEntry = { channel?: string; name?: string; ad_count?: number; count?: number; last_seen?: string };
+function warChannelList(war: { channels?: unknown } | null | undefined): WarChannelEntry[] {
+  const c = war?.channels;
+  if (Array.isArray(c) && c.length && typeof c[0] === "object") return c as WarChannelEntry[];
+  return [];
+}
+
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function AdvertiserPage() {
