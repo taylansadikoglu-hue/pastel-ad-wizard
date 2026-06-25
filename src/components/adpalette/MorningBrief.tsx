@@ -41,11 +41,11 @@ type SovResp = {
 };
 
 const CATEGORIES = [
-  { key: "Banking", label: "General Banking" },
-  { key: "Auto", label: "Automotive" },
-  { key: "Telco", label: "Telco" },
-  { key: "Health", label: "Health Insurance" },
-  { key: "Retail", label: "Retail" },
+  { key: "Banking", label: "General Banking", slug: "banking" },
+  { key: "Auto", label: "Automotive", slug: "automotive" },
+  { key: "Telco", label: "Telco", slug: "telco" },
+  { key: "Health", label: "Health Insurance", slug: "health_insurance" },
+  { key: "Retail", label: "Retail", slug: "retail" },
 ] as const;
 type Category = typeof CATEGORIES[number]["key"];
 
@@ -102,10 +102,11 @@ export function MorningBrief() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    const slug = category.toLowerCase();
+    const cat = CATEGORIES.find((c) => c.key === category)!;
+    const slug = cat.slug;
     (async () => {
       const [p, b, s] = await Promise.all([
-        safeJson<PulseResp>(`${API_BASE}/api/pulse`),
+        safeJson<PulseResp>(`${API_BASE}/api/pulse?category=${slug}`),
         safeJson<BriefResp>(`${API_BASE}/api/brief/${slug}`),
         safeJson<SovResp>(`${API_BASE}/api/intelligence/sov-pro/${slug}`),
       ]);
@@ -126,19 +127,30 @@ export function MorningBrief() {
     );
   }
 
+  // Scope alerts to current category brands (client-side filter)
+  const brands = sov?.brands ?? [];
+  const brandKeys = new Set(brands.map((b) => b.brand.toLowerCase().replace(/\s+/g, "")));
+  const allAlerts = (pulse?.alerts ?? []);
+  const alerts = brandKeys.size > 0
+    ? allAlerts.filter((a) => brandKeys.has(a.brand.toLowerCase().replace(/\s+/g, "")))
+    : allAlerts;
+
   const newToday = pulse?.new_ads_today ?? brief?.market_pulse?.new_ads_72h ?? 0;
-  const mostActive = pulse?.most_active_brand_today ?? brief?.market_pulse?.most_aggressive_brand ?? "";
+  const mostActiveRaw = brief?.market_pulse?.most_aggressive_brand ?? pulse?.most_active_brand_today ?? "";
+  // Only use most_active if it belongs to the category
+  const mostActive = brandKeys.size === 0 || brandKeys.has(mostActiveRaw.toLowerCase().replace(/\s+/g, ""))
+    ? mostActiveRaw
+    : (brands[0]?.brand ?? "");
   const topTheme = pulse?.top_theme_today ?? "";
   const level = (brief?.market_pulse?.activity_level ?? "moderate").toLowerCase();
-  const brands = sov?.brands ?? [];
-  const totalBrands = brief?.market_pulse?.total_active_brands ?? brands.length;
-  const alerts = (pulse?.alerts ?? []);
+  const totalBrands = brands.length || (brief?.market_pulse?.total_active_brands ?? 0);
   const winConditions = (brief?.win_conditions ?? []).slice(0, 4);
 
-  // Synthesize threats from SOV + alerts
+  // Always show 3 threat cards — fallback to 3rd SOV
   const strongest = brands[0];
   const strategic = brands[1];
-  const emerging = alerts.sort((a, b) => b.increase_pct - a.increase_pct)[0];
+  const emergingAlert = alerts.sort((a, b) => b.increase_pct - a.increase_pct)[0];
+  const emergingFallback = brands[2];
 
   return (
     <WorkspaceShell title="">
@@ -168,7 +180,8 @@ export function MorningBrief() {
         {/* SECTION 2 — THREATS */}
         <ThreatsSection
           strongest={strongest}
-          emerging={emerging}
+          emerging={emergingAlert}
+          emergingFallback={emergingFallback}
           strategic={strategic}
           topTheme={topTheme}
           categoryLabel={categoryLabel}
@@ -299,9 +312,10 @@ function HeroStat({ label, value, divider }: { label: string; value: string; div
 
 // ─── Threats ──────────────────────────────────────────────────────────────────
 
-function ThreatsSection({ strongest, emerging, strategic, topTheme, categoryLabel }: {
+function ThreatsSection({ strongest, emerging, emergingFallback, strategic, topTheme, categoryLabel }: {
   strongest?: SovBrand;
   emerging?: { brand: string; today_sightings: number; increase_pct: number };
+  emergingFallback?: SovBrand;
   strategic?: SovBrand;
   topTheme: string;
   categoryLabel: string;
@@ -323,13 +337,23 @@ function ThreatsSection({ strongest, emerging, strategic, topTheme, categoryLabe
     trend: "Rising",
     insight: `Holds ${strongest.sov_sightings_pct.toFixed(1)}% share of voice in ${categoryLabel}.`,
   });
-  if (emerging) threats.push({
-    kind: "emerging", brand: emerging.brand,
-    score: Math.min(99, Math.round(40 + Math.min(emerging.increase_pct, 50))),
-    demand: fmtNum(emerging.today_sightings), creative: `+${Math.round(emerging.increase_pct)}%`,
-    trend: "Rising",
-    insight: `Accelerating fast — sightings up ${Math.round(emerging.increase_pct)}% vs yesterday.`,
-  });
+  if (emerging) {
+    threats.push({
+      kind: "emerging", brand: emerging.brand,
+      score: Math.min(99, Math.round(40 + Math.min(emerging.increase_pct, 50))),
+      demand: fmtNum(emerging.today_sightings), creative: `+${Math.round(emerging.increase_pct)}%`,
+      trend: "Rising",
+      insight: `Accelerating fast — sightings up ${Math.round(emerging.increase_pct)}% vs yesterday.`,
+    });
+  } else if (emergingFallback) {
+    threats.push({
+      kind: "emerging", brand: emergingFallback.brand,
+      score: Math.min(99, Math.round(35 + emergingFallback.sov_sightings_pct * 0.7)),
+      demand: fmtNum(emergingFallback.sightings), creative: fmtNum(emergingFallback.ads),
+      trend: "Stable",
+      insight: `Building presence in ${categoryLabel} — ${emergingFallback.sov_sightings_pct.toFixed(1)}% share.`,
+    });
+  }
   if (strategic) threats.push({
     kind: "strategic", brand: strategic.brand,
     score: Math.min(99, Math.round(45 + strategic.sov_sightings_pct * 0.6)),
@@ -348,6 +372,7 @@ function ThreatsSection({ strongest, emerging, strategic, topTheme, categoryLabe
     </section>
   );
 }
+
 
 function ThreatCard({ t }: { t: { kind: "strongest" | "emerging" | "strategic"; brand: string; score: number; demand: number | string; creative: number | string; trend: "Rising" | "Stable" | "Falling"; insight: string } }) {
   const badge = {
@@ -544,11 +569,21 @@ function WhitespaceSection({ winConditions, categoryLabel }: {
           const statusStyle = status === "Emerging"
             ? { bg: "#F0F9F4", color: "#2D7D46" }
             : { bg: "#F0EDE8", color: "#9E9D94" };
-          const body = n === 0
-            ? `No brand in ${categoryLabel} is running this messaging — unclaimed.`
-            : n === 1
-              ? `Only one brand owns this in ${categoryLabel}. Room to compete.`
-              : `${n} brands using it in ${categoryLabel}.`;
+          const templates = [
+            (theme: string, count: number) => count === 0
+              ? `${theme} is uncontested in ${categoryLabel}. Your client could own this angle.`
+              : `${theme} is underleveraged here. Your client could own this angle.`,
+            (theme: string, count: number) => count === 0
+              ? `No brand in ${categoryLabel} is using ${theme}. Unclaimed territory.`
+              : `Only ${count} brand${count === 1 ? "" : "s"} using ${theme} in ${categoryLabel}. Unclaimed territory.`,
+            (theme: string, count: number) => count === 0
+              ? `${theme} sits open in ${categoryLabel}. First mover sets the price of entry.`
+              : `${theme} is thinly contested in ${categoryLabel} — ${count} brand${count === 1 ? "" : "s"} only.`,
+            (theme: string, count: number) => count === 0
+              ? `Nobody owns ${theme} in ${categoryLabel} yet. Build the position before competitors notice.`
+              : `${count} brand${count === 1 ? "" : "s"} touch ${theme} in ${categoryLabel}. Room to lead, not follow.`,
+          ];
+          const body = templates[i % templates.length](w.gap, n);
           return (
             <div key={i} style={{
               background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10,

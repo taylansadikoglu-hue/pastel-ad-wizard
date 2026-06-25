@@ -46,6 +46,7 @@ type War = {
   first_seen?: string;
   last_seen?: string;
   ads_this_week?: number;
+  spend_signal?: number;
   channel_split?: Record<string, number>;
   top_themes?: { theme: string; count: number; pct: number }[];
   sentiment_breakdown?: { positive?: number; neutral?: number; urgency?: number };
@@ -390,15 +391,15 @@ function AdvertiserPage() {
         {/* LEFT — main intel */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
           {/* A — Brand header */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, paddingBottom: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 4 }}>
             <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 8,
+                width: 44,
+                height: 44,
+                borderRadius: 10,
                 background: "#FDF6E8",
                 color: "#C9963A",
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: 600,
                 display: "flex",
                 alignItems: "center",
@@ -409,8 +410,8 @@ function AdvertiserPage() {
               {initialsOf(brand)}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 22, fontWeight: 600, color: "#1C1C1A", lineHeight: 1.2 }}>{brand}</div>
-              <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 2 }}>
+              <div style={{ fontSize: 24, fontWeight: 600, color: "#1C1C1A", lineHeight: 1.2 }}>{brand}</div>
+              <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 3 }}>
                 {category} · {totalAds} ads
                 {updatedAgo && ` · Updated ${updatedAgo}`}
               </div>
@@ -424,8 +425,8 @@ function AdvertiserPage() {
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: 7,
-                  padding: "8px 18px",
-                  fontSize: 13,
+                  padding: "10px 20px",
+                  fontSize: 14,
                   fontWeight: 500,
                   display: "inline-flex",
                   alignItems: "center",
@@ -434,7 +435,7 @@ function AdvertiserPage() {
                   opacity: exporting ? 0.7 : 1,
                 }}
               >
-                {exporting ? <Loader2 size={14} className="animate-spin" /> : <Presentation size={14} />}
+                {exporting ? <Loader2 size={16} className="animate-spin" /> : <Presentation size={16} />}
                 {exporting ? "Building deck…" : "Export slides"}
               </button>
               {exportError && (
@@ -442,6 +443,7 @@ function AdvertiserPage() {
               )}
             </div>
           </div>
+
 
           {/* B — Intel strip */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
@@ -455,8 +457,11 @@ function AdvertiserPage() {
               label="Sightings"
               trend={null}
             />
-            <div style={{ ...metricCardStyle, alignItems: "flex-start" }}>
-              <SpendIndex spend={spend?.estimated_monthly_spend ?? 0} />
+            <div style={{ ...metricCardStyle, alignItems: "flex-start", padding: 18 }}>
+              <SpendIndex
+                level={typeof war.spend_signal === "number" && war.spend_signal > 0 ? war.spend_signal : undefined}
+                spend={spend?.estimated_monthly_spend ?? 0}
+              />
             </div>
             <MetricCard
               value={daysRunning.toLocaleString()}
@@ -468,29 +473,29 @@ function AdvertiserPage() {
 
           {/* C — Channel presence */}
           <Card title="Channel presence">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
               {channelData.map((c) => (
-                <div key={c.key} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <div key={c.key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <div
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 6,
-                      padding: "6px 12px",
-                      borderRadius: 6,
-                      fontSize: 11,
+                      gap: 8,
+                      padding: "8px 16px",
+                      borderRadius: 8,
+                      fontSize: 12,
                       fontWeight: 500,
                       background: c.active ? "#FDF6E8" : "#F7F6F3",
                       border: `1px solid ${c.active ? "#C9963A" : "#EBE9E4"}`,
                       color: c.active ? "#A07830" : "#C4C2BA",
                     }}
                   >
-                    <c.Icon size={12} style={{ color: c.active ? "#C9963A" : "#C4C2BA" }} />
+                    <c.Icon size={14} style={{ color: c.active ? "#C9963A" : "#C4C2BA" }} />
                     {c.label}
                   </div>
                   {c.active && c.lastSeen && (
                     <div style={{ fontSize: 10, color: "#9E9D94", paddingLeft: 4 }}>
-                      ↑ since {fmtDate(c.lastSeen)}
+                      Active since {fmtDate(c.lastSeen)}
                     </div>
                   )}
                 </div>
@@ -498,21 +503,22 @@ function AdvertiserPage() {
             </div>
           </Card>
 
+
           {/* D — Creative intelligence */}
           <Card title="What they're saying">
-            <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "55fr 45fr", gap: 28 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <Field label="Themes">
                   {themes.length ? (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {themes.map((t, i) => (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {themes.slice(0, 8).map((t, i) => (
                         <span
                           key={i}
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: 500,
-                            padding: "4px 10px",
-                            borderRadius: 999,
+                            padding: "6px 14px",
+                            borderRadius: 5,
                             background: "#FDF6E8",
                             border: "1px solid #E8D5A0",
                             color: "#A07830",
@@ -527,15 +533,15 @@ function AdvertiserPage() {
                   )}
                 </Field>
                 <Field label="Primary CTA">
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "#1C1C1A" }}>{primaryCta}</div>
+                  <div style={{ fontSize: 15, fontWeight: 500, color: "#1C1C1A" }}>{primaryCta}</div>
                 </Field>
                 <Field label="Sentiment">
-                  <div style={{ fontSize: 13, fontWeight: 500, color: sentimentColor, textTransform: "capitalize" }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: sentimentColor, textTransform: "capitalize" }}>
                     {sentimentRaw || "Not detected"}
                   </div>
                 </Field>
               </div>
-              <div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <Field label="Audience">
                   {demographics.length ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -545,19 +551,37 @@ function AdvertiserPage() {
                             style={{
                               display: "flex",
                               justifyContent: "space-between",
-                              fontSize: 11,
+                              fontSize: 12,
                               color: "#6B6B62",
-                              marginBottom: 4,
+                              marginBottom: 5,
                             }}
                           >
                             <span style={{ textTransform: "capitalize" }}>{d.label}</span>
                             <span style={{ fontWeight: 600, color: "#1C1C1A" }}>{Math.round(d.value)}%</span>
                           </div>
-                          <div style={{ height: 4, background: "#F0EDE8", borderRadius: 2, overflow: "hidden" }}>
+                          <div style={{ height: 6, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
                             <div style={{ width: `${d.value}%`, height: "100%", background: "#C9963A" }} />
                           </div>
                         </div>
                       ))}
+                    </div>
+                  ) : themes.length ? (
+                    <div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {themes.slice(0, 4).map((t, i) => (
+                          <div key={i}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6B6B62", marginBottom: 5 }}>
+                              <span style={{ textTransform: "capitalize" }}>{t}</span>
+                            </div>
+                            <div style={{ height: 6, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
+                              <div style={{ width: `${100 - i * 18}%`, height: "100%", background: "#C9963A" }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#C4C2BA", marginTop: 8, fontStyle: "italic" }}>
+                        Based on creative analysis
+                      </div>
                     </div>
                   ) : (
                     <span style={{ fontSize: 13, color: "#9E9D94" }}>Signal incoming</span>
@@ -565,6 +589,7 @@ function AdvertiserPage() {
                 </Field>
               </div>
             </div>
+
 
             {/* Creative analysis */}
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #F0EDE8" }}>
@@ -585,15 +610,15 @@ function AdvertiserPage() {
                   <CreativePill>
                     <span
                       style={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: 3,
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
                         background: creativeAnalysis.colour,
                         border: "1px solid rgba(0,0,0,0.1)",
                         display: "inline-block",
                       }}
                     />
-                    Primary colour
+                    <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.colour}</span>
                   </CreativePill>
                 )}
                 {creativeAnalysis.emotion && (
@@ -601,50 +626,72 @@ function AdvertiserPage() {
                     <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.emotion}</span>
                   </CreativePill>
                 )}
-                {creativeAnalysis.hasPeople !== null && (
-                  <CreativePill>People: {creativeAnalysis.hasPeople ? "Yes" : "No"}</CreativePill>
-                )}
-                {creativeAnalysis.hasLogo !== null && (
-                  <CreativePill>Logo: {creativeAnalysis.hasLogo ? "Yes" : "No"}</CreativePill>
-                )}
+                {(() => {
+                  const fmt = (firstAd?.ad_format ?? "").trim();
+                  return fmt ? <CreativePill><span style={{ textTransform: "capitalize" }}>{fmt}</span></CreativePill> : null;
+                })()}
                 {creativeAnalysis.avgDuration && (
                   <CreativePill>~{creativeAnalysis.avgDuration}s avg</CreativePill>
                 )}
-                {!creativeAnalysis.colour && !creativeAnalysis.emotion && creativeAnalysis.hasPeople === null && (
+                {!creativeAnalysis.colour && !creativeAnalysis.emotion && !firstAd?.ad_format && (
                   <span style={{ fontSize: 12, color: "#9E9D94" }}>Signal incoming</span>
                 )}
               </div>
             </div>
           </Card>
 
-          {/* E — Gap callout */}
-          {war.gap || war.insight ? (
-            <div
-              style={{
-                background: "#FDF6E8",
-                border: "1px solid #E8D5A0",
-                borderLeft: "3px solid #C9963A",
-                borderRadius: 8,
-                padding: "16px 20px",
-              }}
-            >
+          {/* E — Opportunity */}
+          {(() => {
+            const inactive = channelData.filter((c) => !c.active);
+            const top = themes[0];
+            const second = themes[1];
+            const audienceLabel = demographics[0]?.label ?? "Their core audience";
+            let body: string;
+            if (inactive.length > 0) {
+              const ch = inactive[0].label;
+              body = `${brand} has no presence on ${ch}. ${audienceLabel.replace(/^./, (s) => s.toUpperCase())} is uncontested. First mover wins here.`;
+            } else if (top && second) {
+              body = `${brand} owns ${top} in ${category}. The gap is ${second} — only a handful of competitors use it.`;
+            } else if (top) {
+              body = `${brand} owns ${top} in ${category}. Find the second theme nobody else has claimed and run it.`;
+            } else {
+              body = war.gap ?? war.insight ?? `${brand}'s positioning is still forming. Watch for the first repeated theme to set the angle.`;
+            }
+            return (
               <div
                 style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "#A07830",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginBottom: 8,
+                  background: "#FDF6E8",
+                  border: "1px solid #E8D5A0",
+                  borderLeft: "3px solid #C9963A",
+                  borderRadius: 8,
+                  padding: "18px 22px",
                 }}
               >
-                Opportunity detected
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: "#A07830",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    marginBottom: 8,
+                  }}
+                >
+                  Opportunity detected
+                </div>
+                <div style={{ fontSize: 16, color: "#1C1C1A", lineHeight: 1.6, fontWeight: 400 }}>
+                  {body}
+                </div>
+                <Link
+                  to="/app/categories"
+                  style={{ fontSize: 13, color: "#C9963A", fontWeight: 500, textDecoration: "none", display: "inline-block", marginTop: 10 }}
+                >
+                  Explore gap analysis →
+                </Link>
               </div>
-              <div style={{ fontSize: 15, color: "#1C1C1A", lineHeight: 1.5 }}>
-                {war.gap ?? war.insight}
-              </div>
-            </div>
-          ) : null}
+            );
+          })()}
+
 
           {/* F — Recent ads */}
           <Card title="Recent ads">
@@ -771,11 +818,11 @@ function AdvertiserPage() {
 
 const metricCardStyle: React.CSSProperties = {
   background: "#F0EDE8",
-  borderRadius: 8,
-  padding: 16,
+  borderRadius: 10,
+  padding: 18,
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: 6,
   minWidth: 0,
 };
 
@@ -792,24 +839,25 @@ const emptyCard: React.CSSProperties = {
 function MetricCard({ value, label, trend }: { value: string; label: string; trend: string | null }) {
   return (
     <div style={metricCardStyle}>
-      <div style={{ fontSize: 24, fontWeight: 600, color: "#1C1C1A", lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: 28, fontWeight: 600, color: "#1C1C1A", lineHeight: 1, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums" }}>{value}</div>
       <div
         style={{
           fontSize: 11,
           fontWeight: 500,
           color: "#9E9D94",
           textTransform: "uppercase",
-          letterSpacing: "0.06em",
+          letterSpacing: "0.08em",
         }}
       >
         {label}
       </div>
       {trend && (
-        <div style={{ fontSize: 11, color: "#2D7D46", marginTop: 2 }}>{trend}</div>
+        <div style={{ fontSize: 12, color: "#2D7D46", marginTop: 2 }}>{trend}</div>
       )}
     </div>
   );
 }
+
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -854,19 +902,19 @@ function CreativePill({ children }: { children: React.ReactNode }) {
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 500,
         padding: "4px 10px",
-        borderRadius: 999,
-        background: "#F7F6F3",
-        border: "1px solid #EBE9E4",
-        color: "#1C1C1A",
+        borderRadius: 4,
+        background: "#F0EDE8",
+        color: "#6B6B62",
       }}
     >
       {children}
     </span>
   );
 }
+
 
 function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
   const tags = asTags(ad.ai_tags);
@@ -898,8 +946,8 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 12,
-        padding: "12px 0",
+        gap: 16,
+        padding: "16px 0",
         borderBottom: "1px solid #F0EDE8",
       }}
     >
@@ -908,7 +956,7 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
           position: "relative",
           width: 56,
           height: 56,
-          borderRadius: 6,
+          borderRadius: 8,
           flexShrink: 0,
           cursor: isYouTube && ad.video_url ? "pointer" : "default",
         }}
@@ -1057,7 +1105,7 @@ function NewsRow({ item }: { item: NewsItem }) {
       {item.source && (
         <div
           style={{
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: 600,
             color: "#C9963A",
             textTransform: "uppercase",
@@ -1070,7 +1118,7 @@ function NewsRow({ item }: { item: NewsItem }) {
       )}
       <div
         style={{
-          fontSize: 13,
+          fontSize: 14,
           fontWeight: 500,
           color: "#1C1C1A",
           lineHeight: 1.35,
@@ -1085,7 +1133,7 @@ function NewsRow({ item }: { item: NewsItem }) {
         {item.title ?? "Untitled"}
       </div>
       {ts && (
-        <div style={{ fontSize: 11, color: "#9E9D94", marginTop: 4 }}>
+        <div style={{ fontSize: 12, color: "#9E9D94", marginTop: 4 }}>
           {formatTimeAgo(ts)}
         </div>
       )}
