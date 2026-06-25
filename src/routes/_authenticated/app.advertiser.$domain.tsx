@@ -506,19 +506,19 @@ function AdvertiserPage() {
 
           {/* D — Creative intelligence */}
           <Card title="What they're saying">
-            <div style={{ display: "grid", gridTemplateColumns: "3fr 2fr", gap: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "55fr 45fr", gap: 28 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <Field label="Themes">
                   {themes.length ? (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {themes.map((t, i) => (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {themes.slice(0, 8).map((t, i) => (
                         <span
                           key={i}
                           style={{
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: 500,
-                            padding: "4px 10px",
-                            borderRadius: 999,
+                            padding: "6px 14px",
+                            borderRadius: 5,
                             background: "#FDF6E8",
                             border: "1px solid #E8D5A0",
                             color: "#A07830",
@@ -533,15 +533,15 @@ function AdvertiserPage() {
                   )}
                 </Field>
                 <Field label="Primary CTA">
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "#1C1C1A" }}>{primaryCta}</div>
+                  <div style={{ fontSize: 15, fontWeight: 500, color: "#1C1C1A" }}>{primaryCta}</div>
                 </Field>
                 <Field label="Sentiment">
-                  <div style={{ fontSize: 13, fontWeight: 500, color: sentimentColor, textTransform: "capitalize" }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: sentimentColor, textTransform: "capitalize" }}>
                     {sentimentRaw || "Not detected"}
                   </div>
                 </Field>
               </div>
-              <div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <Field label="Audience">
                   {demographics.length ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -551,19 +551,37 @@ function AdvertiserPage() {
                             style={{
                               display: "flex",
                               justifyContent: "space-between",
-                              fontSize: 11,
+                              fontSize: 12,
                               color: "#6B6B62",
-                              marginBottom: 4,
+                              marginBottom: 5,
                             }}
                           >
                             <span style={{ textTransform: "capitalize" }}>{d.label}</span>
                             <span style={{ fontWeight: 600, color: "#1C1C1A" }}>{Math.round(d.value)}%</span>
                           </div>
-                          <div style={{ height: 4, background: "#F0EDE8", borderRadius: 2, overflow: "hidden" }}>
+                          <div style={{ height: 6, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
                             <div style={{ width: `${d.value}%`, height: "100%", background: "#C9963A" }} />
                           </div>
                         </div>
                       ))}
+                    </div>
+                  ) : themes.length ? (
+                    <div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {themes.slice(0, 4).map((t, i) => (
+                          <div key={i}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6B6B62", marginBottom: 5 }}>
+                              <span style={{ textTransform: "capitalize" }}>{t}</span>
+                            </div>
+                            <div style={{ height: 6, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
+                              <div style={{ width: `${100 - i * 18}%`, height: "100%", background: "#C9963A" }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#C4C2BA", marginTop: 8, fontStyle: "italic" }}>
+                        Based on creative analysis
+                      </div>
                     </div>
                   ) : (
                     <span style={{ fontSize: 13, color: "#9E9D94" }}>Signal incoming</span>
@@ -571,6 +589,7 @@ function AdvertiserPage() {
                 </Field>
               </div>
             </div>
+
 
             {/* Creative analysis */}
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #F0EDE8" }}>
