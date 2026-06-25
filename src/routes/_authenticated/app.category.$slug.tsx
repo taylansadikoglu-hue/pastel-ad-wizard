@@ -24,8 +24,7 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 function brandFromDomain(d: string): string {
-  const root = (d ?? "").replace(/^www\./, "").split(/[./]/)[0] ?? d;
-  return root.charAt(0).toUpperCase() + root.slice(1);
+  return displayBrand(d);
 }
 function normalizeDomain(d: string | null | undefined): string {
   return (d ?? "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
