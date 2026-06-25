@@ -1129,11 +1129,11 @@ function aiReply(q: string, visible: Competitor[]): string {
 }
 
 const NAV_ITEMS = [
-  { icon: Home, label: "Morning Brief", href: "/app/dashboard" },
+  { icon: Home, label: "Morning signal", href: "/app/dashboard" },
   { icon: Target, label: "Advertisers", href: "/app/advertisers" },
   { icon: Grid3x3, label: "Categories", href: "/app/categories" },
   { icon: Radio, label: "My Clients", href: "/app/clients" },
-  { icon: BarChart3, label: "Market Intel", href: "/app/pcr" },
+  { icon: BarChart3, label: "Signal", href: "/app/pcr" },
 ];
 
 export function SidebarNav() {
