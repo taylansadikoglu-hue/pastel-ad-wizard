@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Inbox, TrendingUp } from "lucide-react";
+import { Inbox, TrendingUp, Clock, Target, Lock } from "lucide-react";
 import { WorkspaceShell } from "./WorkspaceShell";
+import { SpendLegend } from "./SpendIndex";
 
 const API_BASE = "https://api.revenuad.com";
 
