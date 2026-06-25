@@ -100,6 +100,20 @@ function initialsOf(name: string): string {
   return (parts[0][0] + (parts[1][0] ?? "")).toUpperCase();
 }
 
+// Extract YouTube video ID from common URL shapes.
+function youtubeId(url: string): string | null {
+  const m = url.match(/(?:v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{6,})/);
+  return m ? m[1] : null;
+}
+
+// Proxy CDN images that browsers can't load directly.
+function proxyImage(url: string): string {
+  if (/(?:fbcdn\.net|googlesyndication\.com|doubleclick\.net)/.test(url)) {
+    return `https://api.revenuad.com/api/proxy/image?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 // ─── Channel config ───────────────────────────────────────────────────────────
 
 const CHANNELS: { key: string; label: string; aliases: string[]; Icon: typeof SearchIcon }[] = [
