@@ -296,37 +296,8 @@ function BrandDNAGrid() {
 }
 
 
-export function SpendIndex({ level }: { level: number }) {
-  const lvl = Math.max(0, Math.min(5, Math.round(level)));
-  return (
-    <div>
-      <div style={{ letterSpacing: "3px", color: "#C9963A", fontSize: 16, lineHeight: 1 }}>
-        {"●".repeat(lvl)}
-        <span style={{ color: "#E8E5DE" }}>{"○".repeat(5 - lvl)}</span>
-      </div>
-      <div
-        style={{
-          fontSize: 10,
-          color: "#9E9D94",
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-          marginTop: 2,
-        }}
-      >
-        Spend index
-      </div>
-    </div>
-  );
-}
-
-export function spendLevel(spend: number | null | undefined): number {
-  const n = Number(spend);
-  if (!Number.isFinite(n) || n <= 0) return 1;
-  if (n < 1_000) return 2;
-  if (n < 10_000) return 3;
-  if (n < 100_000) return 4;
-  return 5;
-}
+import { SpendIndex } from "@/components/adpalette/SpendIndex";
+import { spendLevel, displayBrand } from "@/utils/brandDisplay";
 
 function BrandMetricBlocks({ row }: { row: Row }) {
   const spend = row.estimated_monthly_spend;
