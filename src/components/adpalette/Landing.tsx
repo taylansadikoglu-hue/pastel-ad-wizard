@@ -16,7 +16,7 @@ function IntelCard({
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
-  value: string;
+  value: React.ReactNode;
   hint?: string;
   accent?: boolean;
 }) {
@@ -27,10 +27,9 @@ function IntelCard({
         <Icon size={14} className="text-muted-foreground" />
       </div>
       <div
-        className={`text-2xl md:text-[28px] font-semibold tracking-tight leading-tight truncate ${
+        className={`text-2xl md:text-[28px] font-semibold tracking-tight leading-tight ${
           accent ? "text-primary" : ""
         }`}
-        title={value}
       >
         {value}
       </div>
@@ -38,6 +37,7 @@ function IntelCard({
     </div>
   );
 }
+
 
 export function Landing({ onEnter }: { onEnter: () => void }) {
   const { toggle } = useTheme();
@@ -124,10 +124,26 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
           <IntelCard
             icon={Wallet}
             label="Est. Monthly Spend"
-            value="A$184,200"
-            hint="Per tracked competitor · AUD"
+            value={
+              <div>
+                <span style={{ color: "#C9963A", fontSize: 20, letterSpacing: 2 }}>●●●●○</span>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#9E9D94",
+                    marginTop: 4,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  Spend index · High
+                </div>
+              </div>
+            }
+            hint="Per tracked competitor · derived from ad frequency"
             accent
           />
+
           <IntelCard
             icon={Layers}
             label="Active Paid Creatives"
