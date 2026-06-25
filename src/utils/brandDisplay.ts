@@ -69,12 +69,15 @@ export function displayBrand(raw: string | null | undefined): string {
 }
 
 // Spend-index helper used wherever spend appears.
-// 0/null → 1 · >0 → 2 · >10k → 3 · >50k → 4 · >200k → 5
+// 7-tier: <500K=1, <2M=2, <10M=3, <30M=4, <80M=5, <150M=6, 150M+=7
 export function spendLevel(spend: number | null | undefined): number {
   const n = Number(spend);
   if (!Number.isFinite(n) || n <= 0) return 1;
-  if (n > 200_000) return 5;
-  if (n > 50_000) return 4;
-  if (n > 10_000) return 3;
-  return 2;
+  if (n < 500_000) return 1;
+  if (n < 2_000_000) return 2;
+  if (n < 10_000_000) return 3;
+  if (n < 30_000_000) return 4;
+  if (n < 80_000_000) return 5;
+  if (n < 150_000_000) return 6;
+  return 7;
 }
