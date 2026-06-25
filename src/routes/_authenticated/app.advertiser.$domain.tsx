@@ -56,8 +56,15 @@ type War = {
   recent_ads?: RecentAd[];
   gap?: string;
   insight?: string;
-  reach_frequency?: { totalUniqueReach?: number; avgFrequency?: number };
-  spend_weight?: { byChannel?: Record<string, number> };
+  reach_frequency?: {
+    totalUniqueReach?: number;
+    avgFrequency?: number;
+    channels?: Record<string, { reach?: number; adCount?: number } | number>;
+  };
+  spend_weight?: {
+    total?: number;
+    byChannel?: Record<string, { percentage?: number; adCount?: number; spend?: number } | number>;
+  };
   creative_fatigue?: { score?: number; fatigueLabel?: string; label?: string; needsRefresh?: number; fresh?: number };
 };
 
@@ -545,16 +552,16 @@ function AdvertiserPage() {
             <MetricCard
               value={fmtReach(Number(war.reach_frequency?.totalUniqueReach ?? 0))}
               label="Est. reach"
-              trend="Unique Australians"
+              trend="Unique Australians · est."
             />
             <MetricCard
               value={
-                war.reach_frequency?.avgFrequency != null && Number.isFinite(Number(war.reach_frequency.avgFrequency))
-                  ? Number(war.reach_frequency.avgFrequency).toFixed(1) + "×"
+                war.reach_frequency?.avgFrequency != null && Number(war.reach_frequency.avgFrequency) > 0
+                  ? Number(war.reach_frequency.avgFrequency).toFixed(1) + "x"
                   : "—"
               }
               label="Avg. frequency"
-              trend="Times seen per person"
+              trend="Times seen per person · est."
             />
             <div style={{ ...metricCardStyle, alignItems: "flex-start", padding: 18 }}>
               <SpendIndex
@@ -572,31 +579,44 @@ function AdvertiserPage() {
 
           {/* B2 — Channel mix */}
           {(() => {
-            const byChannel = war.spend_weight?.byChannel ?? {};
-            const channelCounts: Record<string, number> = {};
+            const byChannel = (war.spend_weight?.byChannel ?? {}) as Record<string, { percentage?: number; adCount?: number; spend?: number } | number>;
+            const fallbackCounts: Record<string, number> = {};
             for (const part of [war.channels, war.channel_split, channels?.channels, channels?.by_channel]) {
               const c = toChannelCounts(part);
-              for (const [k, v] of Object.entries(c)) channelCounts[k] = (channelCounts[k] ?? 0) + v;
+              for (const [k, v] of Object.entries(c)) fallbackCounts[k] = (fallbackCounts[k] ?? 0) + v;
             }
-            const rows = CHANNEL_MIX.map((c) => {
-              let spendVal = 0;
-              for (const a of c.aliases) {
-                const v = byChannel[a] ?? byChannel[a.replace(/\s+/g, "_")] ?? byChannel[a.replace(/\s+/g, "")];
-                if (typeof v === "number") spendVal += v;
+            const pickEntry = (aliases: string[]) => {
+              for (const a of aliases) {
+                for (const k of [a, a.replace(/\s+/g, "_"), a.replace(/\s+/g, "")]) {
+                  const v = byChannel[k];
+                  if (v != null) return v;
+                }
               }
-              const ads = readChannelValue(channelCounts, c.aliases);
-              return { ...c, spendVal, ads };
+              return undefined;
+            };
+            const rows = CHANNEL_MIX.map((c) => {
+              const entry = pickEntry(c.aliases);
+              let pct = 0;
+              let ads = 0;
+              if (entry != null) {
+                if (typeof entry === "number") pct = entry;
+                else {
+                  pct = Number(entry.percentage ?? 0);
+                  ads = Number(entry.adCount ?? 0);
+                }
+              }
+              if (!ads) ads = readChannelValue(fallbackCounts, c.aliases);
+              return { ...c, pct, ads };
             });
-            const totalSpend = rows.reduce((s, r) => s + r.spendVal, 0);
-            const dominant = totalSpend > 0 ? rows.find((r) => r.spendVal / totalSpend > 0.6) : null;
+            const dominant = rows.find((r) => r.pct > 60);
             return (
               <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 20 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Channel mix</div>
                 <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 14 }}>Where the budget flows</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {rows.map((r) => {
-                    const pct = totalSpend > 0 ? (r.spendVal / totalSpend) * 100 : 0;
-                    const empty = pct <= 0;
+                    const pct = Math.max(0, Math.min(100, r.pct));
+                    const empty = pct <= 0 && r.ads <= 0;
                     return (
                       <div key={r.key} style={{ display: "grid", gridTemplateColumns: "150px 1fr 56px 70px", alignItems: "center", gap: 12, opacity: empty ? 0.5 : 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, color: "#1C1C1A" }}>
@@ -607,7 +627,7 @@ function AdvertiserPage() {
                           <div style={{ width: mounted ? `${pct}%` : "0%", height: "100%", background: "#C9963A", transition: "width 600ms ease-out" }} />
                         </div>
                         <div style={{ fontSize: 14, fontWeight: 600, color: empty ? "#C4C2BA" : "#1C1C1A", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                          {empty ? "—" : `${pct.toFixed(0)}%`}
+                          {pct > 0 ? `${pct.toFixed(0)}%` : "—"}
                         </div>
                         <div style={{ fontSize: 11, color: empty ? "#C4C2BA" : "#9E9D94", textAlign: "right" }}>
                           {empty ? "No data" : `${r.ads} ad${r.ads === 1 ? "" : "s"}`}
