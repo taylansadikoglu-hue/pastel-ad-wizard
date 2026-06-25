@@ -41,11 +41,11 @@ type SovResp = {
 };
 
 const CATEGORIES = [
-  { key: "Banking", label: "General Banking" },
-  { key: "Auto", label: "Automotive" },
-  { key: "Telco", label: "Telco" },
-  { key: "Health", label: "Health Insurance" },
-  { key: "Retail", label: "Retail" },
+  { key: "Banking", label: "General Banking", slug: "banking" },
+  { key: "Auto", label: "Automotive", slug: "automotive" },
+  { key: "Telco", label: "Telco", slug: "telco" },
+  { key: "Health", label: "Health Insurance", slug: "health_insurance" },
+  { key: "Retail", label: "Retail", slug: "retail" },
 ] as const;
 type Category = typeof CATEGORIES[number]["key"];
 
