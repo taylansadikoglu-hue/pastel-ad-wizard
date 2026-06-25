@@ -455,8 +455,8 @@ function AdvertiserPage() {
               label="Sightings"
               trend={null}
             />
-            <div style={metricCardStyle}>
-              <SpendIndex level={spendLevel(spend?.estimated_monthly_spend ?? 0)} label="Spend signal" />
+            <div style={{ ...metricCardStyle, alignItems: "flex-start" }}>
+              <SpendIndex spend={spend?.estimated_monthly_spend ?? 0} />
             </div>
             <MetricCard
               value={daysRunning.toLocaleString()}
@@ -464,6 +464,7 @@ function AdvertiserPage() {
               trend={war.first_seen ? `Since ${fmtDate(war.first_seen)}` : null}
             />
           </div>
+          <SpendLegend />
 
           {/* C — Channel presence */}
           <Card title="Channel presence">
