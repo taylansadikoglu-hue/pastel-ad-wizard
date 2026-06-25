@@ -901,19 +901,19 @@ function CreativePill({ children }: { children: React.ReactNode }) {
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 500,
         padding: "4px 10px",
-        borderRadius: 999,
-        background: "#F7F6F3",
-        border: "1px solid #EBE9E4",
-        color: "#1C1C1A",
+        borderRadius: 4,
+        background: "#F0EDE8",
+        color: "#6B6B62",
       }}
     >
       {children}
     </span>
   );
 }
+
 
 function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
   const tags = asTags(ad.ai_tags);
