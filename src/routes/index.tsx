@@ -7,9 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "RevenueAd — See where your competitors are spending" },
-      { name: "description", content: "RevenueAd tracks every paid ad across Meta and Google — showing you spend estimates, winning creatives, and where the market opportunity is." },
-      { property: "og:title", content: "RevenueAd — Competitive spend intelligence for Meta & Google" },
+      { title: "RevenuAD Signal — See where your competitors are spending" },
+      { name: "description", content: "RevenuAD Signal tracks every paid ad across Meta and Google — showing you spend estimates, winning creatives, and where the market opportunity is." },
+      { property: "og:title", content: "RevenuAD Signal — Competitive spend intelligence for Meta & Google" },
       { property: "og:description", content: "Spend estimates, longest-running creatives, channel allocation, and one-click PDF briefs for every competitor you track." },
     ],
   }),

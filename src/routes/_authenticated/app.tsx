@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/app")({
   head: () => ({
     meta: [
-      { title: "Workspace — RevenueAd" },
+      { title: "Workspace — RevenuAD Signal" },
       { name: "description", content: "Your competitor ad intelligence workspace." },
     ],
   }),

@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/app/category/$slug")({
   head: () => ({
     meta: [
-      { title: "Category Intelligence — RevenueAd" },
+      { title: "Category Intelligence — RevenuAD Signal" },
       { name: "description", content: "Share of voice and competitive intelligence for an Australian ad category." },
     ],
   }),

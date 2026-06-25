@@ -8,8 +8,8 @@ import { ThemeProvider } from "@/components/adpalette/theme";
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
     meta: [
-      { title: "Reset password — RevenueAd" },
-      { name: "description", content: "Reset the password for your RevenueAd workspace." },
+      { title: "Reset password — RevenuAD Signal" },
+      { name: "description", content: "Reset the password for your RevenuAD Signal workspace." },
     ],
   }),
   component: ForgotPasswordPage,

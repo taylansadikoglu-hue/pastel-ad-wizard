@@ -46,7 +46,7 @@ const ScanReadyEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Section style={brand}>
-          <Text style={brandMark}>RevenueAd</Text>
+          <Text style={brandMark}>RevenuAD Signal</Text>
         </Section>
 
         <Section style={card}>
@@ -92,7 +92,7 @@ const ScanReadyEmail = ({
 
         <Section style={footer}>
           <Text style={footerText}>
-            RevenueAd · Competitive ad intelligence for performance teams
+            RevenuAD Signal · Competitive ad intelligence for performance teams
           </Text>
           <Text style={footerText}>
             <Link href="https://revenuad.com" style={footerLink}>

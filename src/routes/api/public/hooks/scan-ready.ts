@@ -9,7 +9,7 @@ const BodySchema = z.object({
   scan_id: z.union([z.number(), z.string()]).transform((v) => Number(v)),
 })
 
-const FROM_ADDRESS = 'RevenueAd <scans@mail.revenuad.com>'
+const FROM_ADDRESS = 'RevenuAD Signal <scans@mail.revenuad.com>'
 const DASHBOARD_BASE = 'https://revenuad.com/app/advertisers'
 
 function timingSafeEqual(a: string, b: string): boolean {

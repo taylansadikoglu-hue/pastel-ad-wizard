@@ -1868,6 +1868,6 @@ function AdvertisersPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/app/advertisers")({
-  head: () => ({ meta: [{ title: "Brand Intelligence — RevenueAd" }] }),
+  head: () => ({ meta: [{ title: "Brand Intelligence — RevenuAD Signal" }] }),
   component: AdvertisersPage,
 });

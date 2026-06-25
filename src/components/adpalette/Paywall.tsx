@@ -48,7 +48,7 @@ export function Paywall({ email, onSignOut }: { email: string; onSignOut: () => 
           <div className="inline-flex items-center gap-1.5 mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-primary">
             <Lock size={11} /> WORKSPACE LOCKED — PAYMENT REQUIRED
           </div>
-          <h1 className="text-2xl font-bold">Activate your RevenueAd workspace</h1>
+          <h1 className="text-2xl font-bold">Activate your RevenuAD Signal workspace</h1>
           <p className="text-sm text-muted-foreground">
             Signed in as <span className="font-semibold text-ink">{email}</span>. Pick a plan to unlock live competitor scans.
           </p>

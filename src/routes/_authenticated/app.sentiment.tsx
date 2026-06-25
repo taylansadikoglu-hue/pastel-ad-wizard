@@ -229,6 +229,6 @@ function AudienceSignalsPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/app/sentiment")({
-  head: () => ({ meta: [{ title: "Audience Signals — RevenueAd" }] }),
+  head: () => ({ meta: [{ title: "Audience Signals — RevenuAD Signal" }] }),
   component: AudienceSignalsPage,
 });
