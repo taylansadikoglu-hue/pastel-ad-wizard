@@ -260,7 +260,7 @@ function HeroInsight({
     ? `${properCase(mostActive)} is leading the ${categoryLabel} narrative`
     : `${categoryLabel} activity is ${level}`;
   const paragraph = mostActive
-    ? `${properCase(mostActive)} is the most aggressive advertiser this week with the highest sighting velocity.${topTheme ? ` Messaging is anchored on ${topTheme}.` : ""} The rest of the category is reacting, not setting the pace.`
+    ? `${properCase(mostActive)} is the most aggressive advertiser this week with the highest impression velocity.${topTheme ? ` Messaging is anchored on ${topTheme}.` : ""} The rest of the category is reacting, not setting the pace.`
     : `${fmtNum(newToday)} new creatives have entered the market this week. Several brands are quietly shifting positioning — worth a closer read before your next pitch.`;
   const action = mostActive
     ? `Open ${properCase(mostActive)}'s war room and identify the two themes their competitors haven't matched yet.`
@@ -348,7 +348,7 @@ function ThreatsSection({ strongest, emerging, emergingFallback, strategic, topT
       score: Math.min(99, Math.round(40 + Math.min(emerging.increase_pct, 50))),
       demand: fmtNum(emerging.today_sightings), creative: `+${Math.round(emerging.increase_pct)}%`,
       trend: "Rising",
-      insight: `Accelerating fast — sightings up ${Math.round(emerging.increase_pct)}% vs yesterday.`,
+      insight: `Accelerating fast — impressions up ${Math.round(emerging.increase_pct)}% vs yesterday.`,
     });
   } else if (emergingFallback) {
     threats.push({
@@ -471,7 +471,7 @@ function SovSection({ brands, categoryLabel, periodDays }: { brands: SovBrand[];
               <tr style={{ background: "#F7F6F3" }}>
                 <th style={thStyle}>#</th>
                 <th style={thStyle}>Brand</th>
-                <th style={{ ...thStyle, textAlign: "right" }}>Sightings</th>
+                <th style={{ ...thStyle, textAlign: "right" }}>Impressions</th>
                 <th style={{ ...thStyle, textAlign: "right" }}>Ads</th>
                 <th style={{ ...thStyle, textAlign: "right" }}>SOV %</th>
               </tr>

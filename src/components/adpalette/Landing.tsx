@@ -398,7 +398,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               {
                 n: "01",
                 t: "Spend signal, not guesswork",
-                b: "Stop presenting estimates from tools that admit they're guessing. R-AD reads ad frequency, placement patterns and sighting data to give you a directional spend index. Honest. Defensible. Updated daily.",
+                b: "Stop presenting estimates from tools that admit they're guessing. R-AD reads ad frequency, placement patterns and impression data to give you a directional spend index. Honest. Defensible. Updated daily.",
                 visual: (
                   <div>
                     <span style={{ color: "#C9963A", fontSize: 48, letterSpacing: 6 }}>●●●●○</span>
@@ -444,7 +444,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               {
                 n: "03",
                 t: "How long it's been running",
-                b: "The best signal in advertising is duration. An ad running 90+ days is working. R-AD shows first seen, last seen, and sighting count. You'll know what's performing before the client does.",
+                b: "The best signal in advertising is duration. An ad running 90+ days is working. R-AD shows first seen, last seen, and impression count. You'll know what's performing before the client does.",
                 visual: (
                   <div>
                     <div style={{ fontSize: 13, color: "#6B6B62", marginBottom: 8 }}>
