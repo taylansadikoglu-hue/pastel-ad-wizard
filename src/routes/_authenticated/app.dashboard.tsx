@@ -6,6 +6,6 @@ function DashboardPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/app/dashboard")({
-  head: () => ({ meta: [{ title: "Morning Brief — RevenuAD Signal" }] }),
+  head: () => ({ meta: [{ title: "Morning signal — RevenuAD Signal" }] }),
   component: DashboardPage,
 });
