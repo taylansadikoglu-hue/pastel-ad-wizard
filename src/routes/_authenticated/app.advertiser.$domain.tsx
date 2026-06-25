@@ -552,16 +552,16 @@ function AdvertiserPage() {
             <MetricCard
               value={fmtReach(Number(war.reach_frequency?.totalUniqueReach ?? 0))}
               label="Est. reach"
-              trend="Unique Australians"
+              trend="Unique Australians · est."
             />
             <MetricCard
               value={
-                war.reach_frequency?.avgFrequency != null && Number.isFinite(Number(war.reach_frequency.avgFrequency))
-                  ? Number(war.reach_frequency.avgFrequency).toFixed(1) + "×"
+                war.reach_frequency?.avgFrequency != null && Number(war.reach_frequency.avgFrequency) > 0
+                  ? Number(war.reach_frequency.avgFrequency).toFixed(1) + "x"
                   : "—"
               }
               label="Avg. frequency"
-              trend="Times seen per person"
+              trend="Times seen per person · est."
             />
             <div style={{ ...metricCardStyle, alignItems: "flex-start", padding: 18 }}>
               <SpendIndex
