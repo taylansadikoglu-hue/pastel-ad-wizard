@@ -205,7 +205,7 @@ export function MorningBrief() {
             })}
           </div>
 
-          {/* SOV table */}
+          {/* SOV table — rows 1-3 normal, 4+ blurred with upsell overlay */}
           {topSov.length > 0 ? (
             <div
               style={{
@@ -213,6 +213,7 @@ export function MorningBrief() {
                 borderRadius: 10,
                 border: "1px solid #EBE9E4",
                 overflow: "hidden",
+                position: "relative",
               }}
             >
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -226,11 +227,80 @@ export function MorningBrief() {
                   </tr>
                 </thead>
                 <tbody>
-                  {topSov.map((b) => (
+                  {topSov.slice(0, 3).map((b) => (
                     <SovRow key={b.brand} brand={b} />
                   ))}
                 </tbody>
               </table>
+              {topSov.length > 3 && (
+                <div style={{ position: "relative" }}>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: 13,
+                      filter: "blur(4px)",
+                      userSelect: "none",
+                      pointerEvents: "none",
+                      opacity: 0.6,
+                    }}
+                  >
+                    <tbody>
+                      {topSov.slice(3).map((b) => (
+                        <SovRow key={b.brand} brand={b} />
+                      ))}
+                    </tbody>
+                  </table>
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background:
+                        "linear-gradient(to bottom, rgba(247,246,243,0.6), rgba(247,246,243,0.95))",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: 20,
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: "#FFFFFF",
+                        border: "1px solid #EBE9E4",
+                        borderLeft: "3px solid #C9963A",
+                        borderRadius: 10,
+                        padding: "20px 24px",
+                        textAlign: "center",
+                        maxWidth: 380,
+                      }}
+                    >
+                      <Lock size={18} style={{ color: "#C9963A", margin: "0 auto 8px" }} />
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A", marginBottom: 6 }}>
+                        See the full picture.
+                      </div>
+                      <div style={{ fontSize: 13, color: "#6B6B62", lineHeight: 1.5, marginBottom: 14 }}>
+                        You're seeing the top 3. Agency Signal shows all competitors, their spend index, and trend direction.
+                      </div>
+                      <Link
+                        to="/"
+                        hash="pricing"
+                        style={{
+                          display: "inline-block",
+                          background: "#C9963A",
+                          color: "#FFF",
+                          borderRadius: 7,
+                          padding: "8px 18px",
+                          fontSize: 13,
+                          fontWeight: 500,
+                          textDecoration: "none",
+                        }}
+                      >
+                        Upgrade to Agency Signal →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div
@@ -247,69 +317,19 @@ export function MorningBrief() {
               Signal incoming for {category}. R-AD is on it.
             </div>
           )}
+          <SpendLegend />
         </div>
 
-        {/* C — Win conditions */}
-        {winConditions.length > 0 && (
-          <div>
-            <h2 style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 12, letterSpacing: "-0.01em" }}>
-              Win conditions
-            </h2>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                gap: 12,
-              }}
-            >
-              {winConditions.map((w, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: "#FFFFFF",
-                    border: "1px solid #EBE9E4",
-                    borderRadius: 10,
-                    padding: 20,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                  }}
-                >
-                  <span
-                    style={{
-                      alignSelf: "flex-start",
-                      background: "#FDF6E8",
-                      border: "1px solid #E8D5A0",
-                      color: "#A07830",
-                      fontSize: 10,
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                      padding: "2px 10px",
-                      borderRadius: 999,
-                    }}
-                  >
-                    Opportunity
-                  </span>
-                  <div
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: "#1C1C1A",
-                      textTransform: "capitalize",
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {w.gap}
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 400, color: "#6B6B62", lineHeight: 1.5 }}>
-                    {w.why}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* C — This week's signal (replaces Win Conditions) */}
+        <ThisWeeksSignal
+          category={category}
+          mostActive={mostActive}
+          newToday={newToday}
+          topTheme={pulse?.top_theme_today ?? null}
+          topBrand={topSov[0] ?? null}
+          winCondition={winConditions[0] ?? null}
+        />
+
 
         {/* Velocity alerts (kept — purely numeric, no $) */}
         {alerts.length > 0 && (
