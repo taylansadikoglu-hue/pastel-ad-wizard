@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Grid3x3, Layers } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
+import { displayBrand } from "@/utils/brandDisplay";
 
 export const Route = createFileRoute("/_authenticated/app/categories")({
   head: () => ({
