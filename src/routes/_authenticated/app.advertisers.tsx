@@ -141,6 +141,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { ScanStatusPill } from "@/components/adpalette/ScanStatusPill";
+import { SpendIndex } from "@/components/adpalette/SpendIndex";
+import { spendLevel, displayBrand } from "@/utils/brandDisplay";
 
 const MAX_BRANDS = 7;
 const COUNTRY_OPTIONS = ["Australia", "United States", "United Kingdom", "Canada"] as const;
@@ -241,14 +243,15 @@ function BrandDNAGrid() {
                     params={{ domain: r.brand }}
                     className="font-bold truncate hover:underline underline-offset-2"
                   >
-                    {r.brand}
+                    {displayBrand(r.brand)}
                   </Link>
                 ) : (
                   <div className="font-bold truncate">—</div>
                 )}
-                <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] bg-secondary">
-                  {Number(r.creative_volume) || 0} creatives
-                </span>
+                <SpendIndex level={spendLevel(Number(r.creative_volume) * 1000)} />
+              </div>
+              <div className="mb-2 mono text-[10px] text-muted-foreground uppercase tracking-wide">
+                {Number(r.creative_volume) || 0} creatives
               </div>
               {category && (
                 <div className="mb-2">
@@ -295,38 +298,6 @@ function BrandDNAGrid() {
   );
 }
 
-
-export function SpendIndex({ level }: { level: number }) {
-  const lvl = Math.max(0, Math.min(5, Math.round(level)));
-  return (
-    <div>
-      <div style={{ letterSpacing: "3px", color: "#C9963A", fontSize: 16, lineHeight: 1 }}>
-        {"●".repeat(lvl)}
-        <span style={{ color: "#E8E5DE" }}>{"○".repeat(5 - lvl)}</span>
-      </div>
-      <div
-        style={{
-          fontSize: 10,
-          color: "#9E9D94",
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-          marginTop: 2,
-        }}
-      >
-        Spend index
-      </div>
-    </div>
-  );
-}
-
-export function spendLevel(spend: number | null | undefined): number {
-  const n = Number(spend);
-  if (!Number.isFinite(n) || n <= 0) return 1;
-  if (n < 1_000) return 2;
-  if (n < 10_000) return 3;
-  if (n < 100_000) return 4;
-  return 5;
-}
 
 function BrandMetricBlocks({ row }: { row: Row }) {
   const spend = row.estimated_monthly_spend;
@@ -444,8 +415,7 @@ function normalizeDomain(raw: string | null | undefined): string {
 }
 
 function brandFromDomain(domain: string) {
-  const root = normalizeDomain(domain).split(/[./]/)[0] ?? domain;
-  return root.charAt(0).toUpperCase() + root.slice(1);
+  return displayBrand(domain);
 }
 
 function normalizeChannel(c: string): "Meta" | "Google" {
