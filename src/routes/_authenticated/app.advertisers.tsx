@@ -296,9 +296,6 @@ function BrandDNAGrid() {
 }
 
 
-import { SpendIndex } from "@/components/adpalette/SpendIndex";
-import { spendLevel, displayBrand } from "@/utils/brandDisplay";
-
 function BrandMetricBlocks({ row }: { row: Row }) {
   const spend = row.estimated_monthly_spend;
   const kw = row.total_paid_keywords;
