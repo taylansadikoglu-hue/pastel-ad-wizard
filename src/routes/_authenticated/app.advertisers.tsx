@@ -1210,13 +1210,11 @@ function AdvertisersPage() {
         >
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 mono text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground">
-              <TrendingUp size={12} className="text-primary" /> Estimated Monthly Spend
+              <TrendingUp size={12} className="text-primary" /> Spend Intensity
             </div>
-            <div className="text-[28px] font-bold tracking-tight leading-none text-ink tabular-nums">
-              {AUD.format(Math.round(ribbon.spend))}
-            </div>
+            <SpendIndex level={spendLevel(ribbon.spend)} />
             <div className="text-[11px] text-muted-foreground">
-              Aggregated en-AU search acquisition envelope across {activeAdvertiser === "__all" ? `${visibleRows.length} tracked` : "this"} advertiser{activeAdvertiser === "__all" && visibleRows.length === 1 ? "" : "s"}.
+              R-AD's index of paid Australian visibility across {activeAdvertiser === "__all" ? `${visibleRows.length} tracked` : "this"} advertiser{activeAdvertiser === "__all" && visibleRows.length === 1 ? "" : "s"}.
             </div>
           </div>
           <div className="flex flex-col gap-2 md:border-l md:border-ink/10 md:pl-5">
