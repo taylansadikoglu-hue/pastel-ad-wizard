@@ -1268,7 +1268,7 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
         <div style={{ fontSize: 12, color: "#6B6B62" }}>
           {ad.first_seen ? formatTimeAgo(ad.first_seen) : "—"}
           {ad.last_seen ? ` → ${formatTimeAgo(ad.last_seen)}` : ""}
-          {sightings > 0 && ` · ${sightings.toLocaleString()} sightings`}
+          {sightings > 0 && ` · ${sightings.toLocaleString()} impressions`}
         </div>
       </div>
       {themes.length > 0 && (
