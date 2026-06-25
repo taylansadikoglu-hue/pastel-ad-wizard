@@ -249,6 +249,18 @@ function CategoryDetailPage() {
               detail={dominantTheme ? `${dominantTheme[1]} brands using it` : "Signal incoming"}
               tone="bg-violet-50 border-violet-300"
             />
+            <InsightCard
+              label="Contested ground"
+              value={contestedTheme ? contestedTheme[0] : "—"}
+              detail={contestedTheme ? `${contestedTheme[1]} brands fighting for it` : "Signal incoming"}
+              tone="bg-amber-50 border-amber-300"
+            />
+            <InsightCard
+              label="Whitespace"
+              value={whitespaceTheme ? whitespaceTheme[0] : "—"}
+              detail={whitespaceTheme ? `Only ${whitespaceTheme[1]} brand uses this` : "Not detected"}
+              tone="bg-emerald-50 border-emerald-300"
+            />
           </div>
 
           {/* CTA BANNER */}
