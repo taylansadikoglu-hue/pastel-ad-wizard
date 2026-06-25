@@ -195,7 +195,7 @@ function CategoryDetailPage() {
                             params={{ domain: r.brand }}
                             className="font-semibold hover:underline truncate"
                           >
-                            {r.brand}
+                            {displayBrand(r.brand)}
                           </Link>
                         </>
                       ) : (
