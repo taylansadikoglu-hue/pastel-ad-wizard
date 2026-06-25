@@ -1118,11 +1118,22 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
     const t = tags.themes;
     return Array.isArray(t) ? (t as string[]).slice(0, 2) : [];
   })();
-  const channel = (ad.channel ?? (tags.channel as string | undefined) ?? "").trim();
+  const channel = (ad.channel_platform ?? ad.channel ?? (tags.channel as string | undefined) ?? "").trim();
   const channelLow = channel.toLowerCase();
   const isYouTube = /youtube|video/.test(channelLow);
   const isDisplay = /display|programmatic|banner/.test(channelLow);
   const channelInitial = (channel || brand).charAt(0).toUpperCase();
+  // Channel-coloured placeholder (never grey, never black) — match Channel mix palette.
+  const placeholderColour = (() => {
+    if (/youtube/.test(channelLow)) return "#FF0000";
+    if (/search/.test(channelLow)) return "#4285F4";
+    if (/display/.test(channelLow)) return "#C9963A";
+    if (/meta|facebook|instagram/.test(channelLow)) return "#1877F2";
+    if (/tiktok/.test(channelLow)) return "#25F4EE";
+    if (/linkedin/.test(channelLow)) return "#0A66C2";
+    if (/programmatic/.test(channelLow)) return "#6B6B62";
+    return "#C9963A";
+  })();
 
   // Thumbnail fallback hierarchy: thumbnail_url → YouTube derived → image_url (proxied)
   let imgSrc: string | null = ad.thumbnail_url ?? null;
