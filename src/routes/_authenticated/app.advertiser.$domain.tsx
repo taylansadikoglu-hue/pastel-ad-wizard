@@ -341,11 +341,13 @@ function AdvertiserPage() {
   const firstAd = war?.recent_ads?.[0];
   const firstTags = asTags(firstAd?.ai_tags);
   const themes: string[] = (() => {
+    // FIX 3: war.top_themes is up to 40 items — surface first 8.
     const fromWar = (war?.top_themes ?? []).map((t) => t.theme).filter(Boolean);
-    if (fromWar.length) return fromWar.slice(0, 6);
+    if (fromWar.length) return fromWar.slice(0, 8);
     const t = firstTags.themes;
-    return Array.isArray(t) ? (t as string[]).slice(0, 6) : [];
+    return Array.isArray(t) ? (t as string[]).slice(0, 8) : [];
   })();
+
   const primaryCta = (firstTags.call_to_action as string | undefined) ?? "—";
   const sentimentRaw = (firstTags.sentiment as string | undefined) ?? "";
   const sentimentColor =
