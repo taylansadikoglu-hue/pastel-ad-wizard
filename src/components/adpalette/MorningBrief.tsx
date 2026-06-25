@@ -180,7 +180,8 @@ export function MorningBrief() {
         {/* SECTION 2 — THREATS */}
         <ThreatsSection
           strongest={strongest}
-          emerging={emerging}
+          emerging={emergingAlert}
+          emergingFallback={emergingFallback}
           strategic={strategic}
           topTheme={topTheme}
           categoryLabel={categoryLabel}
