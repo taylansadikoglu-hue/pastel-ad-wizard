@@ -847,6 +847,27 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function CreativePill({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: 11,
+        fontWeight: 500,
+        padding: "4px 10px",
+        borderRadius: 999,
+        background: "#F7F6F3",
+        border: "1px solid #EBE9E4",
+        color: "#1C1C1A",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
   const tags = asTags(ad.ai_tags);
   const themes = (() => {
@@ -854,9 +875,23 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
     return Array.isArray(t) ? (t as string[]).slice(0, 2) : [];
   })();
   const channel = (ad.channel ?? (tags.channel as string | undefined) ?? "").trim();
+  const channelLow = channel.toLowerCase();
+  const isYouTube = /youtube|video/.test(channelLow);
+  const isDisplay = /display|programmatic|banner/.test(channelLow);
   const channelInitial = (channel || brand).charAt(0).toUpperCase();
-  const img = ad.image_url ?? ad.thumbnail_url ?? null;
+
+  // Thumbnail fallback hierarchy: thumbnail_url → YouTube derived → image_url (proxied)
+  let imgSrc: string | null = ad.thumbnail_url ?? null;
+  if (!imgSrc && ad.video_url) {
+    const id = youtubeId(ad.video_url);
+    if (id) imgSrc = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
+  }
+  if (!imgSrc && ad.image_url) imgSrc = proxyImage(ad.image_url);
+
   const sightings = Number(ad.sighting_count ?? 0);
+  const openVideo = () => {
+    if (ad.video_url) window.open(ad.video_url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div
@@ -868,38 +903,77 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
         borderBottom: "1px solid #F0EDE8",
       }}
     >
-      {img ? (
-        <img
-          src={img}
-          alt=""
-          style={{ width: 48, height: 48, borderRadius: 6, objectFit: "cover", flexShrink: 0, background: "#F0EDE8" }}
-          onError={(e) => {
-            const t = e.currentTarget;
-            t.style.display = "none";
-            const fb = t.nextSibling as HTMLElement | null;
-            if (fb) fb.style.display = "flex";
-          }}
-        />
-      ) : null}
       <div
         style={{
-          display: img ? "none" : "flex",
-          width: 48,
-          height: 48,
+          position: "relative",
+          width: 56,
+          height: 56,
           borderRadius: 6,
-          background: "#F0EDE8",
-          color: "#9E9D94",
-          fontSize: 14,
-          fontWeight: 600,
-          alignItems: "center",
-          justifyContent: "center",
           flexShrink: 0,
+          cursor: isYouTube && ad.video_url ? "pointer" : "default",
         }}
+        onClick={isYouTube ? openVideo : undefined}
       >
-        {channelInitial}
+        {imgSrc ? (
+          <img
+            src={imgSrc}
+            alt=""
+            style={{ width: "100%", height: "100%", borderRadius: 6, objectFit: "cover", background: "#F0EDE8", display: "block" }}
+            onError={(e) => {
+              const t = e.currentTarget;
+              t.style.display = "none";
+              const fb = t.nextSibling as HTMLElement | null;
+              if (fb) fb.style.display = "flex";
+            }}
+          />
+        ) : null}
+        <div
+          style={{
+            display: imgSrc ? "none" : "flex",
+            position: "absolute",
+            inset: 0,
+            borderRadius: 6,
+            background: "#F0EDE8",
+            color: "#9E9D94",
+            fontSize: 14,
+            fontWeight: 600,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {channelInitial}
+        </div>
+        {isYouTube && ad.video_url && imgSrc && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              pointerEvents: "none",
+            }}
+          >
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                background: "rgba(0,0,0,0.5)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#FFF",
+                fontSize: 10,
+              }}
+            >
+              ▶
+            </div>
+          </div>
+        )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 2 }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 2, flexWrap: "wrap" }}>
           {ad.ad_format && (
             <span
               style={{
@@ -914,6 +988,22 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
               }}
             >
               {ad.ad_format}
+            </span>
+          )}
+          {isDisplay && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "#A07830",
+                background: "#FDF6E8",
+                padding: "2px 6px",
+                borderRadius: 4,
+              }}
+            >
+              Display
             </span>
           )}
           {channel && (
