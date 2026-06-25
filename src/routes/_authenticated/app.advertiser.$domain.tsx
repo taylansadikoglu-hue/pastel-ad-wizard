@@ -362,24 +362,23 @@ function AdvertiserPage() {
     };
   }, [war?.recent_ads]);
 
-  // Channel filter for recent ads
+  // Channel filter for recent ads — uses ad.channel_platform per spec.
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const filteredAds = useMemo(() => {
     const ads = war?.recent_ads ?? [];
     if (channelFilter === "all") return ads;
+    const aliases = CHANNEL_TAB_MAP[channelFilter] ?? [];
     return ads.filter((ad) => {
-      const ch = (ad.channel ?? "").toLowerCase();
-      const tags = asTags(ad.ai_tags);
-      const tagCh = String(tags.channel ?? "").toLowerCase();
-      const all = `${ch} ${tagCh}`;
-      if (channelFilter === "youtube") return /youtube|video/.test(all);
-      if (channelFilter === "search") return /search|google/.test(all) && !/youtube/.test(all);
-      if (channelFilter === "display") return /display|image|banner/.test(all);
-      if (channelFilter === "programmatic") return /programmatic|dsp/.test(all);
-      if (channelFilter === "meta") return /meta|facebook|instagram/.test(all);
-      return true;
+      const platform = String(ad.channel_platform ?? ad.channel ?? "").toLowerCase();
+      const tagCh = String(asTags(ad.ai_tags).channel ?? "").toLowerCase();
+      const hay = `${platform} ${tagCh}`;
+      return aliases.some((v) => hay.includes(v.toLowerCase()));
     });
   }, [war?.recent_ads, channelFilter]);
+
+  // Mount flag for spend-bar animation.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setMounted(true), 50); return () => clearTimeout(t); }, [war]);
 
   // Debug: log API responses to see what's coming back
   useEffect(() => {
