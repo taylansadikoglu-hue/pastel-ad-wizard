@@ -14,7 +14,6 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiBarbsRouteImport } from './routes/api/barbs'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSentimentRouteImport } from './routes/_authenticated/app.sentiment'
@@ -52,11 +51,6 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiBarbsRoute = ApiBarbsRouteImport.update({
-  id: '/api/barbs',
-  path: '/api/barbs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
@@ -145,7 +139,6 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
-  '/api/barbs': typeof ApiBarbsRoute
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
@@ -166,7 +159,6 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
-  '/api/barbs': typeof ApiBarbsRoute
   '/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
@@ -189,7 +181,6 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
-  '/api/barbs': typeof ApiBarbsRoute
   '/_authenticated/app/advertisers': typeof AuthenticatedAppAdvertisersRoute
   '/_authenticated/app/advisor': typeof AuthenticatedAppAdvisorRoute
   '/_authenticated/app/benchmarks': typeof AuthenticatedAppBenchmarksRoute
@@ -212,7 +203,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/reset-password'
     | '/app'
-    | '/api/barbs'
     | '/app/advertisers'
     | '/app/advisor'
     | '/app/benchmarks'
@@ -233,7 +223,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/reset-password'
     | '/app'
-    | '/api/barbs'
     | '/app/advertisers'
     | '/app/advisor'
     | '/app/benchmarks'
@@ -255,7 +244,6 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/reset-password'
     | '/_authenticated/app'
-    | '/api/barbs'
     | '/_authenticated/app/advertisers'
     | '/_authenticated/app/advisor'
     | '/_authenticated/app/benchmarks'
@@ -277,7 +265,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  ApiBarbsRoute: typeof ApiBarbsRoute
   ApiPublicHooksScanReadyRoute: typeof ApiPublicHooksScanReadyRoute
 }
 
@@ -316,13 +303,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/barbs': {
-      id: '/api/barbs'
-      path: '/api/barbs'
-      fullPath: '/api/barbs'
-      preLoaderRoute: typeof ApiBarbsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app': {
@@ -476,7 +456,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  ApiBarbsRoute: ApiBarbsRoute,
   ApiPublicHooksScanReadyRoute: ApiPublicHooksScanReadyRoute,
 }
 export const routeTree = rootRouteImport
