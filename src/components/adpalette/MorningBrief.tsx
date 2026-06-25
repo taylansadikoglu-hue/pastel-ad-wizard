@@ -104,11 +104,16 @@ export function MorningBrief() {
     setLoading(true);
     const cat = CATEGORIES.find((c) => c.key === category)!;
     const slug = cat.slug;
+    const briefUrl = `${API_BASE}/api/brief/${slug}`;
+    const pulseUrl = `${API_BASE}/api/pulse?category=${slug}`;
+    const sovUrl = `${API_BASE}/api/intelligence/sov-pro/${slug}`;
+    // eslint-disable-next-line no-console
+    console.log("[MorningBrief] category=", category, "slug=", slug, "brief=", briefUrl);
     (async () => {
       const [p, b, s] = await Promise.all([
-        safeJson<PulseResp>(`${API_BASE}/api/pulse?category=${slug}`),
-        safeJson<BriefResp>(`${API_BASE}/api/brief/${slug}`),
-        safeJson<SovResp>(`${API_BASE}/api/intelligence/sov-pro/${slug}`),
+        safeJson<PulseResp>(pulseUrl),
+        safeJson<BriefResp>(briefUrl),
+        safeJson<SovResp>(sovUrl),
       ]);
       if (!alive) return;
       setPulse(p); setBrief(b); setSov(s); setLoading(false);
