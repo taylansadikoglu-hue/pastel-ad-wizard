@@ -610,15 +610,15 @@ function AdvertiserPage() {
                   <CreativePill>
                     <span
                       style={{
-                        width: 12,
-                        height: 12,
-                        borderRadius: 3,
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
                         background: creativeAnalysis.colour,
                         border: "1px solid rgba(0,0,0,0.1)",
                         display: "inline-block",
                       }}
                     />
-                    Primary colour
+                    <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.colour}</span>
                   </CreativePill>
                 )}
                 {creativeAnalysis.emotion && (
@@ -626,50 +626,72 @@ function AdvertiserPage() {
                     <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.emotion}</span>
                   </CreativePill>
                 )}
-                {creativeAnalysis.hasPeople !== null && (
-                  <CreativePill>People: {creativeAnalysis.hasPeople ? "Yes" : "No"}</CreativePill>
-                )}
-                {creativeAnalysis.hasLogo !== null && (
-                  <CreativePill>Logo: {creativeAnalysis.hasLogo ? "Yes" : "No"}</CreativePill>
-                )}
+                {(() => {
+                  const fmt = (firstAd?.ad_format ?? "").trim();
+                  return fmt ? <CreativePill><span style={{ textTransform: "capitalize" }}>{fmt}</span></CreativePill> : null;
+                })()}
                 {creativeAnalysis.avgDuration && (
                   <CreativePill>~{creativeAnalysis.avgDuration}s avg</CreativePill>
                 )}
-                {!creativeAnalysis.colour && !creativeAnalysis.emotion && creativeAnalysis.hasPeople === null && (
+                {!creativeAnalysis.colour && !creativeAnalysis.emotion && !firstAd?.ad_format && (
                   <span style={{ fontSize: 12, color: "#9E9D94" }}>Signal incoming</span>
                 )}
               </div>
             </div>
           </Card>
 
-          {/* E — Gap callout */}
-          {war.gap || war.insight ? (
-            <div
-              style={{
-                background: "#FDF6E8",
-                border: "1px solid #E8D5A0",
-                borderLeft: "3px solid #C9963A",
-                borderRadius: 8,
-                padding: "16px 20px",
-              }}
-            >
+          {/* E — Opportunity */}
+          {(() => {
+            const inactive = channelData.filter((c) => !c.active);
+            const top = themes[0];
+            const second = themes[1];
+            const audienceLabel = demographics[0]?.label ?? "Their core audience";
+            let body: string;
+            if (inactive.length > 0) {
+              const ch = inactive[0].label;
+              body = `${brand} has no presence on ${ch}. ${audienceLabel.replace(/^./, (s) => s.toUpperCase())} is uncontested. First mover wins here.`;
+            } else if (top && second) {
+              body = `${brand} owns ${top} in ${category}. The gap is ${second} — only a handful of competitors use it.`;
+            } else if (top) {
+              body = `${brand} owns ${top} in ${category}. Find the second theme nobody else has claimed and run it.`;
+            } else {
+              body = war.gap ?? war.insight ?? `${brand}'s positioning is still forming. Watch for the first repeated theme to set the angle.`;
+            }
+            return (
               <div
                 style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "#A07830",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginBottom: 8,
+                  background: "#FDF6E8",
+                  border: "1px solid #E8D5A0",
+                  borderLeft: "3px solid #C9963A",
+                  borderRadius: 8,
+                  padding: "18px 22px",
                 }}
               >
-                Opportunity detected
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: "#A07830",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.12em",
+                    marginBottom: 8,
+                  }}
+                >
+                  Opportunity detected
+                </div>
+                <div style={{ fontSize: 16, color: "#1C1C1A", lineHeight: 1.6, fontWeight: 400 }}>
+                  {body}
+                </div>
+                <Link
+                  to="/app/categories"
+                  style={{ fontSize: 13, color: "#C9963A", fontWeight: 500, textDecoration: "none", display: "inline-block", marginTop: 10 }}
+                >
+                  Explore gap analysis →
+                </Link>
               </div>
-              <div style={{ fontSize: 15, color: "#1C1C1A", lineHeight: 1.5 }}>
-                {war.gap ?? war.insight}
-              </div>
-            </div>
-          ) : null}
+            );
+          })()}
+
 
           {/* F — Recent ads */}
           <Card title="Recent ads">
