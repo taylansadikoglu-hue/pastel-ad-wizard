@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ArrowUp, ArrowDown, Lock, CheckCircle2, Sparkles } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
+import { SpendIndex } from "@/components/adpalette/SpendIndex";
+import { displayBrand, spendLevel } from "@/utils/brandDisplay";
 
 export const Route = createFileRoute("/_authenticated/app/category/$slug")({
   head: () => ({
