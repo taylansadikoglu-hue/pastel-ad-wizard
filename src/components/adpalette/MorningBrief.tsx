@@ -569,11 +569,21 @@ function WhitespaceSection({ winConditions, categoryLabel }: {
           const statusStyle = status === "Emerging"
             ? { bg: "#F0F9F4", color: "#2D7D46" }
             : { bg: "#F0EDE8", color: "#9E9D94" };
-          const body = n === 0
-            ? `No brand in ${categoryLabel} is running this messaging — unclaimed.`
-            : n === 1
-              ? `Only one brand owns this in ${categoryLabel}. Room to compete.`
-              : `${n} brands using it in ${categoryLabel}.`;
+          const templates = [
+            (theme: string, count: number) => count === 0
+              ? `${theme} is uncontested in ${categoryLabel}. Your client could own this angle.`
+              : `${theme} is underleveraged here. Your client could own this angle.`,
+            (theme: string, count: number) => count === 0
+              ? `No brand in ${categoryLabel} is using ${theme}. Unclaimed territory.`
+              : `Only ${count} brand${count === 1 ? "" : "s"} using ${theme} in ${categoryLabel}. Unclaimed territory.`,
+            (theme: string, count: number) => count === 0
+              ? `${theme} sits open in ${categoryLabel}. First mover sets the price of entry.`
+              : `${theme} is thinly contested in ${categoryLabel} — ${count} brand${count === 1 ? "" : "s"} only.`,
+            (theme: string, count: number) => count === 0
+              ? `Nobody owns ${theme} in ${categoryLabel} yet. Build the position before competitors notice.`
+              : `${count} brand${count === 1 ? "" : "s"} touch ${theme} in ${categoryLabel}. Room to lead, not follow.`,
+          ];
+          const body = templates[i % templates.length](w.gap, n);
           return (
             <div key={i} style={{
               background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10,
