@@ -363,7 +363,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             <span className="mono text-[11px] font-bold">R-AD</span>
           </div>
           <div>
-            <div className="font-bold leading-tight">RevenueAd</div>
+            <div className="font-bold leading-tight">RevenuAD Signal</div>
             <div className="mono text-[10px] text-muted-foreground">workspace</div>
           </div>
         </div>
@@ -996,7 +996,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               </div>
               <h2 className="text-2xl font-bold leading-tight">Unlock 24-Month Historical Playbook</h2>
               <p className="text-sm leading-relaxed">
-                Activate the RevenueAd Backtrack Engine. Our system will query cross-channel ad network archives to pull, compile, and future-save every advertising placement this brand has published past and present across Search, Video, and Programmatic networks.
+                Activate the RevenuAD Signal Backtrack Engine. Our system will query cross-channel ad network archives to pull, compile, and future-save every advertising placement this brand has published past and present across Search, Video, and Programmatic networks.
               </p>
               <div className="card-flat-sm p-3 grid grid-cols-3 gap-2 mono text-[10px] uppercase font-bold text-center bg-paper">
                 <div>Search archives</div>
@@ -1129,11 +1129,11 @@ function aiReply(q: string, visible: Competitor[]): string {
 }
 
 const NAV_ITEMS = [
-  { icon: Home, label: "Morning Brief", href: "/app/dashboard" },
+  { icon: Home, label: "Morning signal", href: "/app/dashboard" },
   { icon: Target, label: "Advertisers", href: "/app/advertisers" },
   { icon: Grid3x3, label: "Categories", href: "/app/categories" },
   { icon: Radio, label: "My Clients", href: "/app/clients" },
-  { icon: BarChart3, label: "Market Intel", href: "/app/pcr" },
+  { icon: BarChart3, label: "Signal", href: "/app/pcr" },
 ];
 
 export function SidebarNav() {

@@ -1,4 +1,4 @@
-// Base URL for the RevenueAd math engine.
+// Base URL for the RevenuAD Signal math engine.
 // Prefers VITE_ENGINE_URL; falls back to the direct IP while DNS propagates.
 export const ENGINE_URL: string =
   (import.meta.env.VITE_ENGINE_URL as string | undefined) ?? "https://api.revenuad.com:3001";

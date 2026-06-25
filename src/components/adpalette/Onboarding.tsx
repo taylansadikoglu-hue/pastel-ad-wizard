@@ -106,7 +106,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
             <div className="px-1.5 h-7 border-2 border-ink rounded-[4px] bg-primary grid place-items-center">
               <span className="mono text-[10px] font-bold">R-AD</span>
             </div>
-            <span className="font-bold tracking-tight">RevenueAd</span>
+            <span className="font-bold tracking-tight">RevenuAD Signal</span>
             <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px] ml-1">v2.6</span>
           </div>
           <button onClick={toggle} className="btn-flat">
@@ -170,7 +170,7 @@ function StepSignup({ data, setData }: any) {
       <div>
         <h1 className="text-3xl font-bold">Create your operator account</h1>
         <p className="text-sm text-muted-foreground mt-2">
-          RevenueAd helps agencies understand who is winning, why they're winning, and what to do next.
+          RevenuAD Signal helps agencies understand who is winning, why they're winning, and what to do next.
         </p>
         <ul className="mt-6 space-y-2 text-sm">
           {["Daily creative indexing across 14 channels", "Continuous video hook inspiration loop", "Auto-generated pitch decks"].map((t) => (
@@ -234,7 +234,7 @@ function StepAdvertisers({ data, setData }: any) {
       <div className="card-flat-sm p-3 bg-primary">
         <div className="mono text-[10px] font-bold uppercase">★ Master Brand Fingerprint</div>
         <p className="text-xs mt-1 leading-snug">
-          Each domain you enter below becomes the <span className="font-bold">master fingerprint</span> RevenueAd uses to track every cross-channel ad placement and analyse audience conversation signals around that brand. One root domain = one indexed advertiser.
+          Each domain you enter below becomes the <span className="font-bold">master fingerprint</span> RevenuAD Signal uses to track every cross-channel ad placement and analyse audience conversation signals around that brand. One root domain = one indexed advertiser.
         </p>
       </div>
       {[0, 1, 2].map((i) => (

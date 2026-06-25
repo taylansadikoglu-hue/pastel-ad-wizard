@@ -1197,6 +1197,6 @@ function RecentCard({ ad, brand }: { ad: RecentAd; brand: string }) {
 }
 
 export const Route = createFileRoute("/_authenticated/app/advertiser/$domain")({
-  head: () => ({ meta: [{ title: "Advertiser War Room — RevenueAd" }] }),
+  head: () => ({ meta: [{ title: "Advertiser War Room — RevenuAD Signal" }] }),
   component: AdvertiserPage,
 });

@@ -344,6 +344,6 @@ function MarketIntelligencePage() {
 }
 
 export const Route = createFileRoute("/_authenticated/app/pcr")({
-  head: () => ({ meta: [{ title: "Market Intelligence — RevenueAd" }] }),
+  head: () => ({ meta: [{ title: "Market Intelligence — RevenuAD Signal" }] }),
   component: MarketIntelligencePage,
 });

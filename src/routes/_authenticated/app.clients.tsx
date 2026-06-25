@@ -110,6 +110,6 @@ function ClientsPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/app/clients")({
-  head: () => ({ meta: [{ title: "My Clients — RevenueAd" }] }),
+  head: () => ({ meta: [{ title: "My Clients — RevenuAD Signal" }] }),
   component: ClientsPage,
 });

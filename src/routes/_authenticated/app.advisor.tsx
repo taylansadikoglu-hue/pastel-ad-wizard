@@ -251,6 +251,6 @@ function StrategicAdvisorPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/app/advisor")({
-  head: () => ({ meta: [{ title: "Strategic Advisor — RevenueAd" }] }),
+  head: () => ({ meta: [{ title: "Strategic Advisor — RevenuAD Signal" }] }),
   component: StrategicAdvisorPage,
 });
