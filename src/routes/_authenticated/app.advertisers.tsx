@@ -141,6 +141,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { ScanStatusPill } from "@/components/adpalette/ScanStatusPill";
+import { SpendIndex } from "@/components/adpalette/SpendIndex";
+import { spendLevel, displayBrand } from "@/utils/brandDisplay";
 
 const MAX_BRANDS = 7;
 const COUNTRY_OPTIONS = ["Australia", "United States", "United Kingdom", "Canada"] as const;
