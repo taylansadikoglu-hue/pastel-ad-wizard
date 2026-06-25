@@ -565,6 +565,56 @@ function AdvertiserPage() {
                 </Field>
               </div>
             </div>
+
+            {/* Creative analysis */}
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #F0EDE8" }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "#9E9D94",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  marginBottom: 10,
+                }}
+              >
+                AI creative read
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {creativeAnalysis.colour && (
+                  <CreativePill>
+                    <span
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: 3,
+                        background: creativeAnalysis.colour,
+                        border: "1px solid rgba(0,0,0,0.1)",
+                        display: "inline-block",
+                      }}
+                    />
+                    Primary colour
+                  </CreativePill>
+                )}
+                {creativeAnalysis.emotion && (
+                  <CreativePill>
+                    <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.emotion}</span>
+                  </CreativePill>
+                )}
+                {creativeAnalysis.hasPeople !== null && (
+                  <CreativePill>People: {creativeAnalysis.hasPeople ? "Yes" : "No"}</CreativePill>
+                )}
+                {creativeAnalysis.hasLogo !== null && (
+                  <CreativePill>Logo: {creativeAnalysis.hasLogo ? "Yes" : "No"}</CreativePill>
+                )}
+                {creativeAnalysis.avgDuration && (
+                  <CreativePill>~{creativeAnalysis.avgDuration}s avg</CreativePill>
+                )}
+                {!creativeAnalysis.colour && !creativeAnalysis.emotion && creativeAnalysis.hasPeople === null && (
+                  <span style={{ fontSize: 12, color: "#9E9D94" }}>Signal incoming</span>
+                )}
+              </div>
+            </div>
           </Card>
 
           {/* E — Gap callout */}
