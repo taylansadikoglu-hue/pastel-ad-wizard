@@ -168,6 +168,43 @@ export function DemoFeedback() {
           )}
         </div>
       )}
+      <div
+        style={{
+          background: "#FFFFFF",
+          border: "1px solid #E8D5A0",
+          borderLeft: "3px solid #C9963A",
+          borderRadius: 8,
+          padding: "10px 14px",
+          fontSize: 12,
+          color: "#1C1C1A",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          maxWidth: 320,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+        }}
+      >
+        <div style={{ flex: 1, lineHeight: 1.4 }}>
+          <div style={{ fontWeight: 600 }}>You're on R-AD Demo.</div>
+          <div style={{ color: "#6B6B62" }}>Ready for the real thing?</div>
+        </div>
+        <a
+          href="/auth"
+          style={{
+            background: "#C9963A",
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: 6,
+            padding: "6px 10px",
+            fontSize: 11,
+            fontWeight: 600,
+            textDecoration: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Start free trial →
+        </a>
+      </div>
       <button
         onClick={() => setOpen((o) => !o)}
         style={{
