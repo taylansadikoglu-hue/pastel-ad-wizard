@@ -13,7 +13,7 @@ import {
   Linkedin,
 } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
-import { SpendIndex } from "@/components/adpalette/SpendIndex";
+import { SpendIndex, SpendLegend } from "@/components/adpalette/SpendIndex";
 import { displayBrand, spendLevel } from "@/utils/brandDisplay";
 import { formatTimeAgo } from "@/utils/timeAgo";
 
