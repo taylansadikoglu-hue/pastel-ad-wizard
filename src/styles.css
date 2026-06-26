@@ -4,6 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant pastel (&:is(.pastel *));
+@custom-variant dark-dense (&:is(.dark-dense *));
 
 @theme inline {
   --radius-sm: 4px;
@@ -42,8 +43,11 @@
   --color-gold-border: var(--accent-gold-border);
   --color-success: var(--success);
   --color-danger: var(--danger);
-  --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-dense-bg: var(--dense-bg);
+  --color-dense-surface: var(--dense-surface);
+  --color-dense-border: var(--dense-border);
 }
 
 /* ===== LINEN design system =====
@@ -316,7 +320,7 @@
     padding: 0 24px;
   }
 
-  .mono { font-family: var(--font-sans); letter-spacing: 0; }
+  .mono { font-family: var(--font-mono); letter-spacing: 0.02em; }
 
   /* Pulsing live dot */
   @keyframes pulse-gold {
@@ -327,5 +331,93 @@
     display: inline-block; width: 8px; height: 8px; border-radius: 50%;
     background-color: var(--accent-gold);
     animation: pulse-gold 2s ease-in-out infinite;
+  }
+
+  /* ===== Terminal dark-dense variant (Bloomberg cockpit) ===== */
+  .dark-dense {
+    --dense-bg: #0a0a0a;
+    --dense-surface: #171717;
+    --dense-surface-raised: #1c1c1c;
+    --dense-border: #262626;
+    --dense-text: #e5e5e5;
+    --dense-muted: #737373;
+    --dense-accent: #c9963a;
+    background-color: var(--dense-bg);
+    color: var(--dense-text);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .dark-dense .mono,
+  .dark-dense .font-mono {
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+  }
+
+  .dark-dense .card-dense {
+    background-color: var(--dense-surface);
+    border: 1px solid var(--dense-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+
+  .dark-dense .card-dense-sm {
+    background-color: var(--dense-surface);
+    border: 1px solid var(--dense-border);
+    border-radius: 4px;
+    padding: 8px 10px;
+  }
+
+  .dark-dense .dense-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--dense-muted);
+  }
+
+  .dark-dense .dense-meta {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: var(--dense-muted);
+  }
+
+  .dark-dense .dense-empty {
+    background-color: #171717;
+    border: 1px solid #262626;
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: #a3a3a3;
+  }
+
+  .dark-dense .dense-chip {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--dense-border);
+    background-color: var(--dense-surface-raised);
+  }
+
+  .dark-dense h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--dense-text);
+  }
+
+  .dark-dense h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--dense-text);
   }
 }

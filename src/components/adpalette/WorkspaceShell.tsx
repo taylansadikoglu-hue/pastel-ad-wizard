@@ -5,6 +5,7 @@ import { ThemeProvider } from "./theme";
 import { SidebarNav } from "./Dashboard";
 import { TopBar } from "./TopBar";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 /** Linen app shell — TopBar (52px) + Sidebar (200px) + main canvas. */
 export function WorkspaceShell({
@@ -12,12 +13,15 @@ export function WorkspaceShell({
   subtitle,
   children,
   demo = false,
+  variant = "default",
 }: {
   title: string;
   subtitle?: string;
   children?: ReactNode;
   demo?: boolean;
+  variant?: "default" | "dark-dense";
 }) {
+  const isDense = variant === "dark-dense";
   const navigate = useNavigate();
   const logout = async () => {
     await supabase.auth.signOut();
@@ -26,7 +30,10 @@ export function WorkspaceShell({
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen flex flex-col" style={{ background: "var(--canvas)" }}>
+      <div
+        className={cn("min-h-screen flex flex-col", isDense && "dark-dense bg-neutral-950 text-neutral-100")}
+        style={isDense ? undefined : { background: "var(--canvas)" }}
+      >
         <TopBar demo={demo} />
         <div className="flex flex-1 min-h-0">
           <aside
@@ -51,14 +58,14 @@ export function WorkspaceShell({
 
           <main
             className="flex-1 min-w-0 overflow-auto"
-            style={{ padding: "28px 32px" }}
+            style={{ padding: isDense ? "12px 16px" : "28px 32px" }}
           >
-            <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+            <div style={{ maxWidth: isDense ? 1440 : 1280, margin: "0 auto" }}>
               {(title || subtitle) && (
-                <header style={{ marginBottom: 24 }}>
-                  {title && <h1>{title}</h1>}
+                <header style={{ marginBottom: isDense ? 10 : 24 }}>
+                  {title && (isDense ? <h1 className="text-base font-semibold tracking-tight">{title}</h1> : <h1>{title}</h1>)}
                   {subtitle && (
-                    <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 6 }}>
+                    <p className={cn(isDense && "dense-meta mt-1")} style={isDense ? undefined : { color: "var(--text-secondary)", fontSize: 13, marginTop: 6 }}>
                       {subtitle}
                     </p>
                   )}
