@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { WorkspaceShell } from "./WorkspaceShell";
-import { supabase } from "@/integrations/supabase/client";
 import {
-  getAgencyContext,
-  filterByAgencyWatchlist,
-  type AgencyContext,
-} from "@/lib/agency-watchlist";
+  loadStrategistIntelligence,
+  normalizeBarbsBrief,
+  normalizeBarbsConfidence,
+} from "@/lib/api-gateway";
+import { getAgencyContext, type AgencyContext } from "@/lib/agency-watchlist";
 
 type Brief = {
   client_name: string | null;
@@ -158,23 +158,19 @@ export function StrategistDashboard() {
     let active = true;
     (async () => {
       const ctx = await getAgencyContext();
+      const bundle = await loadStrategistIntelligence(ctx);
       if (!active) return;
+
       setAgencyCtx(ctx);
 
-      const [b, t, c, w, m, e, p, cf] = await Promise.all([
-        supabase.from("ra_barbs_client_brief").select("*").limit(1).maybeSingle(),
-        supabase.from("ra_client_threats").select("*"),
-        supabase.from("ra_brand_opportunities").select("*"),
-        supabase.from("ra_top_opportunities").select("*"),
-        supabase.from("ra_market_pressure").select("*"),
-        supabase.from("ra_executive_summary").select("*").maybeSingle(),
-        supabase.from("ra_pitch_brief").select("*"),
-        supabase.from("ra_barbs_confidence").select("*").limit(1).maybeSingle(),
-      ]);
-      if (!active) return;
+      const briefRow = (() => {
+        const { data, metadata } = bundle.brief;
+        if (!data) return null;
+        if (metadata.source.startsWith("supabase:")) return data as Brief;
+        return normalizeBarbsBrief(data as Record<string, unknown>, null) as Brief;
+      })();
 
       const domains = ctx.domains;
-      const briefRow = b.data as Brief | null;
       const scopedBrief =
         briefRow &&
         (briefRow.client_name == null ||
@@ -187,19 +183,20 @@ export function StrategistDashboard() {
             : null;
 
       setBrief(scopedBrief);
-      setThreats(
-        filterByAgencyWatchlist((t.data ?? []) as Threat[], domains, "competitor_domain"),
+      setThreats((bundle.threats.data ?? []) as Threat[]);
+      setChallengers((bundle.challengers.data ?? []) as Challenger[]);
+      setWhitespace((bundle.whitespace.data ?? []) as Whitespace[]);
+      setMomentum((bundle.momentum.data ?? []) as Momentum[]);
+      setExec((bundle.executive.data ?? null) as Exec | null);
+      setPitch((bundle.pitch.data ?? []) as Pitch[]);
+      setConfidence(
+        normalizeBarbsConfidence(
+          bundle.pulse.status === "ok" ? (bundle.pulse.data as Record<string, unknown>) : null,
+          bundle.confidence.metadata.source.startsWith("supabase:")
+            ? (bundle.confidence.data as Confidence | null)
+            : null,
+        ) as Confidence | null,
       );
-      setChallengers(
-        filterByAgencyWatchlist((c.data ?? []) as Challenger[], domains, "brand_domain"),
-      );
-      setWhitespace((w.data ?? []) as Whitespace[]);
-      setMomentum(
-        filterByAgencyWatchlist((m.data ?? []) as Momentum[], domains, "brand_domain"),
-      );
-      setExec((e.data ?? null) as Exec | null);
-      setPitch((p.data ?? []) as Pitch[]);
-      setConfidence((cf.data ?? null) as Confidence | null);
       setLoading(false);
     })();
     return () => { active = false; };
@@ -476,7 +473,7 @@ export function StrategistDashboard() {
 
         {topThreats.length > 0 && (
           <section>
-            <SectionHeader index="01" title="Competitors" subtitle="Live · ra_client_threats" />
+            <SectionHeader index="01" title="Competitors" subtitle="Live · agency_watchlist → client_threats" />
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {topThreats.map((r, i) => {
                 const t = Number(r.threat_score) || 0;
