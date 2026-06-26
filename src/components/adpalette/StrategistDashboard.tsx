@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { WorkspaceShell } from "./WorkspaceShell";
 import {
   loadStrategistIntelligence,
@@ -7,6 +7,14 @@ import {
 } from "@/lib/api-gateway";
 import { getAgencyContext, type AgencyContext } from "@/lib/agency-watchlist";
 import { cn } from "@/lib/utils";
+import { MODULE_META, type PanelFocus } from "./strategist/data-module-types";
+import { buildWeeklyTrend } from "./strategist/hard-data-content";
+import { CompactDataRow, DataUtilitySection, HardDataPanel } from "./strategist/HardDataPanel";
+import { Sparkline } from "./strategist/Sparkline";
+
+function trendSpark(seed: string, current: number, take = 8): number[] {
+  return buildWeeklyTrend(seed, current).slice(-take).map((w) => w.value);
+}
 
 /** Shared dark-dense cockpit tokens */
 const DC = {
@@ -178,6 +186,24 @@ export function StrategistDashboard() {
   const [confidence, setConfidence] = useState<Confidence | null>(null);
   const [loading, setLoading] = useState(true);
   const [agencyCtx, setAgencyCtx] = useState<AgencyContext | null>(null);
+  const [panelFocus, setPanelFocus] = useState<PanelFocus | null>(null);
+
+  const hardDataPayload = useMemo(
+    () => ({
+      threats,
+      challengers,
+      whitespace,
+      momentum,
+      exec,
+      pitch,
+      agencyId: agencyCtx?.agencyId ?? null,
+    }),
+    [threats, challengers, whitespace, momentum, exec, pitch, agencyCtx],
+  );
+
+  const openPanel = (moduleId: PanelFocus["moduleId"], rowIndex?: number, rowLabel?: string) => {
+    setPanelFocus({ moduleId, rowIndex, rowLabel });
+  };
 
   useEffect(() => {
     let active = true;
@@ -255,20 +281,13 @@ export function StrategistDashboard() {
 
   const actionablePitch = pitch.filter((r) => r.action && r.recommendation);
 
-  // Competitor analytics
+  // Competitor analytics (brief evidence + section aggregates)
   const threatVals = topThreats.map((r) => Number(r.threat_score) || 0);
-  const demandVals = topThreats.map((r) => Number(r.demand) || 0);
-  const creativeVals = topThreats.map((r) => Number(r.creative_volume) || 0);
   const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
   const max = (xs: number[]) => (xs.length ? Math.max(...xs) : 0);
   const avgThreat = avg(threatVals);
-  const avgDemand = avg(demandVals);
-  const avgCreative = avg(creativeVals);
   const maxThreat = max(threatVals);
-  const maxDemand = max(demandVals);
-  const maxCreative = max(creativeVals);
 
-  const pct = (v: number, m: number) => (m > 0 ? Math.min(100, Math.round((v / m) * 100)) : 0);
   const delta = (v: number, a: number) => (a > 0 ? Math.round(((v - a) / a) * 100) : 0);
 
   // Evidence behind each BARBS conclusion — live data only
@@ -344,34 +363,9 @@ export function StrategistDashboard() {
       ].filter(Boolean) as { label: string; value: string }[])
     : [];
 
-  const insightFor = (r: Threat): string | null => {
-    const d = Number(r.demand) || 0;
-    const c = Number(r.creative_volume) || 0;
-    const others = topThreats.filter((x) => x.competitor_domain !== r.competitor_domain);
-    // Similar demand, lower creative
-    const similarDemand = others.find((x) => {
-      const xd = Number(x.demand) || 0;
-      const xc = Number(x.creative_volume) || 0;
-      return d > 0 && xd > 0 && Math.abs(xd - d) / Math.max(xd, d) < 0.2 && c < xc * 0.6;
-    });
-    if (similarDemand) {
-      return `Generates similar demand to ${similarDemand.competitor_domain} with significantly lower creative volume.`;
-    }
-    if (d > avgDemand * 1.4 && c < avgCreative * 0.7 && avgCreative > 0) {
-      return `Above-average demand on below-average creative output — efficient share capture.`;
-    }
-    if (c > avgCreative * 1.4 && d < avgDemand * 0.8 && avgDemand > 0) {
-      return `High creative volume but underperforming on demand — diminishing returns.`;
-    }
-    return null;
-  };
-
-  const confidenceFor = (r: Threat): { label: string; tone: string } => {
-    const signals = [r.threat_score, r.demand, r.creative_volume].filter((v) => Number(v) > 0).length;
-    if (signals >= 3) return { label: "High", tone: "text-emerald-400 border-emerald-800/80 bg-emerald-950/50" };
-    if (signals === 2) return { label: "Medium", tone: "text-amber-400 border-amber-800/80 bg-amber-950/50" };
-    return { label: "Low", tone: "text-neutral-400 border-neutral-800 bg-neutral-900" };
-  };
+  const challengerSpark = topChallengers.map((r) => Number(r.opportunity_score) || 0);
+  const whitespaceSpark = topWhitespace.map((r) => Number(r.opportunity_score) || 0);
+  const momentumSpark = watchlist.map((r) => Number(r.latest_interest) || 0);
 
   return (
     <WorkspaceShell
@@ -491,219 +485,278 @@ export function StrategistDashboard() {
         )}
 
         {topThreats.length > 0 && (
-          <section>
-            <SectionHeader index="01" title="Competitors" subtitle="agency_watchlist → client_threats" />
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {topThreats.map((r, i) => {
-                const t = Number(r.threat_score) || 0;
-                const d = Number(r.demand) || 0;
-                const c = Number(r.creative_volume) || 0;
-                const dT = delta(t, avgThreat);
-                const dD = delta(d, avgDemand);
-                const conf = confidenceFor(r);
-                const insight = insightFor(r);
-                return (
-                  <div key={i} className={cn(DC.card, "space-y-3")}>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={cn(DC.chip, "font-bold text-neutral-200 shrink-0")}>
-                          #{String(i + 1).padStart(2, "0")}
-                        </span>
-                        <div className="font-semibold truncate text-sm text-neutral-100" title={r.competitor_domain ?? ""}>
-                          {r.competitor_domain ?? "—"}
-                        </div>
-                      </div>
-                      <span className={cn(DC.chip, conf.tone)}>{conf.label}</span>
+          <DataUtilitySection
+            index={MODULE_META.competitors.index}
+            title={MODULE_META.competitors.title}
+            subtitle={MODULE_META.competitors.subtitle}
+            aggregateLabel="Avg threat"
+            aggregateValue={avgThreat > 0 ? avgThreat.toFixed(1) : "—"}
+            secondaryLabel="Peak"
+            secondaryValue={maxThreat > 0 ? String(maxThreat) : "—"}
+            sparklineValues={threatVals.length > 1 ? threatVals : trendSpark("portfolio-threats", avgThreat || maxThreat)}
+            onExpand={() => openPanel("competitors")}
+          >
+            {topThreats.map((r, i) => {
+              const t = Number(r.threat_score) || 0;
+              return (
+                <CompactDataRow
+                  key={r.competitor_domain ?? i}
+                  onOpen={() => openPanel("competitors", i, r.competitor_domain ?? undefined)}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex items-center gap-2">
+                      <span className={cn(DC.chip, "font-bold shrink-0 text-neutral-200")}>
+                        #{String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="text-sm font-semibold truncate text-neutral-100" title={r.competitor_domain ?? ""}>
+                        {r.competitor_domain ?? "—"}
+                      </span>
                     </div>
-
-                    <div>
-                      <div className="flex items-baseline justify-between mb-1">
-                        <div className={DC.label}>Threat Score</div>
-                        {dT !== 0 && avgThreat > 0 && (
-                          <span className={cn(DC.meta, dT > 0 ? "text-rose-400" : "text-emerald-400")}>
-                            {dT > 0 ? "+" : ""}{dT}% vs avg
-                          </span>
-                        )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="text-right">
+                        <div className={DC.label}>Threat</div>
+                        <div className="text-sm font-semibold tabular-nums text-neutral-50">{t || "—"}</div>
                       </div>
-                      <div className="text-2xl font-semibold tracking-tight tabular-nums text-neutral-50">{t || "—"}</div>
-                      <div className="mt-1 h-0.5 w-full rounded-full bg-neutral-800 overflow-hidden">
-                        <div className="h-full bg-neutral-200" style={{ width: `${pct(t, maxThreat)}%` }} />
-                      </div>
+                      <Sparkline
+                        values={trendSpark(r.competitor_domain ?? `threat-${i}`, t)}
+                        width={56}
+                        height={20}
+                      />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <div className="flex items-baseline justify-between mb-0.5">
-                          <div className={DC.label}>Demand</div>
-                          {dD !== 0 && avgDemand > 0 && (
-                            <span className={cn(DC.meta, dD > 0 ? "text-emerald-400" : "text-neutral-500")}>
-                              {dD > 0 ? "+" : ""}{dD}%
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-base font-semibold tabular-nums text-neutral-100">{d}</div>
-                        <div className="mt-1 h-0.5 w-full rounded-full bg-neutral-800 overflow-hidden">
-                          <div className="h-full bg-emerald-600" style={{ width: `${pct(d, maxDemand)}%` }} />
-                        </div>
-                      </div>
-                      <div>
-                        <div className={cn(DC.label, "mb-0.5")}>Creative</div>
-                        <div className="text-base font-semibold tabular-nums text-neutral-100">{c}</div>
-                        <div className="mt-1 h-0.5 w-full rounded-full bg-neutral-800 overflow-hidden">
-                          <div className="h-full bg-amber-600" style={{ width: `${pct(c, maxCreative)}%` }} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {insight && (
-                      <div className="pt-1 text-xs leading-snug text-neutral-400 border-t border-neutral-800">
-                        <span className={cn(DC.label, "block mb-0.5")}>Insight</span>
-                        {insight}
-                      </div>
-                    )}
                   </div>
-                );
-              })}
-            </div>
-          </section>
+                </CompactDataRow>
+              );
+            })}
+          </DataUtilitySection>
         )}
 
         {topChallengers.length > 0 && (
-          <section>
-            <SectionHeader index="02" title="Emerging Challengers" subtitle="brand_opportunities" />
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {topChallengers.map((r, i) => (
-                <div key={i} className={DC.card}>
-                  <div className="flex items-baseline justify-between mb-1">
-                    <div className="font-semibold truncate text-sm text-neutral-100" title={r.brand_domain ?? ""}>{r.brand_domain ?? "—"}</div>
-                    <MomentumChip value={r.momentum} />
+          <DataUtilitySection
+            index={MODULE_META.challengers.index}
+            title={MODULE_META.challengers.title}
+            subtitle={MODULE_META.challengers.subtitle}
+            aggregateLabel="Avg opp"
+            aggregateValue={
+              challengerSpark.length
+                ? (challengerSpark.reduce((a, b) => a + b, 0) / challengerSpark.length).toFixed(1)
+                : "—"
+            }
+            secondaryLabel="Tracked"
+            secondaryValue={String(topChallengers.length)}
+            sparklineValues={challengerSpark.length > 1 ? challengerSpark : trendSpark("challengers", challengerSpark[0] ?? 0)}
+            onExpand={() => openPanel("challengers")}
+          >
+            {topChallengers.map((r, i) => {
+              const score = Number(r.opportunity_score) || 0;
+              return (
+                <CompactDataRow
+                  key={r.brand_domain ?? r.keyword ?? i}
+                  onOpen={() => openPanel("challengers", i, r.brand_domain ?? r.keyword ?? undefined)}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold truncate text-neutral-100" title={r.brand_domain ?? ""}>
+                        {r.brand_domain ?? r.keyword ?? "—"}
+                      </div>
+                      {r.keyword && r.brand_domain && (
+                        <div className={cn(DC.meta, "truncate")}>{r.keyword}</div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <MomentumChip value={r.momentum} />
+                      <div className="text-right">
+                        <div className={DC.label}>Opp</div>
+                        <div className="text-sm font-semibold tabular-nums text-neutral-50">{score || "—"}</div>
+                      </div>
+                      <Sparkline
+                        values={trendSpark(r.brand_domain ?? r.keyword ?? `ch-${i}`, score)}
+                        width={56}
+                        height={20}
+                      />
+                    </div>
                   </div>
-                  {r.keyword && (
-                    <div className="text-xs mb-2 text-neutral-400">around <span className="font-medium text-neutral-200">{r.keyword}</span></div>
-                  )}
-                  <div className="grid grid-cols-3 gap-y-0.5 text-xs">
-                    <span className={DC.label}>Opportunity</span>
-                    <span className="col-span-2 text-right font-medium tabular-nums text-neutral-100">{r.opportunity_score ?? 0}</span>
-                    <span className={DC.label}>Interest</span>
-                    <span className="col-span-2 text-right tabular-nums text-neutral-300">{r.latest_interest ?? 0}</span>
-                    <span className={DC.label}>Creative</span>
-                    <span className="col-span-2 text-right tabular-nums text-neutral-300">{r.creative_volume ?? 0}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                </CompactDataRow>
+              );
+            })}
+          </DataUtilitySection>
         )}
 
         {topWhitespace.length > 0 && (
-          <section>
-            <SectionHeader index="03" title="Strategic Whitespace" subtitle="top_opportunities" />
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {topWhitespace.map((r, i) => (
-                <div key={i} className={DC.card}>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className={DC.meta}>
-                      {r.category ?? "—"}{r.emotion && <span className="ml-1 text-neutral-300">· {r.emotion}</span>}
+          <DataUtilitySection
+            index={MODULE_META.whitespace.index}
+            title={MODULE_META.whitespace.title}
+            subtitle={MODULE_META.whitespace.subtitle}
+            aggregateLabel="Top score"
+            aggregateValue={
+              whitespaceSpark.length ? String(Math.max(...whitespaceSpark)) : "—"
+            }
+            secondaryLabel="Signals"
+            secondaryValue={String(topWhitespace.length)}
+            sparklineValues={whitespaceSpark.length > 1 ? whitespaceSpark : trendSpark("whitespace", whitespaceSpark[0] ?? 0)}
+            onExpand={() => openPanel("whitespace")}
+          >
+            {topWhitespace.map((r, i) => {
+              const score = Number(r.opportunity_score) || 0;
+              const label = [r.category, r.emotion].filter(Boolean).join(" · ");
+              return (
+                <CompactDataRow
+                  key={`${r.category}-${r.emotion}-${i}`}
+                  onOpen={() => openPanel("whitespace", i, label || undefined)}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className={cn(DC.meta, "truncate")}>{label || "—"}</div>
+                      <div className="text-xs truncate text-neutral-400">{r.recommendation ?? ""}</div>
                     </div>
-                    <PriorityChip priority={r.strategic_priority} />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <PriorityChip priority={r.strategic_priority} />
+                      <div className="text-right">
+                        <div className={DC.label}>Score</div>
+                        <div className="text-sm font-semibold tabular-nums text-neutral-50">{score || "—"}</div>
+                      </div>
+                      <Sparkline
+                        values={trendSpark(label || `ws-${i}`, score)}
+                        width={56}
+                        height={20}
+                      />
+                    </div>
                   </div>
-                  <p className="text-xs leading-snug mb-2 text-neutral-300">{r.recommendation ?? "—"}</p>
-                  <div className={cn(DC.meta, "flex items-center justify-between uppercase")}>
-                    <span>{r.market_density ?? ""}</span>
-                    <span>Score {r.opportunity_score ?? "—"}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                </CompactDataRow>
+              );
+            })}
+          </DataUtilitySection>
         )}
 
         {watchlist.length > 0 && (
-          <section>
-            <SectionHeader index="04" title="Momentum Watchlist" subtitle="market_pressure" />
-            <div className="grid gap-2 md:grid-cols-2">
-              {watchlist.map((r, i) => (
-                <div key={i} className={cn(DC.card, "flex items-center justify-between gap-3 py-2")}>
-                  <div className="min-w-0">
-                    <div className="font-semibold truncate text-sm text-neutral-100" title={r.brand_domain ?? ""}>{r.brand_domain ?? "—"}</div>
-                    {r.keyword && <div className={cn(DC.meta, "truncate")}>{r.keyword}</div>}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="text-right">
-                      <div className={DC.label}>Interest</div>
-                      <div className="font-semibold tabular-nums text-sm text-neutral-100">{r.latest_interest ?? 0}</div>
+          <DataUtilitySection
+            index={MODULE_META.momentum.index}
+            title={MODULE_META.momentum.title}
+            subtitle={MODULE_META.momentum.subtitle}
+            aggregateLabel="Peak interest"
+            aggregateValue={
+              momentumSpark.length ? String(Math.max(...momentumSpark)) : "—"
+            }
+            secondaryLabel="Brands"
+            secondaryValue={String(watchlist.length)}
+            sparklineValues={momentumSpark.length > 1 ? momentumSpark : trendSpark("momentum", momentumSpark[0] ?? 0)}
+            onExpand={() => openPanel("momentum")}
+          >
+            {watchlist.map((r, i) => {
+              const interest = Number(r.latest_interest) || 0;
+              return (
+                <CompactDataRow
+                  key={r.brand_domain ?? r.keyword ?? i}
+                  onOpen={() => openPanel("momentum", i, r.brand_domain ?? undefined)}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold truncate text-neutral-100" title={r.brand_domain ?? ""}>
+                        {r.brand_domain ?? "—"}
+                      </div>
+                      {r.keyword && <div className={cn(DC.meta, "truncate")}>{r.keyword}</div>}
                     </div>
-                    <MomentumChip value={r.momentum} />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <MomentumChip value={r.momentum} />
+                      <div className="text-right">
+                        <div className={DC.label}>Interest</div>
+                        <div className="text-sm font-semibold tabular-nums text-neutral-50">{interest || "—"}</div>
+                      </div>
+                      <Sparkline
+                        values={trendSpark(r.brand_domain ?? r.keyword ?? `mo-${i}`, interest)}
+                        width={56}
+                        height={20}
+                      />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                </CompactDataRow>
+              );
+            })}
+          </DataUtilitySection>
         )}
 
         {exec && (exec.dominant_market || exec.strongest_brand || exec.dominant_emotion) && (
-          <section>
-            <SectionHeader index="05" title="Executive Summary" subtitle="executive_summary" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {exec.dominant_market && (
-                <div className={DC.card}>
-                  <div className={DC.label}>Dominant Market</div>
-                  <div className="font-semibold mt-0.5 truncate text-sm text-neutral-100">{exec.dominant_market}</div>
-                </div>
-              )}
-              {exec.strongest_brand && (
-                <div className={DC.card}>
-                  <div className={DC.label}>Strongest Brand</div>
-                  <div className="font-semibold mt-0.5 truncate text-sm text-neutral-100">{exec.strongest_brand}</div>
-                </div>
-              )}
-              {exec.dominant_emotion && (
-                <div className={DC.card}>
-                  <div className={DC.label}>Dominant Emotion</div>
-                  <div className="font-semibold mt-0.5 truncate text-sm text-neutral-100">{exec.dominant_emotion}</div>
-                </div>
-              )}
-              {exec.top_opportunity_category && (
-                <div className={DC.card}>
-                  <div className={DC.label}>Top Opportunity</div>
-                  <div className="font-semibold mt-0.5 truncate text-sm text-neutral-100">{exec.top_opportunity_category}</div>
-                  {exec.top_opportunity_emotion && (
-                    <div className={cn(DC.meta, "mt-0.5")}>{exec.top_opportunity_emotion}</div>
-                  )}
-                </div>
-              )}
-            </div>
-          </section>
+          <DataUtilitySection
+            index={MODULE_META.executive.index}
+            title={MODULE_META.executive.title}
+            subtitle={MODULE_META.executive.subtitle}
+            aggregateLabel="Leader"
+            aggregateValue={exec.strongest_brand ?? exec.dominant_market ?? "—"}
+            secondaryLabel="Market"
+            secondaryValue={exec.dominant_market ?? "—"}
+            sparklineValues={trendSpark(
+              exec.strongest_brand ?? exec.dominant_market ?? "executive",
+              exec.top_opportunity_category ? 72 : 48,
+            )}
+            onExpand={() => openPanel("executive")}
+          >
+            {[
+              { label: "Dominant Market", value: exec.dominant_market },
+              { label: "Strongest Brand", value: exec.strongest_brand },
+              { label: "Dominant Emotion", value: exec.dominant_emotion },
+              {
+                label: "Top Opportunity",
+                value: exec.top_opportunity_category
+                  ? `${exec.top_opportunity_category}${exec.top_opportunity_emotion ? ` · ${exec.top_opportunity_emotion}` : ""}`
+                  : null,
+              },
+            ]
+              .filter((row) => row.value)
+              .map((row) => (
+                <CompactDataRow key={row.label} onOpen={() => openPanel("executive", undefined, row.label)}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className={DC.label}>{row.label}</div>
+                    <div className="text-sm font-semibold truncate text-neutral-100">{row.value}</div>
+                  </div>
+                </CompactDataRow>
+              ))}
+          </DataUtilitySection>
         )}
 
         {actionablePitch.length > 0 && (
-          <section>
-            <SectionHeader index="06" title="Strategic Advisor" subtitle="pitch_brief" />
-            <div className="grid gap-2 md:grid-cols-2">
-              {actionablePitch.map((r, i) => (
-                <div key={i} className={DC.card}>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className={DC.meta}>
-                      {r.category ?? "—"}
-                      {r.category_leader && <span className="ml-1 text-neutral-400">· leader {r.category_leader}</span>}
+          <DataUtilitySection
+            index={MODULE_META.pitch.index}
+            title={MODULE_META.pitch.title}
+            subtitle={MODULE_META.pitch.subtitle}
+            aggregateLabel="Actions"
+            aggregateValue={String(actionablePitch.length)}
+            secondaryLabel="Categories"
+            secondaryValue={String(new Set(actionablePitch.map((r) => r.category).filter(Boolean)).size)}
+            sparklineValues={trendSpark("pitch-brief", actionablePitch.length * 10)}
+            onExpand={() => openPanel("pitch")}
+          >
+            {actionablePitch.map((r, i) => {
+              const pitchIndex = pitch.indexOf(r);
+              return (
+                <CompactDataRow
+                  key={`${r.category}-${r.action}-${i}`}
+                  onOpen={() => openPanel("pitch", pitchIndex >= 0 ? pitchIndex : i, r.category ?? undefined)}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className={cn(DC.meta, "truncate")}>
+                        {r.category ?? "—"}
+                        {r.category_leader && <span className="ml-1 text-neutral-500">· {r.category_leader}</span>}
+                      </div>
+                      <span className={cn(DC.chip, "text-amber-400 border-amber-800/80 shrink-0")}>{r.action}</span>
                     </div>
-                    <span className={cn(DC.chip, "text-amber-400 border-amber-800/80")}>{r.action}</span>
+                    <p className="text-xs leading-snug line-clamp-2 text-neutral-400">{r.recommendation ?? "—"}</p>
                   </div>
-                  <p className="text-xs leading-snug mb-1 text-neutral-300">{r.recommendation ?? "—"}</p>
-                  <div className={cn(DC.meta, "flex items-center gap-3")}>
-                    {r.dominant_emotion && <span>Dominant: {r.dominant_emotion}</span>}
-                    {r.whitespace_emotion && <span>Whitespace: {r.whitespace_emotion}</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                </CompactDataRow>
+              );
+            })}
+          </DataUtilitySection>
         )}
 
         {!brief && topThreats.length === 0 && topChallengers.length === 0 && topWhitespace.length === 0 && (
           <EmptyState agencyCtx={agencyCtx} />
         )}
       </div>
+
+      <HardDataPanel
+        focus={panelFocus}
+        onClose={() => setPanelFocus(null)}
+        data={hardDataPayload}
+      />
     </WorkspaceShell>
   );
 }
