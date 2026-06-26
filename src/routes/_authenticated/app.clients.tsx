@@ -22,8 +22,9 @@ function ClientsPage() {
     let active = true;
     (async () => {
       const { data } = await supabase
-        .from("ra_client_watchlist")
-        .select("client_name, client_domain, category, country");
+        .from("agency_watchlist")
+        .select("client_name, client_domain, category, country")
+        .order("client_name");
       if (!active) return;
       const seen = new Set<string>();
       const unique: ClientRow[] = [];

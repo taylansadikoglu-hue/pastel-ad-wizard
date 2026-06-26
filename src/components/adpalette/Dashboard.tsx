@@ -3,6 +3,8 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
+import { getAgencyContext, domainInWatchlist } from "@/lib/agency-watchlist";
+import { runMockScan } from "@/lib/mock-scan.functions";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
@@ -33,32 +35,15 @@ const ADMIN_EMAIL = "hello@revenuad.com";
 
 type Competitor = {
   name: string;
+  domain: string;
   spend: number;
-  meta: number;
-  google: number;
-  programmatic: number;
 };
 
 const INITIAL: Competitor[] = [];
 
-// Deterministic synthetic spend + channel mix derived from a domain string,
-// so tracked-advertiser cards stay populated until live spend ingestion lands.
-function hashStr(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
 function brandFromDomain(domain: string) {
   const root = domain.replace(/^https?:\/\//, "").replace(/^www\./, "").split(/[./]/)[0] ?? domain;
   return root.charAt(0).toUpperCase() + root.slice(1);
-}
-function synthRow(domain: string): Competitor {
-  const h = hashStr(domain);
-  const spend = 500_000 + (h % 48) * 100_000;
-  const meta = 25 + (h % 45);
-  const google = Math.max(10, Math.min(60, 20 + ((h >> 4) % 40)));
-  const programmatic = Math.max(5, 100 - meta - google);
-  return { name: brandFromDomain(domain), spend, meta, google, programmatic };
 }
 
 // Pull a usable media URL out of creative_url (which may be a string OR a JSON object)
@@ -138,6 +123,11 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     { role: "ai", text: "Welcome — ask me anything about the tracked advertisers' creative." },
   ]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [hasNoData, setHasNoData] = useState(false);
+  const [scanDomain, setScanDomain] = useState("commbank.com.au");
+  const [scanning, setScanning] = useState(false);
+  const [agencyId, setAgencyId] = useState<number | null>(null);
+  const [watchlistDomains, setWatchlistDomains] = useState<Set<string>>(new Set());
   const exportRef = useRef<HTMLDivElement>(null);
 
   // Auth user + profile → top-left user card binds to session metadata
@@ -161,24 +151,58 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     return () => { active = false; };
   }, []);
 
-  // Tracked advertisers (domain_scans) → bind matrix + chart to real DB rows
+  // Tracked advertisers scoped via agency_watchlist → domain_scans
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data } = await supabase
+      const ctx = await getAgencyContext();
+      if (!active) return;
+      setAgencyId(ctx.agencyId);
+      setWatchlistDomains(ctx.domains);
+
+      const domains = [...ctx.domains];
+      if (domains.length === 0) {
+        setRows([]);
+        setBaselineRows([]);
+        setSelected({});
+        setHasNoData(true);
+        return;
+      }
+
+      const { data: scans } = await supabase
         .from("domain_scans")
-        .select("domain, created_at")
+        .select("domain, created_at, status")
+        .in("status", ["completed", "ready", "done"])
         .order("created_at", { ascending: false });
-      if (!active || !data || data.length === 0) return;
+
+      const tracked = (scans ?? [])
+        .map((r) => r.domain)
+        .filter((d): d is string => Boolean(d) && domainInWatchlist(d, ctx.domains));
+
       const unique: string[] = [];
-      for (const r of data) {
-        if (r.domain && !unique.includes(r.domain)) unique.push(r.domain);
+      for (const d of tracked) {
+        if (!unique.includes(d)) unique.push(d);
         if (unique.length >= 7) break;
       }
-      const next = unique.map(synthRow);
+
+      if (unique.length === 0) {
+        setRows([]);
+        setBaselineRows([]);
+        setSelected({});
+        setHasNoData(true);
+        setScanDomain(domains[0] ?? "commbank.com.au");
+        return;
+      }
+
+      const next = unique.map((domain) => ({
+        name: brandFromDomain(domain),
+        domain,
+        spend: 0,
+      }));
       setRows(next);
       setBaselineRows(next);
       setSelected(Object.fromEntries(next.map((r) => [r.name, true])));
+      setHasNoData(false);
     })();
     return () => { active = false; };
   }, []);
@@ -222,13 +246,16 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
         .from("ad_placements")
         .select("domain, channel, ad_type, hook, days_running, creative_url, raw, created_at")
         .order("created_at", { ascending: false })
-        .limit(48);
+        .limit(96);
       if (error) {
         console.error("[ad_placements] query failed", error);
         return;
       }
       if (!active || !data) return;
-      setLivePlacements(data.map((p) => {
+      const scoped = watchlistDomains.size
+        ? data.filter((p) => p.domain && domainInWatchlist(p.domain, watchlistDomains))
+        : [];
+      setLivePlacements(scoped.map((p) => {
         const extracted = extractMediaUrl(p.creative_url, p.raw);
         const hookText = safeText(p.hook, "").trim() || "Live creative — hook pending AI extraction.";
         const chan = normalizeChan(p.channel);
@@ -248,13 +275,12 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
       }));
     })();
     return () => { active = false; };
-  }, []);
+  }, [watchlistDomains]);
 
 
 
 
   // Derive spend from live placements: Google Search × $150 + Digital Video × $450.
-  // Falls back to baseline synthetic spend only when zero placements exist for a brand.
   const placementSpend = useMemo(() => {
     const map = new Map<string, number>();
     for (const p of livePlacements) {
@@ -300,6 +326,24 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
   const isAdmin = userEmail === ADMIN_EMAIL;
 
+  const handleRunScan = async () => {
+    const domain = scanDomain.trim();
+    if (!domain.includes(".")) {
+      toast.error("Enter a valid domain (e.g. commbank.com.au)");
+      return;
+    }
+    setScanning(true);
+    try {
+      await runMockScan({ data: { domain } });
+      toast.success(`Demo scan complete for ${domain}`);
+      window.location.reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Scan failed");
+    } finally {
+      setScanning(false);
+    }
+  };
+
 
   const exportCSV = () => {
     const esc = (v: unknown) => {
@@ -308,8 +352,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
     };
     const sections: string[] = [];
     sections.push("ADVERTISER MATRIX");
-    sections.push(["Advertiser", "Est monthly spend", "Meta %", "Google %", "Programmatic %"].join(","));
-    for (const r of rows) sections.push([r.name, r.spend, r.meta, r.google, r.programmatic].map(esc).join(","));
+    sections.push(["Advertiser", "Domain", "Est monthly spend"].join(","));
+    for (const r of rows) sections.push([r.name, r.domain, r.spend].map(esc).join(","));
     sections.push("");
     sections.push("CONTINUOUS INSPIRATION LOOP");
     sections.push(["Brand", "Channel", "Hook", "Flight days", "Media URL"].join(","));
@@ -478,7 +522,33 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
         </header>
 
         <main className="flex-1 overflow-auto p-6 space-y-6">
-          {runningScans.length > 0 && (
+          {hasNoData && (
+            <div className="card-flat p-10 text-center space-y-4 max-w-xl mx-auto">
+              <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">No data found</div>
+              <h2 className="text-2xl font-bold">Your agency watchlist has no completed scans</h2>
+              <p className="text-sm text-muted-foreground">
+                Run a demo scan to seed placements for your portfolio
+                {agencyId != null ? ` (agency #${agencyId})` : ""}.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center items-stretch sm:items-center max-w-md mx-auto">
+                <input
+                  value={scanDomain}
+                  onChange={(e) => setScanDomain(e.target.value)}
+                  placeholder="commbank.com.au"
+                  className="input-flat flex-1 px-3 py-2 text-sm"
+                />
+                <button
+                  onClick={handleRunScan}
+                  disabled={scanning}
+                  className="btn-flat btn-primary justify-center px-6 py-2 font-semibold"
+                >
+                  {scanning ? <><Loader2 size={14} className="animate-spin" /> Running…</> : "Run Scan"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!hasNoData && runningScans.length > 0 && (
             <div className="card-flat p-4 bg-secondary flex items-center gap-4">
               <div className="w-9 h-9 border-2 border-ink rounded-[4px] bg-primary grid place-items-center shrink-0">
                 <Loader2 size={16} className="animate-spin" />
@@ -497,6 +567,8 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
 
+          {!hasNoData && (
+          <>
           {/* Action bar */}
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -935,6 +1007,9 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
 
           </div>
 
+          </>
+          )}
+
         </main>
       </div>
 
@@ -961,11 +1036,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
                     value={r.spend}
                     onChange={(e) => setSpend(r.name, Number(e.target.value))}
                     className="w-full accent-[var(--ink)]" />
-                  <div className="flex h-3 border-2 border-ink rounded-[2px] overflow-hidden">
-                    <div style={{ width: `${r.meta}%`, background: colors[0] }} className="border-r-2 border-ink" />
-                    <div style={{ width: `${r.google}%`, background: colors[1] }} className="border-r-2 border-ink" />
-                    <div style={{ width: `${r.programmatic}%`, background: colors[2] }} />
-                  </div>
+                  <p className="mono text-[10px] text-muted-foreground">Channel mix derives from live placements after scan completes.</p>
                 </div>
               ))}
             </div>
@@ -1046,86 +1117,15 @@ function InsightCard({
   );
 }
 
-const SENTIMENT_AXES = [
-  "Positive Feedback",
-  "Product Quality",
-  "Customer Service",
-  "Ad Engagement",
-] as const;
-
-// Deterministic mock-fallback sentiment per brand so the radar stays populated
-// even before a live sentiment ingestion pipeline lands.
-function sentimentForBrand(name: string): number[] {
-  if (!name) return [60, 60, 60, 60];
-  const h = hashStr(name);
-  return SENTIMENT_AXES.map((_, i) => 55 + ((h >> (i * 3)) % 40));
-}
-
-function SentimentRadar({ scores }: { scores: number[] }) {
-  const size = 260;
-  const cx = size / 2;
-  const cy = size / 2;
-  const radius = size / 2 - 30;
-  const axes = SENTIMENT_AXES.length;
-  const angle = (i: number) => (i / axes) * Math.PI * 2 - Math.PI / 2;
-  const point = (i: number, value: number) => {
-    const a = angle(i);
-    const r = (value / 100) * radius;
-    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r] as const;
-  };
-  const rings = [0.25, 0.5, 0.75, 1];
-  const polygon = scores.map((v, i) => point(i, v).join(",")).join(" ");
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[280px] mx-auto">
-      {rings.map((r) => (
-        <polygon
-          key={r}
-          points={SENTIMENT_AXES.map((_, i) => point(i, r * 100).join(",")).join(" ")}
-          fill="none"
-          stroke="var(--ink)"
-          strokeOpacity={0.25}
-          strokeWidth={1}
-        />
-      ))}
-      {SENTIMENT_AXES.map((_, i) => {
-        const [x, y] = point(i, 100);
-        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--ink)" strokeOpacity={0.25} strokeWidth={1} />;
-      })}
-      <polygon points={polygon} fill="var(--primary)" fillOpacity={0.35} stroke="var(--ink)" strokeWidth={2} />
-      {scores.map((v, i) => {
-        const [x, y] = point(i, v);
-        return <circle key={i} cx={x} cy={y} r={3.5} fill="var(--ink)" />;
-      })}
-      {SENTIMENT_AXES.map((label, i) => {
-        const [x, y] = point(i, 118);
-        return (
-          <text
-            key={label}
-            x={x}
-            y={y}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="mono"
-            style={{ fontSize: 9, fontWeight: 700, fill: "var(--ink)" }}
-          >
-            {label}
-          </text>
-        );
-      })}
-    </svg>
-  );
-}
-
 function aiReply(q: string, visible: Competitor[]): string {
   const total = visible.reduce((a, b) => a + b.spend, 0);
   if (/mix|channel/i.test(q)) {
-    const meta = Math.round(visible.reduce((a, b) => a + (b.meta * b.spend), 0) / Math.max(total, 1));
-    return `Across ${visible.length} advertisers, weighted channel mix is ~${meta}% Meta, the rest split between Google and programmatic. Glossier is the most social-heavy.`;
+    return `Across ${visible.length} advertisers, channel mix is derived from live ad_placements after scan — no synthetic fallback.`;
   }
   if (/hook/i.test(q)) {
-    return `Dominant hook patterns: 1) UGC unboxing (Sephora), 2) minimalist product hero (Lululemon), 3) founder-led story (Glossier). Pain-point hooks underused — opportunity.`;
+    return `Inspect the Continuous Inspiration Loop after a completed scan to review dominant hook patterns across your agency watchlist.`;
   }
-  return `Tracked advertisers account for ~$${(total/1_000_000).toFixed(2)}M in monthly spend. Ask about channel mix, hooks, or ad longevity.`;
+  return `Tracked advertisers account for ~$${(total/1_000_000).toFixed(2)}M in estimated monthly spend from live placements. Ask about channel mix or hooks after running a scan.`;
 }
 
 const NAV_ITEMS = [

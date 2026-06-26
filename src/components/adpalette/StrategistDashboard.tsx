@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { WorkspaceShell } from "./WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  getAgencyContext,
+  filterByAgencyWatchlist,
+  type AgencyContext,
+} from "@/lib/agency-watchlist";
 
 type Brief = {
   client_name: string | null;
@@ -147,10 +152,15 @@ export function StrategistDashboard() {
   const [pitch, setPitch] = useState<Pitch[]>([]);
   const [confidence, setConfidence] = useState<Confidence | null>(null);
   const [loading, setLoading] = useState(true);
+  const [agencyCtx, setAgencyCtx] = useState<AgencyContext | null>(null);
 
   useEffect(() => {
     let active = true;
     (async () => {
+      const ctx = await getAgencyContext();
+      if (!active) return;
+      setAgencyCtx(ctx);
+
       const [b, t, c, w, m, e, p, cf] = await Promise.all([
         supabase.from("ra_barbs_client_brief").select("*").limit(1).maybeSingle(),
         supabase.from("ra_client_threats").select("*"),
@@ -162,11 +172,31 @@ export function StrategistDashboard() {
         supabase.from("ra_barbs_confidence").select("*").limit(1).maybeSingle(),
       ]);
       if (!active) return;
-      setBrief((b.data ?? null) as Brief | null);
-      setThreats((t.data ?? []) as Threat[]);
-      setChallengers((c.data ?? []) as Challenger[]);
+
+      const domains = ctx.domains;
+      const briefRow = b.data as Brief | null;
+      const scopedBrief =
+        briefRow &&
+        (briefRow.client_name == null ||
+          [...domains].some((d) =>
+            briefRow.client_name?.toLowerCase().includes(d.split(".")[0] ?? ""),
+          ))
+          ? briefRow
+          : domains.size > 0
+            ? briefRow
+            : null;
+
+      setBrief(scopedBrief);
+      setThreats(
+        filterByAgencyWatchlist((t.data ?? []) as Threat[], domains, "competitor_domain"),
+      );
+      setChallengers(
+        filterByAgencyWatchlist((c.data ?? []) as Challenger[], domains, "brand_domain"),
+      );
       setWhitespace((w.data ?? []) as Whitespace[]);
-      setMomentum((m.data ?? []) as Momentum[]);
+      setMomentum(
+        filterByAgencyWatchlist((m.data ?? []) as Momentum[], domains, "brand_domain"),
+      );
       setExec((e.data ?? null) as Exec | null);
       setPitch((p.data ?? []) as Pitch[]);
       setConfidence((cf.data ?? null) as Confidence | null);
@@ -662,8 +692,13 @@ export function StrategistDashboard() {
         )}
 
         {!brief && topThreats.length === 0 && topChallengers.length === 0 && topWhitespace.length === 0 && (
-          <div className="card-flat p-8 text-sm text-muted-foreground">
-            No intelligence yet — add a tracked brand under Brand Intelligence to populate.
+          <div className="card-flat p-8 text-sm text-muted-foreground space-y-2">
+            <p>
+              No intelligence yet for agency #{agencyCtx?.agencyId ?? "—"}.
+              {agencyCtx?.domains.size === 0
+                ? " Add brands to your agency watchlist to scope BARBS to your portfolio."
+                : " Run a scan on your watchlist domains to populate threat and challenger cards."}
+            </p>
           </div>
         )}
       </div>

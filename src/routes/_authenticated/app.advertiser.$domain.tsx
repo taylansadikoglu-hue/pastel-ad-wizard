@@ -15,7 +15,13 @@ import {
 } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { SpendIndex, SpendLegend } from "@/components/adpalette/SpendIndex";
-import { displayBrand, spendLevel } from "@/utils/brandDisplay";
+import { displayBrand } from "@/utils/brandDisplay";
+import {
+  getAgencyContext,
+  domainInWatchlist,
+  type AgencyContext,
+} from "@/lib/agency-watchlist";
+import { runMockScan } from "@/lib/mock-scan.functions";
 import { formatTimeAgo } from "@/utils/timeAgo";
 
 const API_BASE = "https://api.revenuad.com";
@@ -235,6 +241,24 @@ function AdvertiserPage() {
   const [newsLoading, setNewsLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [agencyCtx, setAgencyCtx] = useState<AgencyContext | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [outOfScope, setOutOfScope] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    getAgencyContext().then((ctx) => {
+      if (alive) setAgencyCtx(ctx);
+    });
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!agencyCtx) return;
+    const scoped = domainInWatchlist(domain, agencyCtx.domains);
+    setOutOfScope(agencyCtx.domains.size > 0 && !scoped);
+  }, [agencyCtx, domain]);
 
   useEffect(() => {
     let alive = true;
@@ -261,8 +285,6 @@ function AdvertiserPage() {
       setBrand(resolved);
 
       const b = encodeURIComponent(resolved);
-      // Single warroom endpoint returns everything (reach_frequency, spend_weight,
-      // creative_fatigue, channels, recent_ads, news, etc.) — fall back to domain.
       let w = await safe<War & { news?: News["articles"] | News }>(
         `${API_BASE}/api/advertisers/${b}/warroom`
       );
@@ -271,6 +293,35 @@ function AdvertiserPage() {
           `${API_BASE}/api/advertisers/${encodeURIComponent(domain)}/warroom`
         );
       }
+
+      if (!w) {
+        const { data: placements } = await supabase
+          .from("ad_placements")
+          .select("id, domain, channel, channel_platform, ad_type, hook, headline, first_seen, last_seen, times_seen, ai_tags")
+          .ilike("domain", `%${root}%`)
+          .order("created_at", { ascending: false })
+          .limit(12);
+        if (placements?.length) {
+          w = {
+            domain,
+            advertiser: resolved,
+            total_ads: placements.length,
+            recent_ads: placements.map((p) => ({
+              id: p.id,
+              channel: p.channel,
+              channel_platform: p.channel_platform,
+              first_seen: p.first_seen,
+              last_seen: p.last_seen,
+              sighting_count: p.times_seen,
+              ai_tags: p.ai_tags,
+            })),
+            spend_signal: 3,
+            first_seen: placements[placements.length - 1]?.first_seen ?? undefined,
+            last_seen: placements[0]?.last_seen ?? undefined,
+          };
+        }
+      }
+
       if (!alive) return;
       setWar(w);
       setSpend(null);
@@ -468,10 +519,40 @@ function AdvertiserPage() {
     }
   };
 
+  const handleRunScan = async () => {
+    setScanning(true);
+    setScanError(null);
+    try {
+      await runMockScan({ data: { domain } });
+      window.location.reload();
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : "Scan failed");
+    } finally {
+      setScanning(false);
+    }
+  };
+
   if (loading) {
     return (
       <WorkspaceShell title={brand} subtitle={`War room · ${brand}`}>
         <div style={emptyCard}>Reading signal…</div>
+      </WorkspaceShell>
+    );
+  }
+
+  if (outOfScope) {
+    return (
+      <WorkspaceShell title={brand} subtitle={`War room · ${brand}`}>
+        <Link
+          to="/app/clients"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#6B6B62", marginBottom: 16, textDecoration: "none" }}
+        >
+          <ArrowLeft size={14} /> Back to clients
+        </Link>
+        <div style={emptyCard}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 6 }}>Outside agency watchlist</div>
+          {brand} is not on your agency watchlist. Add the domain under My Clients to scope war room intelligence.
+        </div>
       </WorkspaceShell>
     );
   }
@@ -486,8 +567,30 @@ function AdvertiserPage() {
           <ArrowLeft size={14} /> Back to Advertisers
         </Link>
         <div style={emptyCard}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 6 }}>R-AD is on it.</div>
-          Reading the signal for {brand}. First results within 24 hours.
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 6 }}>No data found</div>
+          No intelligence for {brand} yet. Run a demo scan to seed placements and unlock the war room.
+          <button
+            onClick={handleRunScan}
+            disabled={scanning}
+            style={{
+              display: "block",
+              margin: "20px auto 0",
+              background: "#C9963A",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: 7,
+              padding: "10px 24px",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: scanning ? "not-allowed" : "pointer",
+              opacity: scanning ? 0.7 : 1,
+            }}
+          >
+            {scanning ? "Running scan…" : "Run Scan"}
+          </button>
+          {scanError && (
+            <div style={{ color: "#C0392B", fontSize: 12, marginTop: 12 }}>{scanError}</div>
+          )}
         </div>
       </WorkspaceShell>
     );
