@@ -41,10 +41,24 @@ Scripts live in `package.json`:
 
 ### Auth gotcha (important for end-to-end testing)
 - Supabase has `mailer_autoconfirm = false`, so new email/password signups require clicking
-  a confirmation link emailed to the user. The shared/built-in Supabase email sender is
-  heavily rate-limited (`over_email_send_rate_limit`), which can block creating fresh
-  accounts. To exercise the authenticated app you generally need either a pre-confirmed
-  test account or `SUPABASE_SERVICE_ROLE_KEY` (to create/confirm a user via the admin API).
+  a confirmation link emailed to the user, and the shared/built-in Supabase email sender is
+  heavily rate-limited (`over_email_send_rate_limit`). **Skip email entirely** — provision a
+  pre-confirmed user with the **service-role key** (`SUPABASE_SERVICE_ROLE_KEY`, available as
+  a Cloud secret / `process.env`), then sign in with password:
+  ```bash
+  # 1) create a confirmed user (email_confirm:true bypasses the email step)
+  curl -s -X POST "$SUPABASE_URL/auth/v1/admin/users" \
+    -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+    -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"email":"agent@example.com","password":"DevPass12345!","email_confirm":true}'
+  # 2) get a session token (use the anon/publishable key here, not the service role key)
+  curl -s -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
+    -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H "Content-Type: application/json" \
+    -d '{"email":"agent@example.com","password":"DevPass12345!"}'
+  ```
+  Then log in through the UI at `/auth` with the same email/password. (`SUPABASE_URL` /
+  `SUPABASE_PUBLISHABLE_KEY` come from `.env`; the service-role key is injected as a secret.)
 - After login, the workspace is paywalled. The paywall has a **"Continue to demo"** button
   that sets `localStorage.revenuead_demo_unlocked = "1"` and routes to `/app/dashboard`,
   unlocking the dashboards without Stripe. Use this for demos.
