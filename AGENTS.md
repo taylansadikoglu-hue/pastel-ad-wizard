@@ -23,6 +23,15 @@ the backends are remote.
 Scripts live in `package.json`:
 - Dev server: `bun run dev` (Vite). Binds to **http://localhost:8080** (port comes from
   `@lovable.dev/vite-tanstack-config` sandbox detection, not from repo config).
+- **IMPORTANT — server functions need `.env` exported into `process.env`.** TanStack Start
+  server functions / middleware (`startScan`, `saveProfile`, the integrations functions,
+  the auth middleware) read **non-`VITE_` vars** like `process.env.SUPABASE_URL` and
+  `process.env.SUPABASE_PUBLISHABLE_KEY`. Vite/`bun run dev` does NOT auto-load `.env` into
+  the server process for non-`VITE_` keys, so a plain `bun run dev` makes those functions
+  throw `Missing Supabase environment variable(s)` (e.g. onboarding shows "Couldn't kick
+  off scans"). Start the dev server with the env exported, e.g.:
+  `set -a && . ./.env && set +a && bun run dev`
+  (The `VITE_*` keys are injected into the browser regardless; only the server side needs this.)
 - Build: `bun run build` (Cloudflare/Nitro target) or `bun run build:dev`.
 - Lint: `bun run lint` (ESLint flat config). NOTE: the committed code currently has
   thousands of pre-existing `prettier/prettier` formatting violations, so `bun run lint`
@@ -39,6 +48,12 @@ Scripts live in `package.json`:
 - After login, the workspace is paywalled. The paywall has a **"Continue to demo"** button
   that sets `localStorage.revenuead_demo_unlocked = "1"` and routes to `/app/dashboard`,
   unlocking the dashboards without Stripe. Use this for demos.
+- The **"start a scan" core action** is only reachable via the onboarding wizard at `/app`
+  (it calls the `startScan` server fn, inserting a `pending` row into `domain_scans`). After
+  demo-unlock, navigate to `/app` (not `/app/dashboard`) to get the wizard for a brand-new
+  user (one with no `agency_domain` on their `profiles` row). Completing it fires real
+  `domain_scans` inserts; a background worker (external, not in this repo) advances them
+  `pending → running → done`.
 - Admin email is `hello@revenuad.com`; it gets a dashboard picker instead of auto-redirect.
 
 ### Config / env
