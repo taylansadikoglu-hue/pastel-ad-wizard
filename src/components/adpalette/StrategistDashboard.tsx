@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { WorkspaceShell } from "./WorkspaceShell";
 import {
   loadStrategistIntelligence,
   normalizeBarbsBrief,
   normalizeBarbsConfidence,
+  type StrategistIntelBundle,
 } from "@/lib/api-gateway";
 import { getAgencyContext, type AgencyContext } from "@/lib/agency-watchlist";
+import { generatePitchDeck } from "@/lib/export-pptx";
 import { cn } from "@/lib/utils";
 import { MODULE_META, type PanelFocus } from "./strategist/data-module-types";
 import { buildWeeklyTrend } from "./strategist/hard-data-content";
@@ -186,6 +188,7 @@ export function StrategistDashboard() {
   const [confidence, setConfidence] = useState<Confidence | null>(null);
   const [loading, setLoading] = useState(true);
   const [agencyCtx, setAgencyCtx] = useState<AgencyContext | null>(null);
+  const [intelBundle, setIntelBundle] = useState<StrategistIntelBundle | null>(null);
   const [panelFocus, setPanelFocus] = useState<PanelFocus | null>(null);
 
   const hardDataPayload = useMemo(
@@ -205,6 +208,11 @@ export function StrategistDashboard() {
     setPanelFocus({ moduleId, rowIndex, rowLabel });
   };
 
+  const handleExportPitch = useCallback(async () => {
+    if (!intelBundle) return;
+    await generatePitchDeck(intelBundle, { agencyContext: agencyCtx });
+  }, [intelBundle, agencyCtx]);
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -213,6 +221,7 @@ export function StrategistDashboard() {
       if (!active) return;
 
       setAgencyCtx(ctx);
+      setIntelBundle(bundle);
 
       const briefRow = (() => {
         const { data, metadata } = bundle.brief;
@@ -372,6 +381,8 @@ export function StrategistDashboard() {
       variant="dark-dense"
       title="BARBS Morning Brief"
       subtitle="Senior strategy director read · live agency scope"
+      onExportPitch={handleExportPitch}
+      exportPitchDisabled={!intelBundle}
     >
       <div className="space-y-6">
         {brief && (brief.headline || brief.summary) && (

@@ -1,6 +1,6 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { LogOut } from "lucide-react";
+import { Loader2, LogOut, Presentation } from "lucide-react";
 import { ThemeProvider } from "./theme";
 import { SidebarNav } from "./Dashboard";
 import { TopBar } from "./TopBar";
@@ -14,15 +14,31 @@ export function WorkspaceShell({
   children,
   demo = false,
   variant = "default",
+  onExportPitch,
+  exportPitchDisabled = false,
 }: {
   title: string;
   subtitle?: string;
   children?: ReactNode;
   demo?: boolean;
   variant?: "default" | "dark-dense";
+  /** When set, shows Export PPTX in the header (strategist cockpit). */
+  onExportPitch?: () => void | Promise<void>;
+  exportPitchDisabled?: boolean;
 }) {
   const isDense = variant === "dark-dense";
   const navigate = useNavigate();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPitch = async () => {
+    if (!onExportPitch || exporting) return;
+    setExporting(true);
+    try {
+      await onExportPitch();
+    } finally {
+      setExporting(false);
+    }
+  };
   const logout = async () => {
     await supabase.auth.signOut();
     navigate({ to: "/", replace: true });
@@ -61,13 +77,35 @@ export function WorkspaceShell({
             style={{ padding: isDense ? "12px 16px" : "28px 32px" }}
           >
             <div style={{ maxWidth: isDense ? 1440 : 1280, margin: "0 auto" }}>
-              {(title || subtitle) && (
-                <header style={{ marginBottom: isDense ? 10 : 24 }}>
-                  {title && (isDense ? <h1 className="text-base font-semibold tracking-tight">{title}</h1> : <h1>{title}</h1>)}
-                  {subtitle && (
-                    <p className={cn(isDense && "dense-meta mt-1")} style={isDense ? undefined : { color: "var(--text-secondary)", fontSize: 13, marginTop: 6 }}>
-                      {subtitle}
-                    </p>
+              {(title || subtitle || onExportPitch) && (
+                <header
+                  className={cn(onExportPitch && "flex items-start justify-between gap-4")}
+                  style={{ marginBottom: isDense ? 10 : 24 }}
+                >
+                  <div className="min-w-0">
+                    {title && (isDense ? <h1 className="text-base font-semibold tracking-tight">{title}</h1> : <h1>{title}</h1>)}
+                    {subtitle && (
+                      <p className={cn(isDense && "dense-meta mt-1")} style={isDense ? undefined : { color: "var(--text-secondary)", fontSize: 13, marginTop: 6 }}>
+                        {subtitle}
+                      </p>
+                    )}
+                  </div>
+                  {onExportPitch && (
+                    <button
+                      type="button"
+                      onClick={handleExportPitch}
+                      disabled={exporting || exportPitchDisabled}
+                      className={cn(
+                        "shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border transition-colors",
+                        isDense
+                          ? "dense-chip border-neutral-700 bg-neutral-900 text-neutral-200 hover:border-neutral-500 hover:bg-neutral-800 disabled:opacity-50"
+                          : "border-[var(--hairline)] bg-[var(--paper)] text-[var(--ink)] hover:bg-[var(--canvas)] disabled:opacity-50",
+                      )}
+                      style={isDense ? undefined : { fontSize: 12, fontWeight: 500, cursor: exporting || exportPitchDisabled ? "not-allowed" : "pointer" }}
+                    >
+                      {exporting ? <Loader2 size={14} className="animate-spin" /> : <Presentation size={14} />}
+                      {exporting ? "Building deck…" : "Export PPTX"}
+                    </button>
                   )}
                 </header>
               )}
