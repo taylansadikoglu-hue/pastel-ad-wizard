@@ -59,8 +59,8 @@ function ClientsPage() {
 
   return (
     <WorkspaceShell
-      title="My clients"
-      subtitle="Brands you actively manage. Open the war room for spend, channels and flight timing."
+      title="Client Workspaces"
+      subtitle="Choose a client → set competitors → open Market Intel for snapshot, whitespace, and recommended moves."
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {rows.length > 0 && (
@@ -249,6 +249,6 @@ function ClientsPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/app/clients")({
-  head: () => ({ meta: [{ title: "My clients — RevenuAD Signal" }] }),
+  head: () => ({ meta: [{ title: "Client Workspaces — RevenuAD Signal" }] }),
   component: ClientsPage,
 });

@@ -4,10 +4,11 @@ import { useTheme } from "./theme";
 import { saveProfile } from "@/lib/integrations.functions";
 import { startScan } from "@/lib/scan.functions";
 import {
-  ArrowRight, ArrowLeft, Check, CreditCard, Lock, Loader2, Palette, Crosshair, Users,
+  ArrowRight, ArrowLeft, Check, CreditCard, Lock, Loader2, Palette, Building2, Users, Crown,
 } from "lucide-react";
+import { PRICING_PLANS, type PlanKey } from "@/lib/pricing-plans";
 
-const STEPS = ["Sign up", "Agency", "Advertisers", "Plan", "Sync"];
+const STEPS = ["Sign up", "Agency", "Client workspace", "Plan", "Sync"];
 
 const FOCUS_OPTIONS = [
   "Performance Creative (Meta/TikTok heavy)",
@@ -15,29 +16,9 @@ const FOCUS_OPTIONS = [
   "Omnichannel Brand Mix",
 ];
 
-type PlanKey = "solo" | "agency";
+type PlanKeyLocal = PlanKey;
 
-const PLANS: { key: PlanKey; name: string; price: number; tag: string; advertisers: string; icon: any; badge?: string; perks: string[] }[] = [
-  {
-    key: "solo",
-    name: "The Solo Sniper",
-    price: 199,
-    tag: "FOUNDING",
-    advertisers: "1 core tracked advertiser brand",
-    icon: Crosshair,
-    perks: ["Daily creative refresh", "Full ad library indexing", "CSV + PDF exports", "Strategic Advisor"],
-  },
-  {
-    key: "agency",
-    name: "The Agency 7-Pack",
-    price: 799,
-    tag: "FOUNDING",
-    advertisers: "Up to 7 tracked advertiser brands",
-    icon: Users,
-    badge: "BEST VALUE",
-    perks: ["Everything in Solo Sniper", "Side-by-side advertiser benchmarks", "White-label pitch decks", "Hook & creative diff alerts"],
-  },
-];
+const PLAN_ICONS = { launch: Building2, growth: Users, pro: Crown } as const;
 
 export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const { theme, toggle } = useTheme();
@@ -47,7 +28,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
     agency: "", focus: FOCUS_OPTIONS[0],
     rivals: ["", "", ""],
     countries: ["United States", "United States", "United States"],
-    plan: "agency" as PlanKey,
+    plan: "growth" as PlanKeyLocal,
     card: "", cardName: "", exp: "", cvc: "",
   });
   const [syncProgress, setSyncProgress] = useState(0);
@@ -64,8 +45,8 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
       if (!data.card || !data.cardName || !data.exp || !data.cvc) {
         toast.error("Complete payment details"); return;
       }
-      const plan = PLANS.find((p) => p.key === data.plan)!;
-      toast.success(`${plan.name} activated`);
+      const plan = PRICING_PLANS.find((p) => p.key === data.plan)!;
+      toast.success(`${plan.name} plan selected`);
     }
     if (step === 4) { onComplete(); return; }
     if (step === 3) {
@@ -198,8 +179,10 @@ function StepAgency({ data, setData }: any) {
   return (
     <div className="max-w-2xl mx-auto card-flat p-6 space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">Tell us about your agency</h1>
-        <p className="text-sm text-muted-foreground mt-1">This determines your default benchmark cohort.</p>
+        <h1 className="text-2xl font-bold">Your agency account</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          The agency holds billing and seats. Client workspaces live underneath — one per brand you manage.
+        </p>
       </div>
       <Field label="Registered agency name">
         <input className="input-flat" placeholder="North Studio Co." value={data.agency} onChange={(e) => setData({ ...data, agency: e.target.value })} />
@@ -228,8 +211,10 @@ function StepAdvertisers({ data, setData }: any) {
   return (
     <div className="max-w-2xl mx-auto card-flat p-6 space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">Who are your client's top 3 advertisers?</h1>
-        <p className="text-sm text-muted-foreground mt-1">Proprietary technology to backtrack, compile, and future-save your list of advertisers.</p>
+        <h1 className="text-2xl font-bold">First client workspace</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Choose competitors for this client. You can add more client workspaces after onboarding.
+        </p>
       </div>
       <div className="card-flat-sm p-3 bg-primary">
         <div className="mono text-[10px] font-bold uppercase">★ Master Brand Fingerprint</div>
@@ -238,7 +223,7 @@ function StepAdvertisers({ data, setData }: any) {
         </p>
       </div>
       {[0, 1, 2].map((i) => (
-        <Field key={i} label={`Advertiser ${i + 1} · root domain (master fingerprint)`} hint="root only">
+        <Field key={i} label={`Competitor ${i + 1} · domain`} hint="root only">
           <div className="flex gap-2">
             <div className="flex gap-2" style={{ flex: "4 1 0%", minWidth: 0 }}>
               <div className="px-3 py-2 border-2 border-ink rounded-[4px] mono text-xs bg-secondary shrink-0">https://</div>
@@ -268,51 +253,40 @@ function StepAdvertisers({ data, setData }: any) {
 }
 
 function StepPaywall({ data, setData }: any) {
-  const selected = PLANS.find((p) => p.key === data.plan)!;
+  const selected = PRICING_PLANS.find((p) => p.key === data.plan)!;
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="inline-block mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-primary mb-2">
-          ★ FOUNDING MEMBER LAUNCH · FIRST 100 AGENCIES
-        </div>
-        <h1 className="text-2xl font-bold">Lock in lifetime grandfathered pricing</h1>
+        <h1 className="text-2xl font-bold">Choose your agency plan</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          <span className="font-semibold text-ink">No contracts. No minimum durations. Cancel anytime.</span> Billed monthly via Stripe.
+          No contracts. Cancel anytime. Add client workspaces or category packs as you grow.
         </p>
       </div>
-      <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
-        {PLANS.map((p) => {
-          const Icon = p.icon;
+      <div className="grid md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+        {PRICING_PLANS.map((p) => {
+          const Icon = PLAN_ICONS[p.key];
           const active = data.plan === p.key;
           return (
             <button
               key={p.key}
               type="button"
               onClick={() => setData({ ...data, plan: p.key })}
-              className={`relative card-flat p-5 text-left transition ${active ? "bg-primary" : ""}`}
+              className={`relative card-flat p-5 text-left transition ${active ? "bg-primary ring-2 ring-ink" : ""}`}
             >
               {p.badge && (
                 <div className="absolute -top-3 left-3 mono text-[10px] font-bold px-2 py-1 border-2 border-ink rounded-[3px] bg-ink text-paper">
                   {p.badge}
                 </div>
               )}
-              <div className="mono text-[10px] font-bold px-1.5 py-0.5 border-2 border-ink rounded-[3px] inline-block bg-paper">
-                FOUNDING · LIFETIME LOCKED
-              </div>
-              <div className="flex items-center justify-between mt-3">
-                <div className="font-bold flex items-center gap-1.5"><Icon size={14} /> {p.name}</div>
-                <span className="mono text-[10px] px-1.5 py-0.5 border-2 border-ink rounded-[3px]">{p.tag}</span>
-              </div>
+              <div className="font-bold flex items-center gap-1.5"><Icon size={14} /> {p.name}</div>
               <div className="mt-3 mono text-3xl font-bold">${p.price.toLocaleString()}<span className="text-sm font-normal">/mo</span></div>
-              <div className="text-xs mt-1 font-semibold">{p.advertisers}</div>
+              <div className="text-xs mt-2 font-semibold">{p.workspaces}</div>
+              <div className="text-xs mt-1 text-muted-foreground">{p.categories}</div>
               <ul className="mt-4 space-y-1.5 text-sm">
-                {p.perks.map((f) => (
+                {p.perks.slice(0, 4).map((f) => (
                   <li key={f} className="flex items-start gap-1.5"><Check size={14} className="mt-0.5 shrink-0" /> {f}</li>
                 ))}
               </ul>
-              <div className="mt-3 pt-2 border-t-2 border-ink mono text-[10px] leading-snug">
-                Lifetime Grandfathered Founding Member Pricing — Locked In Forever for the First 100 Agencies.
-              </div>
             </button>
           );
         })}

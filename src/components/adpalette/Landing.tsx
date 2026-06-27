@@ -258,7 +258,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
           <MetricCard value="18,000+" label="Ads tracked" sub="YouTube, Search & Display" />
           <MetricCard value="1,173" label="Brands monitored" sub="Across 30 AU categories" />
           <MetricCard value="30" label="Categories" sub="Banking to automotive" />
-          <MetricCard value="$199" label="Per month" sub="Flat rate. No contracts." />
+          <MetricCard value="$299" label="Launch from" sub="Agency plans · no annual contract" />
         </div>
 
         {/* EMPATHY BANNER */}
@@ -664,7 +664,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               {[
                 { t: "30 categories tracked", b: "Banking · Auto · Telco · Retail · Health and 25 more" },
                 { t: "Fresh signal daily", b: "Updated every morning at 3am AEST" },
-                { t: "Built for independent agencies", b: "Flat $199 a month. No category fees. No annual contract." },
+                { t: "Built for independent agencies", b: "Launch from $299/mo. Add client workspaces and category packs as you grow." },
               ].map((s, i) => (
                 <div
                   key={s.t}
@@ -703,47 +703,42 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
           >
             {[
               {
-                name: "Solo Signal",
-                price: "$199",
-                sub: "1 competitor tracked",
+                name: "Launch",
+                price: "$299",
+                sub: "1 active client workspace · 1 category",
                 perks: [
-                  "Daily signal refresh",
-                  "Creative read on every ad",
-                  "Spend index + trend",
-                  "Gap detection",
-                  "PDF export",
+                  "Market snapshot + channel mix",
+                  "Whitespace + 3 recommended moves",
+                  "Pitch story export",
                 ],
                 cta: "Claim your seat →",
                 featured: false,
                 action: "enter" as const,
               },
               {
-                name: "Agency Signal",
+                name: "Growth",
                 price: "$799",
-                sub: "Up to 7 competitors tracked",
+                sub: "3 active client workspaces · 4 categories",
                 badge: "Most popular",
                 perks: [
-                  "Everything in Solo Signal",
-                  "Side-by-side benchmarks",
-                  "Channel allocation breakdown",
-                  "Longest-running creative leaders",
+                  "Everything in Launch",
+                  "Multi-client workspace switching",
+                  "Competitor sets per client",
                   "Priority refresh",
-                  "Slides export",
                 ],
                 cta: "Claim your seat →",
                 featured: true,
                 action: "enter" as const,
               },
               {
-                name: "White Label",
-                price: "$2,999",
-                sub: "Unlimited competitors",
+                name: "Pro",
+                price: "$1,499",
+                sub: "8 active client workspaces · all launch categories",
                 perks: [
-                  "Everything in Agency Signal",
-                  "Your branding on every export",
-                  "Custom domain",
+                  "Everything in Growth",
+                  "Premium export pack eligible",
+                  "Agency pitch templates",
                   "Dedicated onboarding",
-                  "SLA + priority support",
                 ],
                 cta: "Talk to us →",
                 featured: false,

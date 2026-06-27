@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Grid3x3 } from "lucide-react";
+import { Grid3x3, Lock } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { displayBrand } from "@/utils/brandDisplay";
+import { isLaunchCategory } from "@/lib/pricing-plans";
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -91,8 +92,8 @@ function CategoriesPage() {
 
   return (
     <WorkspaceShell
-      title="Australian Ad Intelligence by Category"
-      subtitle="See who dominates every market."
+      title="Categories"
+      subtitle="Launch access: Banking, Retail, Insurance, Telco. Additional categories unlock with a category pack."
     >
       {loading ? (
         <div className="card-flat p-12 text-center text-sm text-muted-foreground">
@@ -105,42 +106,101 @@ function CategoriesPage() {
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-          {grid.map((c) => (
-            <Link
-              key={c.slug}
-              to="/app/category/$slug"
-              params={{ slug: c.slug }}
-              style={{
-                display: "block",
-                background: "#FFFFFF",
-                border: "1px solid #EBE9E4",
-                borderRadius: 10,
-                padding: 20,
-                textDecoration: "none",
-                color: "inherit",
-                transition: "border-color 120ms",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#D4C4A0"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#EBE9E4"; }}
-            >
-              <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A" }}>{c.name}</div>
-              <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 4 }}>
-                {c.brandCount > 0 ? `${c.brandCount} brands` : "Signal incoming"}
-              </div>
-              {c.leader && (
-                <>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "#1C1C1A", marginTop: 12 }}>
-                    Leader: {displayBrand(c.leader)}
-                  </div>
-                  {c.leaderSov != null && (
-                    <div style={{ height: 3, background: "#F0EDE8", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
-                      <div style={{ width: `${Math.min(100, c.leaderSov)}%`, height: "100%", background: "#C9963A" }} />
+          {grid.map((c) => {
+            const unlocked = isLaunchCategory(c.slug) || isLaunchCategory(c.name);
+            const inner = (
+              <>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A" }}>{c.name}</div>
+                <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 4 }}>
+                  {c.brandCount > 0 ? `${c.brandCount} brands` : "Signal incoming"}
+                </div>
+                {c.leader && unlocked && (
+                  <>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "#1C1C1A", marginTop: 12 }}>
+                      Leader: {displayBrand(c.leader)}
                     </div>
-                  )}
-                </>
-              )}
-            </Link>
-          ))}
+                    {c.leaderSov != null && (
+                      <div style={{ height: 3, background: "#F0EDE8", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
+                        <div style={{ width: `${Math.min(100, c.leaderSov)}%`, height: "100%", background: "#C9963A" }} />
+                      </div>
+                    )}
+                  </>
+                )}
+                {!unlocked && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#6B6B62",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                    }}
+                  >
+                    <Lock size={12} /> Add category pack · $199/mo
+                  </div>
+                )}
+              </>
+            );
+
+            if (!unlocked) {
+              return (
+                <div
+                  key={c.slug}
+                  style={{
+                    position: "relative",
+                    background: "#FFFFFF",
+                    border: "1px solid #EBE9E4",
+                    borderRadius: 10,
+                    padding: 20,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div style={{ filter: "blur(5px)", opacity: 0.55, pointerEvents: "none" }}>{inner}</div>
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "grid",
+                      placeItems: "center",
+                      background: "rgba(255,255,255,0.72)",
+                    }}
+                  >
+                    <div style={{ textAlign: "center", padding: 12 }}>
+                      <Lock size={18} style={{ margin: "0 auto 8px", color: "#1C1C1A" }} />
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>Upgrade to unlock</div>
+                      <div style={{ fontSize: 11, color: "#6B6B62", marginTop: 4 }}>Category pack · $199/mo</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={c.slug}
+                to="/app/category/$slug"
+                params={{ slug: c.slug }}
+                style={{
+                  display: "block",
+                  background: "#FFFFFF",
+                  border: "1px solid #EBE9E4",
+                  borderRadius: 10,
+                  padding: 20,
+                  textDecoration: "none",
+                  color: "inherit",
+                  transition: "border-color 120ms",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#D4C4A0"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#EBE9E4"; }}
+              >
+                {inner}
+              </Link>
+            );
+          })}
         </div>
       )}
     </WorkspaceShell>

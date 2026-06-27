@@ -1,11 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { MorningBrief } from "@/components/adpalette/MorningBrief";
-
-function DashboardPage() {
-  return <MorningBrief />;
-}
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/app/dashboard")({
-  head: () => ({ meta: [{ title: "Morning signal — RevenuAD Signal" }] }),
-  component: DashboardPage,
+  head: () => ({ meta: [{ title: "Market Intel — RevenuAD Signal" }] }),
+  beforeLoad: () => {
+    throw redirect({ to: "/app/pcr" });
+  },
 });
