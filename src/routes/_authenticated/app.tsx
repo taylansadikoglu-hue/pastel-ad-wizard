@@ -88,39 +88,55 @@ function AppPage() {
   const isChildWorkspaceRoute = pathname !== "/app" && pathname !== "/app/";
 
   const refresh = async () => {
-    const { data: u } = await supabase.auth.getUser();
-    if (!u.user) {
-      navigate({ to: "/auth", replace: true });
-      return;
-    }
-    const userEmail = u.user.email ?? "";
-    setEmail(userEmail);
-    const isAdmin = userEmail.toLowerCase() === ADMIN_EMAIL;
+    const demoUnlocked = localStorage.getItem("revenuead_demo_unlocked") === "1";
+    const isLocalPreview = ["127.0.0.1", "localhost"].includes(window.location.hostname);
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("stripe_status, agency_domain")
-      .eq("id", u.user.id)
-      .maybeSingle();
-
-    const demoUnlocked = typeof window !== "undefined" && localStorage.getItem("revenuead_demo_unlocked") === "1";
-    if (profile?.stripe_status !== "active" && !demoUnlocked) {
-      setStage("paywall");
-      return;
-    }
-
-    // Admin: no auto-redirect — explicit picker, unless a choice is already stored
-    if (isAdmin) {
-      const choice = typeof window !== "undefined" ? localStorage.getItem(ADMIN_CHOICE_KEY) : null;
-      if (!choice) {
-        setStage("admin_picker");
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) {
+        if (demoUnlocked && isLocalPreview) {
+          setEmail("demo@local");
+          setStage("app");
+          return;
+        }
+        navigate({ to: "/auth", replace: true });
         return;
       }
-      setStage("app");
-      return;
-    }
+      const userEmail = u.user.email ?? "";
+      setEmail(userEmail);
+      const isAdmin = userEmail.toLowerCase() === ADMIN_EMAIL;
 
-    setStage(profile?.agency_domain ? "app" : "onboard");
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("stripe_status, agency_domain")
+        .eq("id", u.user.id)
+        .maybeSingle();
+
+      if (profile?.stripe_status !== "active" && !demoUnlocked) {
+        setStage("paywall");
+        return;
+      }
+
+      // Admin: no auto-redirect — explicit picker, unless a choice is already stored
+      if (isAdmin) {
+        const choice = localStorage.getItem(ADMIN_CHOICE_KEY);
+        if (!choice) {
+          setStage("admin_picker");
+          return;
+        }
+        setStage("app");
+        return;
+      }
+
+      setStage(profile?.agency_domain ? "app" : "onboard");
+    } catch {
+      if (demoUnlocked && isLocalPreview) {
+        setEmail("demo@local");
+        setStage("app");
+        return;
+      }
+      navigate({ to: "/auth", replace: true });
+    }
   };
 
   useEffect(() => {
