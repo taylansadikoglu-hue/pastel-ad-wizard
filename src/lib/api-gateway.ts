@@ -18,7 +18,7 @@ export type GatewayResponse<T = unknown> = {
 
 export type IntelligenceResource =
   | "rad_brief"
-  | "barbs_confidence"
+  | "rad_confidence"
   | "pulse"
   | "sov"
   | "client_threats"
@@ -36,14 +36,14 @@ export type GatewayRequest = {
 
 const INSIGHT_RESOURCES = new Set<IntelligenceResource>([
   "rad_brief",
-  "barbs_confidence",
+  "rad_confidence",
   "pulse",
   "sov",
 ]);
 
 const SUPABASE_VIEWS: Partial<Record<IntelligenceResource, string>> = {
   rad_brief: "ra_barbs_client_brief",
-  barbs_confidence: "ra_barbs_confidence",
+  rad_confidence: "ra_rad_confidence",
   client_threats: "ra_client_threats",
   brand_opportunities: "ra_brand_opportunities",
   top_opportunities: "ra_top_opportunities",
@@ -180,8 +180,8 @@ export async function fetchIntelligence<T = unknown>(
     const view = SUPABASE_VIEWS[resource];
     if (view) {
       const fallback = await fetchSupabaseView<T>(view, agencyId, {
-        single: resource === "rad_brief" || resource === "barbs_confidence",
-        limit: resource === "barbs_confidence" ? 1 : undefined,
+        single: resource === "rad_brief" || resource === "rad_confidence",
+        limit: resource === "rad_confidence" ? 1 : undefined,
       });
       if (fallback.status === "ok") {
         return {
@@ -220,7 +220,7 @@ async function fetchInsight<T>(
   switch (resource) {
     case "rad_brief":
       return fetchEngineJson<T>(`/api/brief/${categorySlug}`, agencyId, params);
-    case "barbs_confidence":
+    case "rad_confidence":
       return fetchEngineJson<T>(
         `/api/intelligence/confidence/${categorySlug}`,
         agencyId,
@@ -297,7 +297,7 @@ export async function loadStrategistIntelligence(
       agencyContext,
     ),
     fetchIntelligence<Record<string, unknown> | null>(
-      { resource: "barbs_confidence", agencyId, params: { categorySlug } },
+      { resource: "rad_confidence", agencyId, params: { categorySlug } },
       agencyContext,
     ),
     fetchIntelligence<Record<string, unknown>[]>(

@@ -596,6 +596,6 @@ export async function generatePitchDeck(
   }
 
   const datePart = new Date().toISOString().slice(0, 10);
-  const fileName = `barbs-pitch-${fileSlug(brand)}-${datePart}.pptx`;
+  const fileName = `rad-pitch-${fileSlug(brand)}-${datePart}.pptx`;
   await pptx.writeFile({ fileName });
 }
