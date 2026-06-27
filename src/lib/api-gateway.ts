@@ -1,10 +1,8 @@
-import { supabase } from "@/integrations/supabase/client";
-import { engineUrl } from "@/lib/engine";
 import {
-  filterByAgencyWatchlist,
   getAgencyContext,
   type AgencyContext,
 } from "@/lib/agency-watchlist";
+import { ENGINE_URL } from "@/lib/engine";
 
 /** Standard envelope for every intelligence response. */
 export type GatewayResponse<T = unknown> = {
@@ -29,33 +27,12 @@ export type IntelligenceResource =
   | "pitch_brief";
 
 export type GatewayRequest = {
-  resource: IntelligenceResource;
-  agencyId: number;
+  /** Logical resource key — resolved via {@link resolveUrl}. */
+  resource?: IntelligenceResource | string;
+  /** Direct API URL — bypasses resource map when set. */
+  url?: string;
+  agencyId?: string;
   params?: Record<string, string | number | boolean | undefined>;
-};
-
-const INSIGHT_RESOURCES = new Set<IntelligenceResource>([
-  "rad_brief",
-  "rad_confidence",
-  "pulse",
-  "sov",
-]);
-
-const SUPABASE_VIEWS: Partial<Record<IntelligenceResource, string>> = {
-  rad_brief: "ra_barbs_client_brief",
-  rad_confidence: "ra_rad_confidence",
-  client_threats: "ra_client_threats",
-  brand_opportunities: "ra_brand_opportunities",
-  top_opportunities: "ra_top_opportunities",
-  market_pressure: "ra_market_pressure",
-  executive_summary: "ra_executive_summary",
-  pitch_brief: "ra_pitch_brief",
-};
-
-const WATCHLIST_DOMAIN_KEYS: Partial<Record<IntelligenceResource, string>> = {
-  client_threats: "competitor_domain",
-  brand_opportunities: "brand_domain",
-  market_pressure: "brand_domain",
 };
 
 const CATEGORY_SLUGS: Record<string, string> = {
@@ -103,30 +80,62 @@ function resolveCategorySlug(
   return categoryToSlug(firstCategory);
 }
 
-function withAgencyQuery(path: string, agencyId: number, params?: GatewayRequest["params"]): string {
-  const url = new URL(engineUrl(path));
-  url.searchParams.set("agency_id", String(agencyId));
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      if (value === undefined || value === null || key === "category" || key === "categorySlug") continue;
-      url.searchParams.set(key, String(value));
-    }
-  }
-  return url.toString();
+function resolveAgencyId(agencyId?: string | number | null): string {
+  if (agencyId == null || agencyId === "") return "system";
+  return String(agencyId);
 }
 
-async function fetchEngineJson<T>(
-  path: string,
-  agencyId: number,
+/** Map logical resources to live R-AD API paths. */
+export function resolveUrl(
+  resource: string,
+  _agencyId: string,
+  _params?: Record<string, string>,
+): string {
+  const base = ENGINE_URL.replace(/\/+$/, "");
+
+  const map: Record<string, string> = {
+    rad_brief: "/api/brief/banking",
+    rad_confidence: "/api/pulse",
+    pulse: "/api/pulse",
+    client_threats: "/api/intelligence/share-of-voice",
+    ra_client_threats: "/api/intelligence/share-of-voice",
+    sov: "/api/intelligence/share-of-voice",
+    ra_category_ownership: "/api/intelligence/share-of-voice",
+    brand_opportunities: "/api/leaderboard/banking",
+    ra_brand_opportunities: "/api/leaderboard/banking",
+    top_opportunities: "/api/intelligence/creative-themes",
+    ra_top_opportunities: "/api/intelligence/creative-themes",
+    market_pressure: "/api/velocity/CommBank",
+    ra_market_pressure: "/api/velocity/CommBank",
+    executive_summary: "/api/pulse",
+    ra_executive_summary: "/api/pulse",
+    pitch_brief: "/api/pulse",
+  };
+
+  const path = map[resource] ?? "/api/pulse";
+  return `${base}${path}`;
+}
+
+function appendQueryParams(
+  url: string,
   params?: GatewayRequest["params"],
-): Promise<GatewayResponse<T>> {
-  const source = `engine:${path}`;
+): string {
+  if (!params) return url;
+  const parsed = new URL(url);
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || key === "category" || key === "categorySlug") continue;
+    parsed.searchParams.set(key, String(value));
+  }
+  return parsed.toString();
+}
+
+async function fetchFromUrl<T>(url: string, agencyId: string): Promise<GatewayResponse<T>> {
+  const source = url;
   try {
-    const url = withAgencyQuery(path, agencyId, params);
     const res = await fetch(url, {
       headers: {
         Accept: "application/json",
-        "X-Agency-Id": String(agencyId),
+        "X-Agency-Id": agencyId,
       },
     });
     if (!res.ok) return error<T>(source, `http_${res.status}`);
@@ -137,111 +146,28 @@ async function fetchEngineJson<T>(
   }
 }
 
-async function fetchSupabaseView<T>(
-  view: string,
-  agencyId: number,
-  options?: { single?: boolean; limit?: number },
-): Promise<GatewayResponse<T>> {
-  const source = `supabase:${view}`;
-  // Dynamic view routing — agency_id passed via RLS on underlying tables.
-  type ViewName = keyof import("@/integrations/supabase/types").Database["public"]["Views"];
-  let query = supabase.from(view as ViewName).select("*");
-  if (options?.limit) query = query.limit(options.limit);
-  const result = options?.single ? await query.maybeSingle() : await query;
-  if (result.error) return error<T>(source, result.error.code ?? "query_error");
-  void agencyId;
-  return ok(result.data as T, source);
-}
-
-function scopeRows<T extends Record<string, unknown>>(
-  rows: T[],
-  resource: IntelligenceResource,
-  domains: Set<string>,
-): T[] {
-  const key = WATCHLIST_DOMAIN_KEYS[resource];
-  if (!key || domains.size === 0) return rows;
-  return filterByAgencyWatchlist(rows, domains, key as keyof T);
-}
-
-/** Route a single intelligence request through Supabase (data) or engine (insight). */
+/** Fetch intelligence from a direct URL or resolved R-AD API endpoint. */
 export async function fetchIntelligence<T = unknown>(
   request: GatewayRequest,
-  ctx?: AgencyContext,
 ): Promise<GatewayResponse<T>> {
-  const { resource, agencyId, params } = request;
-  const agencyContext = ctx ?? (await getAgencyContext());
-  const domains = agencyContext.domains;
-  const categorySlug = resolveCategorySlug(params, agencyContext);
+  const agencyId = resolveAgencyId(request.agencyId);
+  const stringParams = Object.fromEntries(
+    Object.entries(request.params ?? {}).map(([k, v]) => [k, v == null ? "" : String(v)]),
+  );
 
-  if (INSIGHT_RESOURCES.has(resource)) {
-    const insight = await fetchInsight<T>(resource, agencyId, categorySlug, params);
-    if (insight.status === "ok" && insight.data != null) return insight;
-
-    const view = SUPABASE_VIEWS[resource];
-    if (view) {
-      const fallback = await fetchSupabaseView<T>(view, agencyId, {
-        single: resource === "rad_brief" || resource === "rad_confidence",
-        limit: resource === "rad_confidence" ? 1 : undefined,
-      });
-      if (fallback.status === "ok") {
-        return {
-          ...fallback,
-          metadata: {
-            ...fallback.metadata,
-            source: `${fallback.metadata.source} (insight_fallback)`,
-          },
-        };
-      }
-    }
-    return insight;
-  }
-
-  const view = SUPABASE_VIEWS[resource];
-  if (!view) return error<T>(`gateway:${resource}`, "unknown_resource");
-
-  const raw = await fetchSupabaseView<T[] | T>(view, agencyId, {
-    single: resource === "executive_summary",
-  });
-  if (raw.status !== "ok" || raw.data == null) return raw as GatewayResponse<T>;
-
-  if (Array.isArray(raw.data)) {
-    const scoped = scopeRows(raw.data as Record<string, unknown>[], resource, domains);
-    return ok(scoped as T, raw.metadata.source);
-  }
-  return raw as GatewayResponse<T>;
-}
-
-async function fetchInsight<T>(
-  resource: IntelligenceResource,
-  agencyId: number,
-  categorySlug: string,
-  params?: GatewayRequest["params"],
-): Promise<GatewayResponse<T>> {
-  switch (resource) {
-    case "rad_brief":
-      return fetchEngineJson<T>(`/api/brief/${categorySlug}`, agencyId, params);
-    case "rad_confidence":
-      return fetchEngineJson<T>(
-        `/api/intelligence/confidence/${categorySlug}`,
-        agencyId,
-        params,
+  const url = request.url
+    ? appendQueryParams(request.url, request.params)
+    : appendQueryParams(
+        resolveUrl(request.resource ?? "pulse", agencyId, stringParams),
+        request.params,
       );
-    case "pulse":
-      return fetchEngineJson<T>(`/api/pulse`, agencyId, { ...params, category: categorySlug });
-    case "sov":
-      return fetchEngineJson<T>(
-        `/api/intelligence/sov-pro/${categorySlug}`,
-        agencyId,
-        params,
-      );
-    default:
-      return error<T>(`engine:${resource}`, "not_insight");
-  }
+
+  return fetchFromUrl<T>(url, agencyId);
 }
 
 /** Strategist dashboard bundle — single entry point for R-AD cockpit data. */
 export type StrategistIntelBundle = {
-  agencyId: number | null;
+  agencyId: string;
   brief: GatewayResponse<Record<string, unknown> | null>;
   confidence: GatewayResponse<Record<string, unknown> | null>;
   threats: GatewayResponse<Record<string, unknown>[]>;
@@ -258,27 +184,9 @@ export async function loadStrategistIntelligence(
   ctx?: AgencyContext,
 ): Promise<StrategistIntelBundle> {
   const agencyContext = ctx ?? (await getAgencyContext());
-  const agencyId = agencyContext.agencyId;
-
-  if (!agencyId) {
-    const emptyBundle = empty<null>("gateway:none", "no_agency");
-    return {
-      agencyId: null,
-      brief: emptyBundle,
-      confidence: emptyBundle,
-      threats: ok([], "gateway:none"),
-      challengers: ok([], "gateway:none"),
-      whitespace: ok([], "gateway:none"),
-      momentum: ok([], "gateway:none"),
-      executive: emptyBundle,
-      pitch: ok([], "gateway:none"),
-      pulse: emptyBundle,
-      sov: emptyBundle,
-    };
-  }
-
-  const base = { agencyId };
+  const agencyId = resolveAgencyId(agencyContext.agencyId);
   const categorySlug = resolveCategorySlug(undefined, agencyContext);
+  const params = { categorySlug };
 
   const [
     brief,
@@ -292,49 +200,58 @@ export async function loadStrategistIntelligence(
     pulse,
     sov,
   ] = await Promise.all([
-    fetchIntelligence<Record<string, unknown> | null>(
-      { resource: "rad_brief", agencyId, params: { categorySlug } },
-      agencyContext,
-    ),
-    fetchIntelligence<Record<string, unknown> | null>(
-      { resource: "rad_confidence", agencyId, params: { categorySlug } },
-      agencyContext,
-    ),
-    fetchIntelligence<Record<string, unknown>[]>(
-      { resource: "client_threats", agencyId },
-      agencyContext,
-    ),
-    fetchIntelligence<Record<string, unknown>[]>(
-      { resource: "brand_opportunities", agencyId },
-      agencyContext,
-    ),
-    fetchIntelligence<Record<string, unknown>[]>(
-      { resource: "top_opportunities", agencyId },
-      agencyContext,
-    ),
-    fetchIntelligence<Record<string, unknown>[]>(
-      { resource: "market_pressure", agencyId },
-      agencyContext,
-    ),
-    fetchIntelligence<Record<string, unknown> | null>(
-      { resource: "executive_summary", agencyId },
-      agencyContext,
-    ),
-    fetchIntelligence<Record<string, unknown>[]>(
-      { resource: "pitch_brief", agencyId },
-      agencyContext,
-    ),
-    fetchIntelligence<Record<string, unknown> | null>(
-      { resource: "pulse", agencyId, params: { categorySlug } },
-      agencyContext,
-    ),
-    fetchIntelligence<Record<string, unknown> | null>(
-      { resource: "sov", agencyId, params: { categorySlug } },
-      agencyContext,
-    ),
+    fetchIntelligence<Record<string, unknown> | null>({
+      resource: "rad_brief",
+      agencyId,
+      params,
+    }),
+    fetchIntelligence<Record<string, unknown> | null>({
+      resource: "rad_confidence",
+      agencyId,
+      params,
+    }),
+    fetchIntelligence<Record<string, unknown>[]>({
+      resource: "client_threats",
+      agencyId,
+      params,
+    }),
+    fetchIntelligence<Record<string, unknown>[]>({
+      resource: "brand_opportunities",
+      agencyId,
+      params,
+    }),
+    fetchIntelligence<Record<string, unknown>[]>({
+      resource: "top_opportunities",
+      agencyId,
+      params,
+    }),
+    fetchIntelligence<Record<string, unknown>[]>({
+      resource: "market_pressure",
+      agencyId,
+      params,
+    }),
+    fetchIntelligence<Record<string, unknown> | null>({
+      resource: "executive_summary",
+      agencyId,
+      params,
+    }),
+    fetchIntelligence<Record<string, unknown>[]>({
+      resource: "pitch_brief",
+      agencyId,
+      params,
+    }),
+    fetchIntelligence<Record<string, unknown> | null>({
+      resource: "pulse",
+      agencyId,
+      params,
+    }),
+    fetchIntelligence<Record<string, unknown> | null>({
+      resource: "sov",
+      agencyId,
+      params,
+    }),
   ]);
 
-  void base;
   return {
     agencyId,
     brief,
