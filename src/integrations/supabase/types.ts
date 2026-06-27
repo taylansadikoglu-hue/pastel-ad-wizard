@@ -423,6 +423,33 @@ export type Database = {
         }
         Relationships: []
       }
+      agencies: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       agency_profiles: {
         Row: {
           accent_color: string
@@ -459,57 +486,27 @@ export type Database = {
         }
         Relationships: []
       }
-      agencies: {
-        Row: {
-          id: number
-          name: string
-          domain: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: number
-          name: string
-          domain?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: number
-          name?: string
-          domain?: string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
       agency_watchlist: {
         Row: {
-          id: number
-          agency_id: number
-          client_name: string
-          client_domain: string
-          competitor_domain: string | null
-          category: string | null
-          country: string | null
+          agency_id: string
           created_at: string
+          domain: string
+          id: string
+          label: string | null
         }
         Insert: {
-          id?: number
-          agency_id: number
-          client_name: string
-          client_domain: string
-          competitor_domain?: string | null
-          category?: string | null
-          country?: string | null
+          agency_id: string
           created_at?: string
+          domain: string
+          id?: string
+          label?: string | null
         }
         Update: {
-          id?: number
-          agency_id?: number
-          client_name?: string
-          client_domain?: string
-          competitor_domain?: string | null
-          category?: string | null
-          country?: string | null
+          agency_id?: string
           created_at?: string
+          domain?: string
+          id?: string
+          label?: string | null
         }
         Relationships: [
           {
@@ -770,7 +767,6 @@ export type Database = {
       profiles: {
         Row: {
           agency_domain: string | null
-          agency_id: number | null
           agency_name: string | null
           created_at: string
           id: string
@@ -779,7 +775,6 @@ export type Database = {
         }
         Insert: {
           agency_domain?: string | null
-          agency_id?: number | null
           agency_name?: string | null
           created_at?: string
           id: string
@@ -788,22 +783,13 @@ export type Database = {
         }
         Update: {
           agency_domain?: string | null
-          agency_id?: number | null
           agency_name?: string | null
           created_at?: string
           id?: string
           stripe_status?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_agency_id_fkey"
-            columns: ["agency_id"]
-            isOneToOne: false
-            referencedRelation: "agencies"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       reddit_brand_sentiment: {
         Row: {
@@ -2008,7 +1994,7 @@ export type Database = {
         }
         Relationships: []
       }
-      ra_rad_brief: {
+      ra_barbs_brief: {
         Row: {
           category: string | null
           client_domain: string | null
@@ -2024,7 +2010,7 @@ export type Database = {
         }
         Relationships: []
       }
-      ra_rad_brief_cards: {
+      ra_barbs_brief_cards: {
         Row: {
           emerging_challenger: string | null
           headline: string | null
@@ -2265,19 +2251,6 @@ export type Database = {
           competitor_domain: string | null
           country: string | null
           watchlist_id: number | null
-        }
-        Relationships: []
-      }
-      ra_agency_watchlist: {
-        Row: {
-          id: number | null
-          agency_id: number | null
-          client_name: string | null
-          client_domain: string | null
-          competitor_domain: string | null
-          category: string | null
-          country: string | null
-          created_at: string | null
         }
         Relationships: []
       }
