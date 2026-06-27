@@ -2008,7 +2008,7 @@ export type Database = {
         }
         Relationships: []
       }
-      ra_barbs_brief: {
+      ra_rad_brief: {
         Row: {
           category: string | null
           client_domain: string | null
@@ -2024,7 +2024,7 @@ export type Database = {
         }
         Relationships: []
       }
-      ra_barbs_brief_cards: {
+      ra_rad_brief_cards: {
         Row: {
           emerging_challenger: string | null
           headline: string | null

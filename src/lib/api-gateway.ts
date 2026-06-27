@@ -17,7 +17,7 @@ export type GatewayResponse<T = unknown> = {
 };
 
 export type IntelligenceResource =
-  | "barbs_brief"
+  | "rad_brief"
   | "barbs_confidence"
   | "pulse"
   | "sov"
@@ -35,14 +35,14 @@ export type GatewayRequest = {
 };
 
 const INSIGHT_RESOURCES = new Set<IntelligenceResource>([
-  "barbs_brief",
+  "rad_brief",
   "barbs_confidence",
   "pulse",
   "sov",
 ]);
 
 const SUPABASE_VIEWS: Partial<Record<IntelligenceResource, string>> = {
-  barbs_brief: "ra_barbs_client_brief",
+  rad_brief: "ra_barbs_client_brief",
   barbs_confidence: "ra_barbs_confidence",
   client_threats: "ra_client_threats",
   brand_opportunities: "ra_brand_opportunities",
@@ -180,7 +180,7 @@ export async function fetchIntelligence<T = unknown>(
     const view = SUPABASE_VIEWS[resource];
     if (view) {
       const fallback = await fetchSupabaseView<T>(view, agencyId, {
-        single: resource === "barbs_brief" || resource === "barbs_confidence",
+        single: resource === "rad_brief" || resource === "barbs_confidence",
         limit: resource === "barbs_confidence" ? 1 : undefined,
       });
       if (fallback.status === "ok") {
@@ -218,7 +218,7 @@ async function fetchInsight<T>(
   params?: GatewayRequest["params"],
 ): Promise<GatewayResponse<T>> {
   switch (resource) {
-    case "barbs_brief":
+    case "rad_brief":
       return fetchEngineJson<T>(`/api/brief/${categorySlug}`, agencyId, params);
     case "barbs_confidence":
       return fetchEngineJson<T>(
@@ -239,7 +239,7 @@ async function fetchInsight<T>(
   }
 }
 
-/** Strategist dashboard bundle — single entry point for BARBS cockpit data. */
+/** Strategist dashboard bundle — single entry point for R-AD cockpit data. */
 export type StrategistIntelBundle = {
   agencyId: number | null;
   brief: GatewayResponse<Record<string, unknown> | null>;
@@ -293,7 +293,7 @@ export async function loadStrategistIntelligence(
     sov,
   ] = await Promise.all([
     fetchIntelligence<Record<string, unknown> | null>(
-      { resource: "barbs_brief", agencyId, params: { categorySlug } },
+      { resource: "rad_brief", agencyId, params: { categorySlug } },
       agencyContext,
     ),
     fetchIntelligence<Record<string, unknown> | null>(
@@ -350,8 +350,8 @@ export async function loadStrategistIntelligence(
   };
 }
 
-/** Map engine brief payload into strategist BARBS card shape when needed. */
-export function normalizeBarbsBrief(
+/** Map engine brief payload into strategist R-AD card shape when needed. */
+export function normalizeRadBrief(
   engineBrief: Record<string, unknown> | null,
   fallback: Record<string, unknown> | null,
 ): Record<string, unknown> | null {
@@ -378,7 +378,7 @@ export function normalizeBarbsBrief(
 }
 
 /** Map engine pulse into confidence metrics when Supabase view is empty. */
-export function normalizeBarbsConfidence(
+export function normalizeRadConfidence(
   enginePulse: Record<string, unknown> | null,
   fallback: Record<string, unknown> | null,
 ): Record<string, unknown> | null {

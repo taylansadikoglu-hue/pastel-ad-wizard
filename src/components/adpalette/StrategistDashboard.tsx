@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { WorkspaceShell } from "./WorkspaceShell";
 import {
   loadStrategistIntelligence,
-  normalizeBarbsBrief,
-  normalizeBarbsConfidence,
+  normalizeRadBrief,
+  normalizeRadConfidence,
   type StrategistIntelBundle,
 } from "@/lib/api-gateway";
 import { getAgencyContext, type AgencyContext } from "@/lib/agency-watchlist";
@@ -73,7 +73,7 @@ function EvidenceBlock({ items }: { items: { label: string; value: string }[] })
   if (!items.length) return null;
   return (
     <div className="mt-auto pt-2 border-t border-neutral-800">
-      <div className={cn(DC.label, "mb-2")}>Why BARBS Thinks This</div>
+      <div className={cn(DC.label, "mb-2")}>Why R-AD Thinks This</div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         {items.map((it) => (
           <div key={it.label}>
@@ -97,7 +97,7 @@ function EmptyState({ agencyCtx }: { agencyCtx: AgencyContext | null }) {
       </p>
       <p className="mt-2 text-neutral-500">
         {agencyCtx?.domains.size === 0
-          ? "> add brands to agency_watchlist to scope BARBS"
+          ? "> add brands to agency_watchlist to scope R-AD"
           : "> run scan on watchlist domains to populate threat cards"}
       </p>
     </div>
@@ -227,7 +227,7 @@ export function StrategistDashboard() {
         const { data, metadata } = bundle.brief;
         if (!data) return null;
         if (metadata.source.startsWith("supabase:")) return data as Brief;
-        return normalizeBarbsBrief(data as Record<string, unknown>, null) as Brief;
+        return normalizeRadBrief(data as Record<string, unknown>, null) as Brief;
       })();
 
       const domains = ctx.domains;
@@ -250,7 +250,7 @@ export function StrategistDashboard() {
       setExec((bundle.executive.data ?? null) as Exec | null);
       setPitch((bundle.pitch.data ?? []) as Pitch[]);
       setConfidence(
-        normalizeBarbsConfidence(
+        normalizeRadConfidence(
           bundle.pulse.status === "ok" ? (bundle.pulse.data as Record<string, unknown>) : null,
           bundle.confidence.metadata.source.startsWith("supabase:")
             ? (bundle.confidence.data as Confidence | null)
@@ -264,7 +264,7 @@ export function StrategistDashboard() {
 
   if (loading) {
     return (
-      <WorkspaceShell variant="dark-dense" title="BARBS Morning Brief">
+      <WorkspaceShell variant="dark-dense" title="Morning Signal">
         <div className={cn(DC.empty, "text-center")}>
           <span className="text-neutral-500">{">"} loading intelligence stream…</span>
         </div>
@@ -299,7 +299,7 @@ export function StrategistDashboard() {
 
   const delta = (v: number, a: number) => (a > 0 ? Math.round(((v - a) / a) * 100) : 0);
 
-  // Evidence behind each BARBS conclusion — live data only
+  // Evidence behind each R-AD conclusion — live data only
   const threatTarget =
     topThreats.find(
       (t) =>
@@ -379,7 +379,7 @@ export function StrategistDashboard() {
   return (
     <WorkspaceShell
       variant="dark-dense"
-      title="BARBS Morning Brief"
+      title="Morning Signal"
       subtitle="Senior strategy director read · live agency scope"
       onExportPitch={handleExportPitch}
       exportPitchDisabled={!intelBundle}

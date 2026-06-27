@@ -1,7 +1,7 @@
 import pptxgen from "pptxgenjs";
 import {
-  normalizeBarbsBrief,
-  normalizeBarbsConfidence,
+  normalizeRadBrief,
+  normalizeRadConfidence,
   type StrategistIntelBundle,
 } from "@/lib/api-gateway";
 import type { AgencyContext } from "@/lib/agency-watchlist";
@@ -198,7 +198,7 @@ function resolveBrief(bundle: StrategistIntelBundle): BriefShape | null {
   const { data, metadata } = bundle.brief;
   if (!data) return null;
   if (metadata.source.startsWith("supabase:")) return data as BriefShape;
-  return normalizeBarbsBrief(data as Record<string, unknown>, null) as BriefShape;
+  return normalizeRadBrief(data as Record<string, unknown>, null) as BriefShape;
 }
 
 function resolveConfidence(bundle: StrategistIntelBundle): ConfidenceShape | null {
@@ -208,7 +208,7 @@ function resolveConfidence(bundle: StrategistIntelBundle): ConfidenceShape | nul
     bundle.confidence.metadata.source.startsWith("supabase:")
       ? (bundle.confidence.data as ConfidenceShape | null)
       : null;
-  return normalizeBarbsConfidence(pulse, fallback) as ConfidenceShape | null;
+  return normalizeRadConfidence(pulse, fallback) as ConfidenceShape | null;
 }
 
 function resolveAgencyBrand(bundle: StrategistIntelBundle, ctx?: AgencyContext | null): string {
@@ -270,7 +270,7 @@ function buildTitleSlide(pptx: pptxgen, brand: string, category: string | null) 
   const slide = pptx.addSlide();
   slideBackground(slide);
 
-  slide.addText("BARBS Morning Brief", {
+  slide.addText("Morning Signal", {
     x: 0.55,
     y: 2.1,
     w: 8.9,
@@ -333,7 +333,7 @@ function buildExecutiveSlide(pptx: pptxgen, bundle: StrategistIntelBundle) {
 
   const slide = pptx.addSlide();
   slideBackground(slide);
-  addSlideLabel(slide, "Executive Summary · BARBS Insight");
+  addSlideLabel(slide, "Executive Summary · R-AD Insight");
   addSlideTitle(slide, brief.headline ?? "Strategic intelligence brief");
 
   let y = 1.25;
@@ -568,7 +568,7 @@ function buildModuleSlide(pptx: pptxgen, moduleId: DataModuleId, bundle: Strateg
 }
 
 /**
- * Build and download a BARBS pitch deck from the strategist intelligence bundle.
+ * Build and download a R-AD pitch deck from the strategist intelligence bundle.
  * Exports only normalized intelligence fields — no API keys, agency IDs, or internal source paths.
  */
 export async function generatePitchDeck(
@@ -582,8 +582,8 @@ export async function generatePitchDeck(
   const pptx = new pptxgen();
   pptx.layout = "LAYOUT_16x9";
   pptx.author = "RevenuAD Signal";
-  pptx.subject = "BARBS Intelligence Brief";
-  pptx.title = `${brand} · BARBS Brief`;
+  pptx.subject = "R-AD Intelligence Brief";
+  pptx.title = `${brand} · R-AD Brief`;
 
   buildTitleSlide(pptx, brand, brief?.category ?? null);
 
