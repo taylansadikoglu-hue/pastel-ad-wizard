@@ -55,6 +55,21 @@ export type RadStrategistBundleApi = {
   methodology?: Record<string, unknown>;
 };
 
+/** Strategist dashboard bundle — single entry point for R-AD cockpit data. */
+export type StrategistIntelBundle = {
+  agencyId: string;
+  brief: GatewayResponse<Record<string, unknown> | null>;
+  confidence: GatewayResponse<Record<string, unknown> | null>;
+  threats: GatewayResponse<Record<string, unknown>[]>;
+  challengers: GatewayResponse<Record<string, unknown>[]>;
+  whitespace: GatewayResponse<Record<string, unknown>[]>;
+  momentum: GatewayResponse<Record<string, unknown>[]>;
+  executive: GatewayResponse<Record<string, unknown> | null>;
+  pitch: GatewayResponse<Record<string, unknown>[]>;
+  pulse: GatewayResponse<Record<string, unknown> | null>;
+  sov: GatewayResponse<Record<string, unknown> | null>;
+};
+
 const CATEGORY_SLUGS: Record<string, string> = {
   banking: "banking",
   "general banking": "banking",
@@ -252,21 +267,6 @@ function emptyStrategistBundle(agencyId: string, source: string): StrategistInte
   };
 }
 
-/** Strategist dashboard bundle — single entry point for R-AD cockpit data. */
-export type StrategistIntelBundle = {
-  agencyId: string;
-  brief: GatewayResponse<Record<string, unknown> | null>;
-  confidence: GatewayResponse<Record<string, unknown> | null>;
-  threats: GatewayResponse<Record<string, unknown>[]>;
-  challengers: GatewayResponse<Record<string, unknown>[]>;
-  whitespace: GatewayResponse<Record<string, unknown>[]>;
-  momentum: GatewayResponse<Record<string, unknown>[]>;
-  executive: GatewayResponse<Record<string, unknown> | null>;
-  pitch: GatewayResponse<Record<string, unknown>[]>;
-  pulse: GatewayResponse<Record<string, unknown> | null>;
-  sov: GatewayResponse<Record<string, unknown> | null>;
-};
-
 export async function loadStrategistIntelligence(
   ctx?: AgencyContext,
 ): Promise<StrategistIntelBundle> {
@@ -277,7 +277,7 @@ export async function loadStrategistIntelligence(
   const url = strategistBundleUrl(category, brand);
 
   const response = await fetchFromUrl<RadStrategistBundleApi>(url, agencyId);
-  if (response.status !== "ok" || !response.data) {
+  if (response.status !== "ok" || !response.data?.modules) {
     return emptyStrategistBundle(agencyId, response.metadata.source);
   }
 
@@ -325,7 +325,6 @@ export function normalizeRadBrief(
     client_name: src.industry ?? src.client_name ?? null,
     category: src.category ?? src.industry ?? null,
     headline:
-      src.headline ??
       winConditions[0]?.gap ??
       (typeof src.pitch_narrative === "string" ? src.pitch_narrative : null) ??
       pulse?.most_aggressive_brand ??
