@@ -180,12 +180,59 @@ export type StrategistIntelBundle = {
   sov: GatewayResponse<Record<string, unknown> | null>;
 };
 
+type StrategistApiBundle = {
+  generated_at: string;
+  agency_id: string;
+  brief: Record<string, unknown> | null;
+  confidence: Record<string, unknown> | null;
+  modules: {
+    competitors: Record<string, unknown>[];
+    challengers: Record<string, unknown>[];
+    whitespace: Record<string, unknown>[];
+    momentum: Record<string, unknown>[];
+    executive: Record<string, unknown> | null;
+    pitch: Record<string, unknown>[];
+  };
+  pulse: Record<string, unknown> | null;
+  sov: Record<string, unknown> | null;
+};
+
 export async function loadStrategistIntelligence(
   ctx?: AgencyContext,
 ): Promise<StrategistIntelBundle> {
   const agencyContext = ctx ?? (await getAgencyContext());
   const agencyId = resolveAgencyId(agencyContext.agencyId);
   const categorySlug = resolveCategorySlug(undefined, agencyContext);
+  const selectedBrand = agencyContext.entries.find((entry) => entry.client_name)?.client_name;
+  const bundleUrl = new URL(
+    `${ENGINE_URL.replace(/\/+$/, "")}/api/strategist/bundle`,
+  );
+  bundleUrl.searchParams.set("category", categorySlug);
+  if (selectedBrand) bundleUrl.searchParams.set("brand", selectedBrand);
+
+  const strategist = await fetchFromUrl<StrategistApiBundle>(
+    bundleUrl.toString(),
+    agencyId,
+  );
+  if (strategist.status === "ok" && strategist.data?.modules) {
+    const source = bundleUrl.toString();
+    const data = strategist.data;
+    return {
+      agencyId,
+      brief: ok(data.brief, source),
+      confidence: ok(data.confidence, source),
+      threats: ok(data.modules.competitors ?? [], source),
+      challengers: ok(data.modules.challengers ?? [], source),
+      whitespace: ok(data.modules.whitespace ?? [], source),
+      momentum: ok(data.modules.momentum ?? [], source),
+      executive: ok(data.modules.executive, source),
+      pitch: ok(data.modules.pitch ?? [], source),
+      pulse: ok(data.pulse, source),
+      sov: ok(data.sov, source),
+    };
+  }
+
+  // Compatibility fallback while older API deployments are still active.
   const params = { categorySlug };
 
   const [
@@ -274,6 +321,7 @@ export function normalizeRadBrief(
 ): Record<string, unknown> | null {
   if (fallback && (fallback.headline || fallback.strongest_threat)) return fallback;
   if (!engineBrief) return fallback;
+  if (engineBrief.headline || engineBrief.strongest_threat) return engineBrief;
 
   const pulse = engineBrief.market_pulse as Record<string, unknown> | undefined;
   const winConditions = Array.isArray(engineBrief.win_conditions)
