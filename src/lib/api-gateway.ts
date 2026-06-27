@@ -270,7 +270,11 @@ function emptyStrategistBundle(agencyId: string, source: string): StrategistInte
 export async function loadStrategistIntelligence(
   ctx?: AgencyContext,
 ): Promise<StrategistIntelBundle> {
-  const agencyContext = ctx ?? (await getAgencyContext());
+  const agencyContext = ctx ?? (await getAgencyContext().catch(() => ({
+    agencyId: null,
+    entries: [],
+    domains: new Set<string>(),
+  })));
   const agencyId = resolveAgencyId(agencyContext.agencyId);
   const category = resolveCategorySlug(undefined, agencyContext);
   const brand = resolveBrand(agencyContext);
