@@ -223,26 +223,9 @@ export function StrategistDashboard() {
       setAgencyCtx(ctx);
       setIntelBundle(bundle);
 
-      const briefRow = (() => {
-        const { data, metadata } = bundle.brief;
-        if (!data) return null;
-        if (metadata.source.startsWith("supabase:")) return data as Brief;
-        return normalizeRadBrief(data as Record<string, unknown>, null) as Brief;
-      })();
-
-      const domains = ctx.domains;
-      const scopedBrief =
-        briefRow &&
-        (briefRow.client_name == null ||
-          [...domains].some((d) =>
-            briefRow.client_name?.toLowerCase().includes(d.split(".")[0] ?? ""),
-          ))
-          ? briefRow
-          : domains.size > 0
-            ? briefRow
-            : null;
-
-      setBrief(scopedBrief);
+      setBrief(
+        normalizeRadBrief(bundle.brief.data as Record<string, unknown> | null, null) as Brief | null,
+      );
       setThreats((bundle.threats.data ?? []) as Threat[]);
       setChallengers((bundle.challengers.data ?? []) as Challenger[]);
       setWhitespace((bundle.whitespace.data ?? []) as Whitespace[]);
@@ -251,10 +234,8 @@ export function StrategistDashboard() {
       setPitch((bundle.pitch.data ?? []) as Pitch[]);
       setConfidence(
         normalizeRadConfidence(
-          bundle.pulse.status === "ok" ? (bundle.pulse.data as Record<string, unknown>) : null,
-          bundle.confidence.metadata.source.startsWith("supabase:")
-            ? (bundle.confidence.data as Confidence | null)
-            : null,
+          bundle.pulse.data as Record<string, unknown> | null,
+          bundle.confidence.data as Record<string, unknown> | null,
         ) as Confidence | null,
       );
       setLoading(false);

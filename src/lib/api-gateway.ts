@@ -24,15 +24,35 @@ export type IntelligenceResource =
   | "top_opportunities"
   | "market_pressure"
   | "executive_summary"
-  | "pitch_brief";
+  | "pitch_brief"
+  | "strategist_bundle";
 
 export type GatewayRequest = {
-  /** Logical resource key — resolved via {@link resolveUrl}. */
   resource?: IntelligenceResource | string;
-  /** Direct API URL — bypasses resource map when set. */
   url?: string;
   agencyId?: string;
   params?: Record<string, string | number | boolean | undefined>;
+};
+
+/** Live strategist bundle from GET /api/strategist/bundle */
+export type RadStrategistBundleApi = {
+  api_version?: string;
+  generated_at?: string;
+  agency_id?: string;
+  query?: { category?: string; brand?: string; days?: number };
+  brief?: Record<string, unknown>;
+  confidence?: Record<string, unknown>;
+  modules?: {
+    competitors?: Record<string, unknown>[];
+    challengers?: Record<string, unknown>[];
+    whitespace?: Record<string, unknown>[];
+    momentum?: Record<string, unknown>[];
+    executive?: Record<string, unknown>;
+    pitch?: Record<string, unknown>[];
+  };
+  pulse?: Record<string, unknown>;
+  sov?: Record<string, unknown>;
+  methodology?: Record<string, unknown>;
 };
 
 const CATEGORY_SLUGS: Record<string, string> = {
@@ -80,40 +100,59 @@ function resolveCategorySlug(
   return categoryToSlug(firstCategory);
 }
 
+function resolveBrand(ctx?: AgencyContext): string {
+  const entry = ctx?.entries.find((e) => e.client_name || e.client_domain);
+  if (entry?.client_name?.trim()) return entry.client_name.trim();
+  if (entry?.client_domain) {
+    const root = entry.client_domain.split(".")[0] ?? "";
+    if (root) return root.charAt(0).toUpperCase() + root.slice(1);
+  }
+  return "CommBank";
+}
+
 function resolveAgencyId(agencyId?: string | number | null): string {
   if (agencyId == null || agencyId === "") return "system";
   return String(agencyId);
 }
 
-/** Map logical resources to live R-AD API paths. */
+export function strategistBundleUrl(
+  category: string,
+  brand: string,
+  days = 30,
+): string {
+  const base = ENGINE_URL.replace(/\/+$/, "");
+  const url = new URL(`${base}/api/strategist/bundle`);
+  url.searchParams.set("category", category);
+  url.searchParams.set("brand", brand);
+  url.searchParams.set("days", String(days));
+  return url.toString();
+}
+
+/** Map logical resources to live R-AD API paths (legacy per-resource fetch). */
 export function resolveUrl(
   resource: string,
   _agencyId: string,
   _params?: Record<string, string>,
 ): string {
-  const base = ENGINE_URL.replace(/\/+$/, "");
+  if (resource === "strategist_bundle") {
+    return strategistBundleUrl("banking", "CommBank");
+  }
 
+  const base = ENGINE_URL.replace(/\/+$/, "");
   const map: Record<string, string> = {
     rad_brief: "/api/brief/banking",
     rad_confidence: "/api/pulse",
     pulse: "/api/pulse",
     client_threats: "/api/intelligence/share-of-voice",
-    ra_client_threats: "/api/intelligence/share-of-voice",
-    sov: "/api/intelligence/share-of-voice",
-    ra_category_ownership: "/api/intelligence/share-of-voice",
     brand_opportunities: "/api/leaderboard/banking",
-    ra_brand_opportunities: "/api/leaderboard/banking",
     top_opportunities: "/api/intelligence/creative-themes",
-    ra_top_opportunities: "/api/intelligence/creative-themes",
     market_pressure: "/api/velocity/CommBank",
-    ra_market_pressure: "/api/velocity/CommBank",
     executive_summary: "/api/pulse",
-    ra_executive_summary: "/api/pulse",
     pitch_brief: "/api/pulse",
+    sov: "/api/intelligence/share-of-voice",
   };
 
-  const path = map[resource] ?? "/api/pulse";
-  return `${base}${path}`;
+  return `${base}${map[resource] ?? "/api/pulse"}`;
 }
 
 function appendQueryParams(
@@ -123,7 +162,7 @@ function appendQueryParams(
   if (!params) return url;
   const parsed = new URL(url);
   for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === null || key === "category" || key === "categorySlug") continue;
+    if (value === undefined || value === null) continue;
     parsed.searchParams.set(key, String(value));
   }
   return parsed.toString();
@@ -165,6 +204,54 @@ export async function fetchIntelligence<T = unknown>(
   return fetchFromUrl<T>(url, agencyId);
 }
 
+function asExecutive(
+  exec: Record<string, unknown> | undefined,
+): Record<string, unknown> | null {
+  if (!exec) return null;
+  const hasValue = Object.values(exec).some((v) => v != null && v !== "");
+  return hasValue ? exec : null;
+}
+
+/** Map Codex bundle JSON → dashboard StrategistIntelBundle envelopes. */
+export function adaptStrategistBundle(
+  api: RadStrategistBundleApi,
+  source: string,
+): StrategistIntelBundle {
+  const modules = api.modules ?? {};
+  const agencyId = resolveAgencyId(api.agency_id);
+
+  return {
+    agencyId,
+    brief: ok(api.brief ?? null, source),
+    confidence: ok(api.confidence ?? null, source),
+    threats: ok(modules.competitors ?? [], source),
+    challengers: ok(modules.challengers ?? [], source),
+    whitespace: ok(modules.whitespace ?? [], source),
+    momentum: ok(modules.momentum ?? [], source),
+    executive: ok(asExecutive(modules.executive), source),
+    pitch: ok(modules.pitch ?? [], source),
+    pulse: ok(api.pulse ?? null, source),
+    sov: ok(api.sov ?? null, source),
+  };
+}
+
+function emptyStrategistBundle(agencyId: string, source: string): StrategistIntelBundle {
+  const emptyBrief = empty<Record<string, unknown> | null>(source);
+  return {
+    agencyId,
+    brief: emptyBrief,
+    confidence: emptyBrief,
+    threats: ok([], source, "empty"),
+    challengers: ok([], source, "empty"),
+    whitespace: ok([], source, "empty"),
+    momentum: ok([], source, "empty"),
+    executive: emptyBrief,
+    pitch: ok([], source, "empty"),
+    pulse: emptyBrief,
+    sov: emptyBrief,
+  };
+}
+
 /** Strategist dashboard bundle — single entry point for R-AD cockpit data. */
 export type StrategistIntelBundle = {
   agencyId: string;
@@ -185,128 +272,104 @@ export async function loadStrategistIntelligence(
 ): Promise<StrategistIntelBundle> {
   const agencyContext = ctx ?? (await getAgencyContext());
   const agencyId = resolveAgencyId(agencyContext.agencyId);
-  const categorySlug = resolveCategorySlug(undefined, agencyContext);
-  const params = { categorySlug };
+  const category = resolveCategorySlug(undefined, agencyContext);
+  const brand = resolveBrand(agencyContext);
+  const url = strategistBundleUrl(category, brand);
 
-  const [
-    brief,
-    confidence,
-    threats,
-    challengers,
-    whitespace,
-    momentum,
-    executive,
-    pitch,
-    pulse,
-    sov,
-  ] = await Promise.all([
-    fetchIntelligence<Record<string, unknown> | null>({
-      resource: "rad_brief",
-      agencyId,
-      params,
-    }),
-    fetchIntelligence<Record<string, unknown> | null>({
-      resource: "rad_confidence",
-      agencyId,
-      params,
-    }),
-    fetchIntelligence<Record<string, unknown>[]>({
-      resource: "client_threats",
-      agencyId,
-      params,
-    }),
-    fetchIntelligence<Record<string, unknown>[]>({
-      resource: "brand_opportunities",
-      agencyId,
-      params,
-    }),
-    fetchIntelligence<Record<string, unknown>[]>({
-      resource: "top_opportunities",
-      agencyId,
-      params,
-    }),
-    fetchIntelligence<Record<string, unknown>[]>({
-      resource: "market_pressure",
-      agencyId,
-      params,
-    }),
-    fetchIntelligence<Record<string, unknown> | null>({
-      resource: "executive_summary",
-      agencyId,
-      params,
-    }),
-    fetchIntelligence<Record<string, unknown>[]>({
-      resource: "pitch_brief",
-      agencyId,
-      params,
-    }),
-    fetchIntelligence<Record<string, unknown> | null>({
-      resource: "pulse",
-      agencyId,
-      params,
-    }),
-    fetchIntelligence<Record<string, unknown> | null>({
-      resource: "sov",
-      agencyId,
-      params,
-    }),
-  ]);
-
-  return {
-    agencyId,
-    brief,
-    confidence,
-    threats,
-    challengers,
-    whitespace,
-    momentum,
-    executive,
-    pitch,
-    pulse,
-    sov,
-  };
-}
-
-/** Map engine brief payload into strategist R-AD card shape when needed. */
-export function normalizeRadBrief(
-  engineBrief: Record<string, unknown> | null,
-  fallback: Record<string, unknown> | null,
-): Record<string, unknown> | null {
-  if (fallback && (fallback.headline || fallback.strongest_threat)) return fallback;
-  if (!engineBrief) return fallback;
-
-  const pulse = engineBrief.market_pulse as Record<string, unknown> | undefined;
-  const winConditions = Array.isArray(engineBrief.win_conditions)
-    ? (engineBrief.win_conditions as { gap?: string; why?: string }[])
-    : [];
-
-  return {
-    client_name: engineBrief.industry ?? null,
-    category: engineBrief.industry ?? null,
-    headline: winConditions[0]?.gap ?? pulse?.most_aggressive_brand ?? null,
-    summary: winConditions[0]?.why ?? null,
-    strategic_opening: winConditions[1]?.gap ?? null,
-    recommended_action: winConditions[0]?.why ?? null,
-    strongest_threat: pulse?.most_aggressive_brand ?? null,
-    emerging_challenger: winConditions[1]?.gap ?? null,
-    whitespace_emotion: null,
-    whitespace_category: engineBrief.industry ?? null,
-  };
-}
-
-/** Map engine pulse into confidence metrics when Supabase view is empty. */
-export function normalizeRadConfidence(
-  enginePulse: Record<string, unknown> | null,
-  fallback: Record<string, unknown> | null,
-): Record<string, unknown> | null {
-  if (fallback && (fallback.ads_analysed != null || fallback.brands_tracked != null)) {
-    return fallback;
+  const response = await fetchFromUrl<RadStrategistBundleApi>(url, agencyId);
+  if (response.status !== "ok" || !response.data) {
+    return emptyStrategistBundle(agencyId, response.metadata.source);
   }
-  if (!enginePulse) return fallback;
+
+  return adaptStrategistBundle(response.data, response.metadata.source);
+}
+
+/**
+ * Normalize brief into dashboard card shape.
+ * Passes through v1 strategist bundle brief; maps legacy engine /api/brief payloads.
+ */
+export function normalizeRadBrief(
+  raw: Record<string, unknown> | null,
+  fallback: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  const src = raw ?? fallback;
+  if (!src) return null;
+
+  if (src.headline || src.strongest_threat) {
+    return {
+      client_name: src.client_name ?? null,
+      category: src.category ?? null,
+      headline: src.headline ?? null,
+      summary: src.summary ?? null,
+      strategic_opening: src.strategic_opening ?? null,
+      recommended_action: src.recommended_action ?? null,
+      strongest_threat: src.strongest_threat ?? null,
+      fastest_mover: src.fastest_mover ?? null,
+      emerging_challenger: src.emerging_challenger ?? null,
+      whitespace_category: src.whitespace_category ?? null,
+      whitespace_emotion: src.whitespace_emotion ?? null,
+      whitespace_score: src.whitespace_score ?? null,
+    };
+  }
+
+  const pulse = src.market_pulse as Record<string, unknown> | undefined;
+  const winConditions = Array.isArray(src.win_conditions)
+    ? (src.win_conditions as { gap?: string; why?: string }[])
+    : [];
+  const whitespace = Array.isArray(src.whitespace)
+    ? (src.whitespace as { theme?: string; emotion?: string; opportunity_score?: number }[])
+    : [];
+  const topWhitespace = whitespace[0];
+
   return {
-    ads_analysed: enginePulse.total_ads_today ?? enginePulse.new_ads_today ?? null,
-    brands_tracked: null,
-    trend_points: Array.isArray(enginePulse.alerts) ? enginePulse.alerts.length : null,
+    client_name: src.industry ?? src.client_name ?? null,
+    category: src.category ?? src.industry ?? null,
+    headline:
+      src.headline ??
+      winConditions[0]?.gap ??
+      (typeof src.pitch_narrative === "string" ? src.pitch_narrative : null) ??
+      pulse?.most_aggressive_brand ??
+      null,
+    summary: src.summary ?? winConditions[0]?.why ?? null,
+    strategic_opening: src.strategic_opening ?? winConditions[1]?.gap ?? null,
+    recommended_action:
+      src.recommended_action ??
+      winConditions[0]?.why ??
+      (typeof src.pitch_narrative === "string" ? src.pitch_narrative : null),
+    strongest_threat:
+      (src.top_threat as { brand?: string } | undefined)?.brand ??
+      pulse?.most_aggressive_brand ??
+      null,
+    fastest_mover: src.fastest_mover ?? null,
+    emerging_challenger: src.emerging_challenger ?? winConditions[1]?.gap ?? null,
+    whitespace_category: src.whitespace_category ?? src.industry ?? null,
+    whitespace_emotion:
+      src.whitespace_emotion ?? topWhitespace?.emotion ?? topWhitespace?.theme ?? null,
+    whitespace_score: src.whitespace_score ?? topWhitespace?.opportunity_score ?? null,
+  };
+}
+
+/** Normalize confidence — prefers bundle.confidence; falls back to pulse metrics. */
+export function normalizeRadConfidence(
+  pulse: Record<string, unknown> | null,
+  confidence: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (confidence && (confidence.ads_analysed != null || confidence.brands_tracked != null)) {
+    return {
+      ads_analysed: confidence.ads_analysed ?? null,
+      brands_tracked: confidence.brands_tracked ?? null,
+      trend_points: confidence.trend_points ?? null,
+      classification_coverage: confidence.classification_coverage ?? null,
+    };
+  }
+
+  if (!pulse) return null;
+
+  const marketPulse = pulse.market_pulse as Record<string, unknown> | undefined;
+  return {
+    ads_analysed: pulse.total_ads_today ?? pulse.new_ads_today ?? null,
+    brands_tracked: marketPulse?.total_active_brands ?? null,
+    trend_points: Array.isArray(pulse.alerts) ? pulse.alerts.length : null,
     classification_coverage: null,
   };
 }

@@ -195,20 +195,15 @@ function addDataTable(
 }
 
 function resolveBrief(bundle: StrategistIntelBundle): BriefShape | null {
-  const { data, metadata } = bundle.brief;
-  if (!data) return null;
-  if (metadata.source.startsWith("supabase:")) return data as BriefShape;
-  return normalizeRadBrief(data as Record<string, unknown>, null) as BriefShape;
+  if (!bundle.brief.data) return null;
+  return normalizeRadBrief(bundle.brief.data as Record<string, unknown>, null) as BriefShape;
 }
 
 function resolveConfidence(bundle: StrategistIntelBundle): ConfidenceShape | null {
-  const pulse =
-    bundle.pulse.status === "ok" ? (bundle.pulse.data as Record<string, unknown> | null) : null;
-  const fallback =
-    bundle.confidence.metadata.source.startsWith("supabase:")
-      ? (bundle.confidence.data as ConfidenceShape | null)
-      : null;
-  return normalizeRadConfidence(pulse, fallback) as ConfidenceShape | null;
+  return normalizeRadConfidence(
+    bundle.pulse.status === "ok" ? (bundle.pulse.data as Record<string, unknown>) : null,
+    bundle.confidence.data as Record<string, unknown> | null,
+  ) as ConfidenceShape | null;
 }
 
 function resolveAgencyBrand(bundle: StrategistIntelBundle, ctx?: AgencyContext | null): string {
