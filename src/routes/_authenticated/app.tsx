@@ -108,18 +108,16 @@ function AppPage() {
       return;
     }
 
-    // Admin: no auto-redirect — explicit picker, unless a choice is already stored
-    if (isAdmin) {
+    // Admin picker only on /app root — child routes (e.g. /app/clients) always render.
+    if (isAdmin && !isChildWorkspaceRoute) {
       const choice = typeof window !== "undefined" ? localStorage.getItem(ADMIN_CHOICE_KEY) : null;
       if (!choice) {
         setStage("admin_picker");
         return;
       }
-      setStage("app");
-      return;
     }
 
-    setStage(profile?.agency_domain ? "app" : "onboard");
+    setStage(profile?.agency_domain || isAdmin || demoUnlocked ? "app" : "onboard");
   };
 
   useEffect(() => {
@@ -128,7 +126,7 @@ function AppPage() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pathname]);
 
   const logout = async () => {
     localStorage.removeItem(ADMIN_CHOICE_KEY);
