@@ -4,7 +4,6 @@ import { loadDomainIntelligence } from "@/lib/domain-intelligence.functions";
 import type { DomainIntelligence, FeedSource } from "@/lib/feeds/types";
 import { formatCurrency, formatVisits } from "@/lib/feeds/normalize-domain";
 
-/** Buyer-facing labels — never expose vendor names in logged-in UI. */
 const SOURCE_LABELS: Record<FeedSource, string> = {
   similarweb: "Observed market signals",
   dataforseo: "Channel evidence",
