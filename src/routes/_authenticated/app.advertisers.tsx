@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   Search as SearchIcon,
@@ -11,7 +11,6 @@ import {
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { SpendIndex } from "@/components/adpalette/SpendIndex";
 import { displayBrand } from "@/utils/brandDisplay";
-import { supabase } from "@/integrations/supabase/client";
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -31,10 +30,6 @@ type Advertiser = {
   channels?: string[] | Record<string, number>;
   themes?: string[];
   top_themes?: Array<string | { theme: string }>;
-};
-
-type FeaturedBrand = Advertiser & {
-  sighting_count?: number;
 };
 
 // ─── Channel config ───────────────────────────────────────────────────────────
@@ -62,14 +57,6 @@ function initialsOf(name: string): string {
   const parts = s.split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + (parts[1][0] ?? "")).toUpperCase();
-}
-
-function formatSightings(n: number | undefined | null): string {
-  const v = Number(n);
-  if (!Number.isFinite(v) || v <= 0) return "0 impressions";
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(v >= 10_000_000 ? 0 : 1)}M impressions`;
-  if (v >= 1_000) return `${(v / 1_000).toFixed(v >= 10_000 ? 0 : 1)}K impressions`;
-  return `${v} impressions`;
 }
 
 function getChannels(a: Advertiser): string[] {
@@ -119,23 +106,10 @@ function brandDomain(a: Advertiser): string {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function AdvertisersPage() {
-  const search = (useSearch({ strict: false }) as { demo?: string | boolean }) ?? {};
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [list, setList] = useState<Advertiser[]>([]);
-  const [featured, setFeatured] = useState<FeaturedBrand[]>([]);
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState("All");
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
-  }, []);
-
-  const demoMode = useMemo(() => {
-    const q = String(search.demo ?? "").toLowerCase();
-    if (q === "true" || q === "1") return true;
-    return userEmail === "demo@revenuad.com";
-  }, [search.demo, userEmail]);
 
   useEffect(() => {
     let alive = true;
@@ -153,22 +127,6 @@ function AdvertisersPage() {
     })();
     return () => { alive = false; };
   }, []);
-
-  useEffect(() => {
-    if (!demoMode) return;
-    let alive = true;
-    (async () => {
-      try {
-        const r = await fetch(`${API_BASE}/api/demo/featured-brands`);
-        const j = r.ok ? await r.json() : null;
-        const arr: FeaturedBrand[] = Array.isArray(j) ? j : (j?.brands ?? j?.advertisers ?? []);
-        if (alive) setFeatured(arr);
-      } catch {
-        if (alive) setFeatured([]);
-      }
-    })();
-    return () => { alive = false; };
-  }, [demoMode]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -229,29 +187,6 @@ function AdvertisersPage() {
             );
           })}
         </div>
-
-        {/* Featured (demo only) */}
-        {demoMode && featured.length > 0 && (
-          <div style={{ marginTop: 4 }}>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: "#C9963A",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                marginBottom: 12,
-              }}
-            >
-              Featured brands
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
-              {featured.map((b, i) => (
-                <FeaturedCard key={b.domain ?? b.name ?? i} brand={b} />
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Main grid */}
         <div>
@@ -355,82 +290,6 @@ function BrandCard({ brand }: { brand: Advertiser }) {
         <ChannelIconRow present={present} />
 
         <div style={{ fontSize: 11, color: "#C9963A", marginTop: 2 }}>
-          Open war room →
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function FeaturedCard({ brand }: { brand: FeaturedBrand }) {
-  const name = displayBrand(brand.name ?? brand.brand ?? brand.domain ?? "");
-  const domain = brandDomain(brand);
-  const cat = brand.category ?? brand.industry ?? "—";
-  const present = getChannels(brand);
-  const activeCount = CHANNELS.filter((c) => isChannelActive(c.aliases, present)).length;
-  const themes = getThemes(brand).slice(0, 5);
-  const spend = Number(brand.spend_signal ?? 0);
-  const impressions = Number(brand.sighting_count ?? brand.total_sightings ?? 0);
-
-  return (
-    <Link
-      to="/app/advertiser/$domain"
-      params={{ domain: domain || rootSlug(name) }}
-      style={{ textDecoration: "none" }}
-    >
-      <div
-        style={{
-          background: "#FFFFFF",
-          border: "1px solid #EBE9E4",
-          borderRadius: 10,
-          padding: 24,
-          cursor: "pointer",
-          display: "flex",
-          flexDirection: "column",
-          gap: 14,
-          height: "100%",
-          transition: "border-color 120ms ease",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#C9963A")}
-        onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#EBE9E4")}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <Avatar name={name} size={40} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: "#1C1C1A" }}>{name}</div>
-            <div style={{ fontSize: 12, color: "#9E9D94", marginTop: 2, textTransform: "capitalize" }}>
-              {cat} · {activeCount} channels
-            </div>
-          </div>
-          <SpendIndex level={spend > 0 ? spend : undefined} showCaption={false} />
-        </div>
-
-        <div style={{ fontSize: 13, color: "#6B6B62", fontWeight: 500 }}>
-          {formatSightings(impressions)}
-        </div>
-
-        {themes.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {themes.map((t, i) => (
-              <span
-                key={i}
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: 4,
-                  background: "#F0EDE8",
-                  fontSize: 12,
-                  color: "#6B6B62",
-                }}
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <ChannelIconRow present={present} />
-
-        <div style={{ fontSize: 12, color: "#C9963A", fontWeight: 500 }}>
           Open war room →
         </div>
       </div>

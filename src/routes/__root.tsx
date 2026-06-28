@@ -116,7 +116,6 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 import { Toaster } from "@/components/ui/sonner";
-import { DemoFeedback } from "@/components/adpalette/DemoFeedback";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -126,7 +125,6 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster position="bottom-right" />
-      <DemoFeedback />
     </QueryClientProvider>
   );
 }
