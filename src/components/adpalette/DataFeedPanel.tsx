@@ -4,11 +4,19 @@ import { loadDomainIntelligence } from "@/lib/domain-intelligence.functions";
 import type { DomainIntelligence, FeedSource } from "@/lib/feeds/types";
 import { formatCurrency, formatVisits } from "@/lib/feeds/normalize-domain";
 
+/** Buyer-facing labels — never expose vendor names in logged-in UI. */
 const SOURCE_LABELS: Record<FeedSource, string> = {
-  similarweb: "Similarweb",
-  dataforseo: "DataForSEO",
-  apify: "Apify",
-  newspi: "Newspi",
+  similarweb: "Observed market signals",
+  dataforseo: "Channel evidence",
+  apify: "Creative evidence",
+  newspi: "News signal",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  ok: "Live",
+  empty: "Awaiting data",
+  skipped: "Not connected",
+  error: "Unavailable",
 };
 
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
@@ -34,8 +42,8 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
     try {
       const data = await loadDomainIntelligence({ data: { domain, brandLabel, persist: true } });
       setIntel(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Feed aggregation failed");
+    } catch {
+      setError("Could not refresh market signals. Try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -61,13 +69,13 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
         <div>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9E9D94" }}>
-            Multi-feed intelligence
+            R-AD Engine
           </div>
           <div style={{ fontSize: 17, fontWeight: 600, color: "#1C1C1A", marginTop: 4 }}>
-            Similarweb · DataForSEO · Apify · Newspi
+            Observed market signals
           </div>
           <div style={{ fontSize: 13, color: "#6B6B62", marginTop: 4 }}>
-            Unified traffic, paid media, peers, and news for pitch-ready context.
+            Traffic, channel activity, peers, and news — unified for pitch-ready context.
           </div>
         </div>
         <button
@@ -89,7 +97,7 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
           }}
         >
           {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-          Refresh feeds
+          Refresh
         </button>
       </div>
 
@@ -101,7 +109,7 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
             return (
               <span
                 key={key}
-                title={s.message}
+                title={buyerSafeMessage(s.message)}
                 style={{
                   fontSize: 11,
                   fontWeight: 600,
@@ -111,7 +119,7 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
                   color: style.text,
                 }}
               >
-                {SOURCE_LABELS[key]} · {s.status}
+                {SOURCE_LABELS[key]} · {STATUS_LABELS[s.status] ?? s.status}
               </span>
             );
           })}
@@ -120,7 +128,7 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
 
       {loading && !intel && (
         <div style={{ fontSize: 13, color: "#9E9D94", display: "flex", alignItems: "center", gap: 8 }}>
-          <Loader2 size={16} className="animate-spin" /> Pulling feed layers…
+          <Loader2 size={16} className="animate-spin" /> Loading market signals…
         </div>
       )}
 
@@ -133,7 +141,12 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
       {intel && (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-            <Metric icon={Globe} label="Monthly visits" value={formatVisits(intel.traffic?.monthlyVisits)} sub={intel.traffic?.title ?? intel.traffic?.category ?? "Similarweb"} />
+            <Metric
+              icon={Globe}
+              label="Monthly visits"
+              value={formatVisits(intel.traffic?.monthlyVisits)}
+              sub={intel.traffic?.title ?? intel.traffic?.category ?? "Observed market signals"}
+            />
             <Metric
               icon={Radar}
               label="Global rank"
@@ -147,14 +160,19 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
                   .join(" · ") || undefined
               }
             />
-            <Metric icon={Megaphone} label="Est. paid spend" value={formatCurrency(intel.paidMedia?.estimatedMonthlySpend)} sub={`${intel.paidMedia?.creativeCount ?? 0} placements tracked`} />
-            <Metric icon={Newspaper} label="News headlines" value={String(intel.news.length)} sub="Newspi / engine layer" />
+            <Metric
+              icon={Megaphone}
+              label="Est. paid spend"
+              value={formatCurrency(intel.paidMedia?.estimatedMonthlySpend)}
+              sub={`${intel.paidMedia?.creativeCount ?? 0} placements tracked`}
+            />
+            <Metric icon={Newspaper} label="News headlines" value={String(intel.news.length)} sub="News signal" />
           </div>
 
           {intel.insights.length > 0 && (
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: "#6B6B62", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                R-AD synthesized reads
+                Meeting-ready reads
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {intel.insights.map((insight) => (
@@ -170,7 +188,7 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
           {intel.similarCompetitors.length > 0 && (
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: "#6B6B62", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                Similarweb peer set
+                Audience-overlap peers
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
                 {intel.similarCompetitors.slice(0, 8).map((peer) => (
@@ -198,7 +216,7 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
           {intel.news.length > 0 && (
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: "#6B6B62", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                News momentum
+                News signal
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {intel.news.slice(0, 4).map((article, i) => (
@@ -220,6 +238,16 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
       )}
     </div>
   );
+}
+
+function buyerSafeMessage(message?: string): string | undefined {
+  if (!message) return undefined;
+  return message
+    .replace(/Similarweb/gi, "market signals")
+    .replace(/DataForSEO/gi, "channel evidence")
+    .replace(/Apify/gi, "creative evidence")
+    .replace(/Newspi/gi, "news signal")
+    .replace(/RapidAPI key/gi, "API key in Settings");
 }
 
 function Metric({

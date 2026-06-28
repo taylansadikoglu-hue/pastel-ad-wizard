@@ -51,7 +51,7 @@ function synthesizeInsights(input: {
       id: "traffic-weight",
       label: "Digital weight",
       value: `${formatVisits(input.trafficVisits)} monthly visits`,
-      detail: [input.category, rankParts.join(" · ")].filter(Boolean).join(" — ") || "Similarweb traffic profile",
+      detail: [input.category, rankParts.join(" · ")].filter(Boolean).join(" — ") || "Observed traffic profile from R-AD Engine",
       sources: ["similarweb"],
       priority: "high",
     });
@@ -66,8 +66,8 @@ function synthesizeInsights(input: {
       label: "Competitive peer set",
       value: `${input.similarCount} similar domains`,
       detail: peerLabel
-        ? `Top peer by Similarweb overlap: ${peerLabel}. Add to client workspace competitors.`
-        : "Audience-overlap peers from Similarweb Similar Sites.",
+        ? `Closest audience overlap: ${peerLabel}. Worth adding to the client competitor set.`
+        : "Audience-overlap peers from observed market signals.",
       sources: ["similarweb"],
       priority: "high",
     });
@@ -79,7 +79,7 @@ function synthesizeInsights(input: {
       id: "paid-signal",
       label: "Paid media signal",
       value: `${spendLabel} · ${input.creativeCount} tracked placements`,
-      detail: `Apify ${input.apifyCount} · DataForSEO ${input.dataforseoCount} — cross-check channel mix against traffic scale.`,
+      detail: `${input.creativeCount} tracked placements — cross-check channel mix against site traffic.`,
       sources: ["apify", "dataforseo"],
       priority: "medium",
     });
@@ -91,7 +91,7 @@ function synthesizeInsights(input: {
       id: "spend-per-visit",
       label: "Spend intensity proxy",
       value: `$${ratio.toFixed(4)} est. spend per visit`,
-      detail: "Heuristic: DataForSEO monthly spend ÷ Similarweb visits. High ratio may indicate heavy paid acquisition.",
+      detail: "Estimated paid intensity relative to site visits. High ratio often means heavy acquisition spend.",
       sources: ["similarweb", "dataforseo"],
       priority: "medium",
     });
@@ -102,7 +102,7 @@ function synthesizeInsights(input: {
       id: "news-momentum",
       label: "News momentum",
       value: `${input.newsCount} recent headlines`,
-      detail: "Newspi / Google News layer — pair with paid bursts for pitch narrative.",
+      detail: "Recent headlines — pair with paid bursts for the pitch narrative.",
       sources: ["newspi"],
       priority: "low",
     });
@@ -111,9 +111,9 @@ function synthesizeInsights(input: {
   if (!insights.length) {
     insights.push({
       id: "awaiting-feeds",
-      label: "Feed coverage",
+      label: "Signal coverage",
       value: "Limited signals",
-      detail: "Connect Similarweb RapidAPI key in Settings and run a domain scan for Apify/DataForSEO placements.",
+      detail: "Connect your API key in Settings and run a domain scan to populate channel and creative evidence.",
       sources: ["similarweb", "apify", "dataforseo"],
       priority: "low",
     });
@@ -185,10 +185,10 @@ export async function aggregateDomainIntelligence(
         }
       }
     } catch (err) {
-      sources.similarweb = meta("error", err instanceof Error ? err.message : "Similarweb fetch failed");
+      sources.similarweb = meta("error", err instanceof Error ? err.message.replace(/Similarweb/gi, "Market signals") : "Market signals unavailable");
     }
   } else {
-    sources.similarweb = meta("skipped", "No RapidAPI key configured");
+    sources.similarweb = meta("skipped", "Market signals not connected — add API key in Settings");
   }
 
   try {
@@ -201,8 +201,8 @@ export async function aggregateDomainIntelligence(
       placementCount > 0 && dataforseoCount > 0 ? "ok" : placementCount > 0 ? "empty" : "empty",
     );
     if (!placementCount && !pm?.estimatedMonthlySpend) {
-      sources.apify = meta("empty", "No Apify placements yet — run a scan");
-      sources.dataforseo = meta("empty", "No DataForSEO placements yet — run a scan");
+      sources.apify = meta("empty", "No creative placements yet — run a scan");
+      sources.dataforseo = meta("empty", "No channel placements yet — run a scan");
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Supabase feed read failed";
