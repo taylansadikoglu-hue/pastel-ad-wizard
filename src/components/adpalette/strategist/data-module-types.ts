@@ -43,14 +43,14 @@ export const MODULE_META: Record<
   },
   whitespace: {
     index: "05",
-    title: "What nobody owns yet",
-    subtitle: "Open angles competitors haven't claimed",
+    title: "Angles nobody is owning",
+    subtitle: "Open positioning competitors haven't claimed",
     source: "ra_top_opportunities",
   },
   pitch: {
     index: "06",
-    title: "What I'd recommend tomorrow",
-    subtitle: "Recommended next moves for the pitch",
+    title: "Recommended next moves",
+    subtitle: "What to say in tomorrow's client meeting",
     source: "ra_pitch_brief",
   },
 };

@@ -84,12 +84,12 @@ export function renderHardDataBody(focus: PanelFocus, data: HardDataPayload) {
           <HardDataSection title="Share of observed activity">
             <HardDataTable
               highlightRow={hi}
-              columns={["Brand", "Creatives", "Observed demand", "Pressure index", "Efficiency"]}
+              columns={["Brand", "Creatives", "Observed demand", "Efficiency"]}
               rows={rows.map((r) => {
                 const d = Number(r.demand) || 0;
                 const c = Number(r.creative_volume) || 0;
                 const eff = c > 0 ? (d / c).toFixed(2) : "—";
-                return [r.competitor_domain, r.creative_volume, r.demand, r.threat_score, eff];
+                return [r.competitor_domain, r.creative_volume, r.demand, eff];
               })}
             />
           </HardDataSection>
@@ -97,7 +97,6 @@ export function renderHardDataBody(focus: PanelFocus, data: HardDataPayload) {
             <HardDataTable
               columns={["Metric", "Category average", "Selected brand"]}
               rows={[
-                ["Pressure index", avg(rows.map((r) => Number(r.threat_score) || 0)), focusRow?.threat_score],
                 ["Observed demand", avg(rows.map((r) => Number(r.demand) || 0)), focusRow?.demand],
                 ["Active creatives", avg(rows.map((r) => Number(r.creative_volume) || 0)), focusRow?.creative_volume],
               ]}
@@ -108,23 +107,23 @@ export function renderHardDataBody(focus: PanelFocus, data: HardDataPayload) {
       );
     }
     case "challengers": {
-      const rows = [...data.challengers].sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0));
+      const rows = [...data.challengers].sort((a, b) => (Number(b.creative_volume) || 0) - (Number(a.creative_volume) || 0));
       const focusRow = hi != null ? rows[hi] : rows[0];
       return (
         <>
           <HardDataSection title="Repeated market messages">
             <HardDataTable
               highlightRow={hi}
-              columns={["Brand", "Message / keyword", "Signal strength", "Observed demand", "Creatives", "Trend", "Pressure"]}
+              columns={["Brand", "Message / keyword", "Creatives", "Observed demand", "Trend", "Pressure"]}
               rows={rows.map((r) => [
-                r.brand_domain, r.keyword, r.opportunity_score, r.latest_interest, r.creative_volume, r.momentum, r.pressure,
+                r.brand_domain, r.keyword, r.creative_volume, r.latest_interest, r.momentum, r.pressure,
               ])}
             />
           </HardDataSection>
           <HardDataTrend
             seed={focusRow?.brand_domain ?? "messages"}
-            current={Number(focusRow?.opportunity_score) || 0}
-            metricLabel="Message signal strength"
+            current={Number(focusRow?.creative_volume) || 0}
+            metricLabel="Creatives observed"
           />
         </>
       );
@@ -132,12 +131,12 @@ export function renderHardDataBody(focus: PanelFocus, data: HardDataPayload) {
     case "whitespace": {
       const rows = [...data.whitespace].sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0));
       return (
-        <HardDataSection title="Open angles">
+        <HardDataSection title="Angles nobody is owning">
           <HardDataTable
             highlightRow={hi}
-            columns={["Category", "Emotion", "Priority", "Competition level", "Signal strength", "Recommendation"]}
+            columns={["Category", "Emotion", "Priority", "Competition level", "Recommendation"]}
             rows={rows.map((r) => [
-              r.category, r.emotion, r.strategic_priority, r.market_density, r.opportunity_score, r.recommendation,
+              r.category, r.emotion, r.strategic_priority, r.market_density, r.recommendation,
             ])}
           />
         </HardDataSection>

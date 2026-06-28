@@ -11,6 +11,7 @@ import { generatePitchDeck } from "@/lib/export-pptx";
 import { cn } from "@/lib/utils";
 import { MODULE_META, type PanelFocus } from "./strategist/data-module-types";
 import { HardDataPanel } from "./strategist/HardDataPanel";
+import { dominantQualifyingTheme, isCommerciallyMeaningfulPhrase, qualifyingMarketThemes } from "./strategist/market-themes";
 
 const DC = {
   card: "card-dense",
@@ -44,7 +45,7 @@ function SectionHeader({
           onClick={onEvidence}
           className={cn(DC.chip, "shrink-0 text-neutral-400 hover:text-amber-400/90 border-neutral-700")}
         >
-          View evidence
+          Evidence
         </button>
       )}
     </div>
@@ -242,22 +243,14 @@ export function StrategistDashboard() {
     .slice(0, 4);
 
   const openAngles = [...whitespace]
+    .filter((r) => !r.emotion || isCommerciallyMeaningfulPhrase(r.emotion))
     .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
     .slice(0, 5);
 
   const actionablePitch = pitch.filter((r) => r.action && r.recommendation);
 
-  const marketMessages = (() => {
-    const msgs = new Set<string>();
-    if (exec?.dominant_emotion) msgs.add(exec.dominant_emotion);
-    for (const c of challengers) {
-      if (c.keyword) msgs.add(c.keyword);
-    }
-    for (const p of pitch) {
-      if (p.dominant_emotion) msgs.add(p.dominant_emotion);
-    }
-    return Array.from(msgs).slice(0, 8);
-  })();
+  const marketMessages = qualifyingMarketThemes(challengers);
+  const dominantMessage = dominantQualifyingTheme(challengers, exec?.dominant_emotion);
 
   const hasAnyData =
     brief ||
@@ -379,7 +372,7 @@ export function StrategistDashboard() {
             <div className="space-y-3">
               {pressureBrands.length > 0 && (
                 <div className={cn(DC.card)}>
-                  <div className={cn(DC.label, "mb-2 text-rose-400/90")}>Who&apos;s putting pressure on the client</div>
+                  <div className={cn(DC.label, "mb-2 text-rose-400/90")}>Who&apos;s putting the most pressure</div>
                   <ul className="space-y-2">
                     {pressureBrands.map((r, i) => (
                       <li key={r.competitor_domain ?? i} className="flex items-center justify-between gap-2 text-sm">
@@ -432,7 +425,7 @@ export function StrategistDashboard() {
         )}
 
         {/* 04 — What the market keeps saying */}
-        {(marketMessages.length > 0 || exec?.dominant_emotion) && (
+        {(marketMessages.length > 0 || dominantMessage) && (
           <section>
             <SectionHeader
               index={MODULE_META.challengers.index}
@@ -441,10 +434,10 @@ export function StrategistDashboard() {
               onEvidence={() => openPanel("challengers")}
             />
             <div className={cn(DC.card)}>
-              {exec?.dominant_emotion && (
+              {dominantMessage && (
                 <p className="text-sm text-neutral-200 leading-relaxed mb-3">
                   The market keeps coming back to{" "}
-                  <span className="font-semibold text-neutral-50 capitalize">{exec.dominant_emotion}</span>.
+                  <span className="font-semibold text-neutral-50 capitalize">{dominantMessage}</span>.
                   {contestedGround(pitch) ? ` Most brands are fighting over the same angle.` : " Few brands own a distinct message yet."}
                 </p>
               )}
@@ -480,7 +473,7 @@ export function StrategistDashboard() {
                     onClick={() => openPanel("whitespace", i, label || undefined)}
                     className={cn(DC.card, "text-left py-3 px-3 hover:border-emerald-800/50 transition-colors")}
                   >
-                    <div className={cn(DC.label, "text-emerald-400/90 mb-1")}>Open angle</div>
+                    <div className={cn(DC.label, "text-emerald-400/90 mb-1")}>Angles nobody is owning</div>
                     <div className="text-sm font-medium text-neutral-100">{label || "Unclaimed positioning"}</div>
                     {r.recommendation && (
                       <p className="text-xs text-neutral-400 mt-2 leading-relaxed line-clamp-3">{r.recommendation}</p>
