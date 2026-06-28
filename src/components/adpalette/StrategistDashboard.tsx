@@ -11,7 +11,7 @@ import { generatePitchDeck } from "@/lib/export-pptx";
 import { cn } from "@/lib/utils";
 import { MODULE_META, type PanelFocus } from "./strategist/data-module-types";
 import { HardDataPanel } from "./strategist/HardDataPanel";
-import { dominantQualifyingTheme, isCommerciallyMeaningfulPhrase, qualifyingMarketThemes } from "./strategist/market-themes";
+import { selectDominantTheme, selectSurfacedThemes, isThemeAllowed } from "@/lib/radInsightTranslator";
 
 const DC = {
   card: "card-dense",
@@ -243,14 +243,22 @@ export function StrategistDashboard() {
     .slice(0, 4);
 
   const openAngles = [...whitespace]
-    .filter((r) => !r.emotion || isCommerciallyMeaningfulPhrase(r.emotion))
+    .filter((r) => !r.emotion || isThemeAllowed(r.emotion))
     .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
     .slice(0, 5);
 
   const actionablePitch = pitch.filter((r) => r.action && r.recommendation);
 
-  const marketMessages = qualifyingMarketThemes(challengers);
-  const dominantMessage = dominantQualifyingTheme(challengers, exec?.dominant_emotion);
+  const marketMessages = selectSurfacedThemes(
+    challengers.map((c) => ({
+      keyword: c.keyword,
+      creative_volume: c.creative_volume,
+    })),
+  );
+  const dominantMessage = selectDominantTheme(
+    challengers.map((c) => ({ keyword: c.keyword, creative_volume: c.creative_volume })),
+    exec?.dominant_emotion,
+  );
 
   const hasAnyData =
     brief ||

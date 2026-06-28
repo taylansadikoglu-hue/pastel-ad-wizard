@@ -104,10 +104,21 @@ function CategoriesPage() {
         <div className="card-flat p-12 text-center text-sm text-muted-foreground">
           Loading categories…
         </div>
+      ) : rows.length === 0 ? (
+        <div className="card-flat p-12 text-center max-w-lg mx-auto">
+          <Grid3x3 size={24} className="mx-auto mb-3 opacity-50" />
+          <div className="text-base font-semibold text-foreground mb-2">Category benchmarks not indexed yet</div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Add competitors to a client watchlist and run a scan. Category cards appear once enough brands are tracked in the market.
+          </p>
+        </div>
       ) : unlocked.length === 0 ? (
-        <div className="card-flat p-12 text-center">
-          <Grid3x3 size={24} className="mx-auto mb-2 opacity-50" />
-          <div className="text-sm text-muted-foreground">Categories will appear once market data is indexed.</div>
+        <div className="card-flat p-12 text-center max-w-lg mx-auto">
+          <Grid3x3 size={24} className="mx-auto mb-3 opacity-50" />
+          <div className="text-base font-semibold text-foreground mb-2">Your plan categories are ready</div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Banking, Retail, Insurance, and Telco unlock automatically. Additional verticals need a category pack — contact us to add one.
+          </p>
         </div>
       ) : (
         <>

@@ -123,8 +123,8 @@ function StatCard({ label, value, hint, icon: Icon }: {
 
 function SourceBadge({ source }: { source: "Apify" | "DataForSEO" }) {
   const meta = source === "Apify"
-    ? { bg: "bg-[#1877f2]/10", text: "text-[#1877f2]", label: "Apify" }
-    : { bg: "bg-[#1a73e8]/10", text: "text-[#1a73e8]", label: "DataForSEO" };
+    ? { bg: "bg-[#1877f2]/10", text: "text-[#1877f2]", label: "Creative evidence" }
+    : { bg: "bg-[#1a73e8]/10", text: "text-[#1a73e8]", label: "Channel evidence" };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] mono font-semibold ${meta.bg} ${meta.text}`}>
       {meta.label}

@@ -24,6 +24,11 @@ import {
 import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
+import {
+  describeChannelConcentration,
+  recommendChannelOpportunity,
+  recommendNextMove,
+} from "@/lib/radCreativeStory";
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -629,6 +634,24 @@ function AdvertiserPage() {
         <ArrowLeft size={14} /> Back to Ad Library
       </Link>
 
+      {totalAds < 5 && (
+        <div
+          style={{
+            background: "#FDF6E8",
+            border: "1px solid #E8D5A0",
+            borderLeft: "3px solid #C9963A",
+            borderRadius: 8,
+            padding: "12px 16px",
+            marginBottom: 16,
+            fontSize: 13,
+            color: "#6B6B62",
+            lineHeight: 1.5,
+          }}
+        >
+          Limited signal — treat these findings as directional only.
+        </div>
+      )}
+
       <div style={{ marginBottom: 20 }}>
         <DataFeedPanel domain={domain} brandLabel={brand} />
       </div>
@@ -807,7 +830,7 @@ function AdvertiserPage() {
                 </div>
                 {dominant && (
                   <div style={{ marginTop: 14, background: "#FDF6E8", borderLeft: "2px solid #C9963A", padding: "8px 12px", borderRadius: 4, fontSize: 12, color: "#6B6B62" }}>
-                    {brand} is heavily concentrated on {dominant.label}. Single-channel dependency is a vulnerability.
+                    {describeChannelConcentration(brand, dominant.label, dominant.ads, dominant.pct)}
                   </div>
                 )}
               </div>
@@ -1036,7 +1059,7 @@ function AdvertiserPage() {
             const audienceLabel = demographics[0]?.label ?? "Their core audience";
             let body: string;
             if (missingChannels.length > 0) {
-              body = `${brand} has no presence on ${missingChannels[0]}. ${audienceLabel.replace(/^./, (s) => s.toUpperCase())} is uncontested. First mover wins here.`;
+              body = recommendChannelOpportunity(missingChannels[0], 0);
             } else if (activeBadges.length > 0) {
               body = `${brand} is active across all major channels. The gap is in messaging — not distribution.`;
             } else if (top && second) {
@@ -1099,17 +1122,13 @@ function AdvertiserPage() {
               What we&apos;d recommend next
             </div>
             <div style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.6 }}>
-              {(() => {
-                const cf = war.creative_fatigue ?? {};
-                const tier = Number(cf.score ?? 0) <= 30 ? "fresh" : Number(cf.score ?? 0) <= 60 ? "maturing" : "fatigued";
-                if (tier === "fatigued") {
-                  return `Their creative is tiring. Pitch a fresh angle on ${themes[0] ?? "their core message"} while they're vulnerable — especially on channels where you can move faster.`;
-                }
-                if (missingChannelsFromWar(war).length > 0) {
-                  return `Test ${missingChannelsFromWar(war)[0]} with a message they aren't running. ${brand} leaves that channel open.`;
-                }
-                return `Lead the meeting with channel mix: where they're heavy, where they're absent, and one open message angle from category intel.`;
-              })()}
+              {recommendNextMove({
+                brand,
+                totalAds,
+                missingChannel: missingChannelsFromWar(war)[0] ?? null,
+                missingChannelAds: 0,
+                primaryTheme: themes[0] ?? null,
+              })}
             </div>
             <Link
               to="/app/categories"
