@@ -27,22 +27,22 @@ const THEME = {
 } as const;
 
 const MODULE_ORDER: DataModuleId[] = [
+  "executive",
   "competitors",
+  "momentum",
   "challengers",
   "whitespace",
-  "momentum",
-  "executive",
   "pitch",
 ];
 
 /** Client-facing module copy — excludes internal view/table names from MODULE_META.source. */
 const MODULE_EXPORT_COPY: Record<DataModuleId, { subtitle: string }> = {
-  competitors: { subtitle: "Competitive threat landscape" },
-  challengers: { subtitle: "Emerging challenger opportunities" },
-  whitespace: { subtitle: "Strategic whitespace signals" },
-  momentum: { subtitle: "Momentum & search pressure" },
-  executive: { subtitle: "Market leadership snapshot" },
-  pitch: { subtitle: "Strategic advisor actions" },
+  executive: { subtitle: "What's happening in the market" },
+  competitors: { subtitle: "Who is leading — share of observed activity" },
+  momentum: { subtitle: "Who is getting louder" },
+  challengers: { subtitle: "What the market keeps saying" },
+  whitespace: { subtitle: "What nobody owns yet — open angles" },
+  pitch: { subtitle: "What I'd recommend tomorrow" },
 };
 
 export type PitchExportOptions = {
@@ -329,8 +329,8 @@ function buildExecutiveSlide(pptx: pptxgen, bundle: StrategistIntelBundle) {
 
   const slide = pptx.addSlide();
   slideBackground(slide);
-  addSlideLabel(slide, "Executive Summary · R-AD Insight");
-  addSlideTitle(slide, brief.headline ?? "Strategic intelligence brief");
+  addSlideLabel(slide, "Market Intel · RevenuAD Signal");
+  addSlideTitle(slide, brief.headline ?? "Market intelligence brief");
 
   let y = 1.25;
   if (brief.summary) {
@@ -348,11 +348,11 @@ function buildExecutiveSlide(pptx: pptxgen, bundle: StrategistIntelBundle) {
   }
 
   const pillars: { label: string; value: string }[] = [];
-  if (brief.strongest_threat) pillars.push({ label: "Strongest threat", value: brief.strongest_threat });
-  if (brief.emerging_challenger) pillars.push({ label: "Emerging challenger", value: brief.emerging_challenger });
+  if (brief.strongest_threat) pillars.push({ label: "Pressure on client", value: brief.strongest_threat });
+  if (brief.emerging_challenger) pillars.push({ label: "Brand to watch", value: brief.emerging_challenger });
   if (brief.strategic_opening || brief.whitespace_emotion) {
     pillars.push({
-      label: "Strategic opening",
+      label: "Open angle",
       value: brief.strategic_opening ?? brief.whitespace_emotion ?? "—",
     });
   }
@@ -363,7 +363,7 @@ function buildExecutiveSlide(pptx: pptxgen, bundle: StrategistIntelBundle) {
   }
 
   if (brief.recommended_action) {
-    slide.addText("RECOMMENDED ACTION", {
+    slide.addText("RECOMMENDED NEXT MOVES", {
       x: 0.55,
       y,
       w: 8.9,
@@ -412,7 +412,7 @@ function buildModuleSlide(pptx: pptxgen, moduleId: DataModuleId, bundle: Strateg
   const copy = MODULE_EXPORT_COPY[moduleId];
   const slide = pptx.addSlide();
   slideBackground(slide);
-  addSlideLabel(slide, `${meta.index} · Data Utility`);
+  addSlideLabel(slide, `${meta.index} · Evidence`);
   addSlideTitle(slide, meta.title);
 
   slide.addText(copy.subtitle, {
@@ -433,12 +433,12 @@ function buildModuleSlide(pptx: pptxgen, moduleId: DataModuleId, bundle: Strateg
       const scores = rows.map((r) => num(r.threat_score));
       addAggregateRow(slide, [
         { label: "Tracked competitors", value: String(rows.length) },
-        { label: "Avg threat", value: scores.length ? avg(scores).toFixed(1) : "—" },
-        { label: "Peak threat", value: scores.length ? String(Math.max(...scores)) : "—" },
+        { label: "Avg pressure index", value: scores.length ? avg(scores).toFixed(1) : "—" },
+        { label: "Peak pressure", value: scores.length ? String(Math.max(...scores)) : "—" },
       ]);
       addDataTable(
         slide,
-        ["Domain", "Threat", "Demand", "Creative"],
+        ["Brand", "Pressure index", "Observed demand", "Creatives"],
         rows.map((r) => [
           str(r.competitor_domain),
           str(r.threat_score),
@@ -454,13 +454,13 @@ function buildModuleSlide(pptx: pptxgen, moduleId: DataModuleId, bundle: Strateg
         .slice(0, 8);
       const scores = rows.map((r) => num(r.opportunity_score));
       addAggregateRow(slide, [
-        { label: "Challengers", value: String(rows.length) },
-        { label: "Avg opportunity", value: scores.length ? avg(scores).toFixed(1) : "—" },
-        { label: "Peak opportunity", value: scores.length ? String(Math.max(...scores)) : "—" },
+        { label: "Messages tracked", value: String(rows.length) },
+        { label: "Avg signal strength", value: scores.length ? avg(scores).toFixed(1) : "—" },
+        { label: "Strongest signal", value: scores.length ? String(Math.max(...scores)) : "—" },
       ]);
       addDataTable(
         slide,
-        ["Domain", "Keyword", "Opportunity", "Interest", "Momentum"],
+        ["Brand", "Keyword", "Signal strength", "Observed demand", "Trend"],
         rows.map((r) => [
           str(r.brand_domain),
           str(r.keyword),
@@ -477,13 +477,13 @@ function buildModuleSlide(pptx: pptxgen, moduleId: DataModuleId, bundle: Strateg
         .slice(0, 8);
       const scores = rows.map((r) => num(r.opportunity_score));
       addAggregateRow(slide, [
-        { label: "Signals", value: String(rows.length) },
-        { label: "Top score", value: scores.length ? String(Math.max(...scores)) : "—" },
-        { label: "Avg score", value: scores.length ? avg(scores).toFixed(1) : "—" },
+        { label: "Open angles", value: String(rows.length) },
+        { label: "Strongest signal", value: scores.length ? String(Math.max(...scores)) : "—" },
+        { label: "Avg signal", value: scores.length ? avg(scores).toFixed(1) : "—" },
       ]);
       addDataTable(
         slide,
-        ["Category", "Emotion", "Priority", "Density", "Score"],
+        ["Category", "Emotion", "Priority", "Competition", "Signal strength"],
         rows.map((r) => [
           str(r.category),
           str(r.emotion),
@@ -500,13 +500,13 @@ function buildModuleSlide(pptx: pptxgen, moduleId: DataModuleId, bundle: Strateg
         .slice(0, 8);
       const interests = rows.map((r) => num(r.latest_interest));
       addAggregateRow(slide, [
-        { label: "Watchlist", value: String(rows.length) },
-        { label: "Peak interest", value: interests.length ? String(Math.max(...interests)) : "—" },
-        { label: "Avg interest", value: interests.length ? Math.round(avg(interests)).toLocaleString() : "—" },
+        { label: "Brands tracked", value: String(rows.length) },
+        { label: "Peak observed demand", value: interests.length ? String(Math.max(...interests)) : "—" },
+        { label: "Avg observed demand", value: interests.length ? Math.round(avg(interests)).toLocaleString() : "—" },
       ]);
       addDataTable(
         slide,
-        ["Domain", "Keyword", "Interest", "Creative", "Momentum"],
+        ["Brand", "Keyword", "Observed demand", "Creatives", "Trend"],
         rows.map((r) => [
           str(r.brand_domain),
           str(r.keyword),
@@ -521,16 +521,16 @@ function buildModuleSlide(pptx: pptxgen, moduleId: DataModuleId, bundle: Strateg
       const exec = bundle.executive.data as Record<string, unknown> | null;
       if (!exec) break;
       addAggregateRow(slide, [
-        { label: "Dominant market", value: str(exec.dominant_market) },
-        { label: "Strongest brand", value: str(exec.strongest_brand) },
-        { label: "Dominant emotion", value: str(exec.dominant_emotion) },
+        { label: "Category", value: str(exec.dominant_market) },
+        { label: "Market leader", value: str(exec.strongest_brand) },
+        { label: "Dominant message", value: str(exec.dominant_emotion) },
       ]);
       addDataTable(slide, ["Field", "Value"], [
-        ["Dominant market", str(exec.dominant_market)],
-        ["Strongest brand", str(exec.strongest_brand)],
-        ["Dominant emotion", str(exec.dominant_emotion)],
-        ["Top opportunity category", str(exec.top_opportunity_category)],
-        ["Top opportunity emotion", str(exec.top_opportunity_emotion)],
+        ["Category", str(exec.dominant_market)],
+        ["Market leader", str(exec.strongest_brand)],
+        ["Dominant message", str(exec.dominant_emotion)],
+        ["Top open category", str(exec.top_opportunity_category)],
+        ["Top open message", str(exec.top_opportunity_emotion)],
       ]);
       break;
     }

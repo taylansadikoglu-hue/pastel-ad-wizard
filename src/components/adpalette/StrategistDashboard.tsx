@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { WorkspaceShell } from "./WorkspaceShell";
 import {
   loadStrategistIntelligence,
@@ -10,33 +10,43 @@ import { getAgencyContext, type AgencyContext } from "@/lib/agency-watchlist";
 import { generatePitchDeck } from "@/lib/export-pptx";
 import { cn } from "@/lib/utils";
 import { MODULE_META, type PanelFocus } from "./strategist/data-module-types";
-import { buildWeeklyTrend } from "./strategist/hard-data-content";
-import { CompactDataRow, DataUtilitySection, HardDataPanel } from "./strategist/HardDataPanel";
-import { Sparkline } from "./strategist/Sparkline";
+import { HardDataPanel } from "./strategist/HardDataPanel";
 
-function trendSpark(seed: string, current: number, take = 8): number[] {
-  return buildWeeklyTrend(seed, current).slice(-take).map((w) => w.value);
-}
-
-/** Shared dark-dense cockpit tokens */
 const DC = {
   card: "card-dense",
   label: "dense-label",
   meta: "dense-meta",
   empty: "dense-empty",
-  border: "border border-neutral-800",
-  surface: "bg-neutral-900",
   chip: "dense-chip",
 } as const;
 
-function SectionHeader({ index, title, subtitle }: { index: string; title: string; subtitle?: string }) {
+function SectionHeader({
+  index,
+  title,
+  subtitle,
+  onEvidence,
+}: {
+  index: string;
+  title: string;
+  subtitle?: string;
+  onEvidence?: () => void;
+}) {
   return (
-    <div className="flex items-baseline justify-between mb-2">
+    <div className="flex items-start justify-between gap-3 mb-3">
       <div>
         <div className={cn(DC.label, "tracking-widest")}>{index}</div>
         <h2 className="text-base font-semibold tracking-tight text-neutral-100">{title}</h2>
+        {subtitle && <p className={cn(DC.meta, "mt-1 normal-case max-w-2xl")}>{subtitle}</p>}
       </div>
-      {subtitle && <div className={cn(DC.meta, "uppercase tracking-wide text-right max-w-[45%]")}>{subtitle}</div>}
+      {onEvidence && (
+        <button
+          type="button"
+          onClick={onEvidence}
+          className={cn(DC.chip, "shrink-0 text-neutral-400 hover:text-amber-400/90 border-neutral-700")}
+        >
+          View evidence
+        </button>
+      )}
     </div>
   );
 }
@@ -48,61 +58,22 @@ function MomentumChip({ value }: { value: string | null }) {
     : v.includes("decl") || v.includes("cool")
       ? "text-rose-400 border-rose-800/80 bg-rose-950/50"
       : "text-neutral-400 border-neutral-800 bg-neutral-900";
-  return (
-    <span className={cn(DC.chip, tone)}>
-      {value ?? "—"}
-    </span>
-  );
-}
-
-function PriorityChip({ priority }: { priority: string | null }) {
-  const p = (priority ?? "").toLowerCase();
-  const tone = p.includes("emerging")
-    ? "text-emerald-400 border-emerald-800/80 bg-emerald-950/50"
-    : p.includes("competitive")
-      ? "text-amber-400 border-amber-800/80 bg-amber-950/50"
-      : "text-neutral-400 border-neutral-800 bg-neutral-900";
-  return (
-    <span className={cn(DC.chip, tone)}>
-      {priority ?? "—"}
-    </span>
-  );
-}
-
-function EvidenceBlock({ items }: { items: { label: string; value: string }[] }) {
-  if (!items.length) return null;
-  return (
-    <div className="mt-auto pt-2 border-t border-neutral-800">
-      <div className={cn(DC.label, "mb-2")}>Why R-AD Thinks This</div>
-      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-        {items.map((it) => (
-          <div key={it.label}>
-            <div className="text-xs font-semibold tracking-tight truncate text-neutral-100" title={it.value}>
-              {it.value}
-            </div>
-            <div className={cn(DC.label, "mt-0.5 normal-case")}>{it.label}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <span className={cn(DC.chip, tone)}>{value ?? "—"}</span>;
 }
 
 function EmptyState({ agencyCtx }: { agencyCtx: AgencyContext | null }) {
   return (
     <div className={DC.empty}>
-      <p className="text-neutral-400 uppercase tracking-wider text-[10px] mb-2">No data found</p>
-      <p>
-        {`// agency_id=${agencyCtx?.agencyId ?? "null"} · watchlist_domains=${agencyCtx?.domains.size ?? 0}`}
-      </p>
-      <p className="mt-2 text-neutral-500">
+      <p className="text-neutral-200 font-medium mb-2">No market intel yet</p>
+      <p className="text-neutral-400 text-sm leading-relaxed max-w-md mx-auto">
         {agencyCtx?.domains.size === 0
-          ? "> add brands to agency_watchlist to scope R-AD"
-          : "> run scan on watchlist domains to populate threat cards"}
+          ? "Add your client's competitors to the watchlist, then run a scan. Market Intel fills in once brands are tracked."
+          : "Run a scan on your watchlist brands. You'll get a meeting-ready read on who's leading, who's getting louder, and what to recommend next."}
       </p>
     </div>
   );
 }
+
 type Brief = {
   client_name: string | null;
   category: string | null;
@@ -177,6 +148,11 @@ type Confidence = {
   classification_coverage: number | null;
 };
 
+function brandLabel(domain: string | null | undefined): string {
+  if (!domain) return "Unknown brand";
+  return domain.replace(/^www\./, "").split(".")[0].replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export function StrategistDashboard() {
   const [brief, setBrief] = useState<Brief | null>(null);
   const [threats, setThreats] = useState<Threat[]>([]);
@@ -191,18 +167,15 @@ export function StrategistDashboard() {
   const [intelBundle, setIntelBundle] = useState<StrategistIntelBundle | null>(null);
   const [panelFocus, setPanelFocus] = useState<PanelFocus | null>(null);
 
-  const hardDataPayload = useMemo(
-    () => ({
-      threats,
-      challengers,
-      whitespace,
-      momentum,
-      exec,
-      pitch,
-      agencyId: agencyCtx?.agencyId ?? null,
-    }),
-    [threats, challengers, whitespace, momentum, exec, pitch, agencyCtx],
-  );
+  const hardDataPayload = {
+    threats,
+    challengers,
+    whitespace,
+    momentum,
+    exec,
+    pitch,
+    agencyId: agencyCtx?.agencyId ?? null,
+  };
 
   const openPanel = (moduleId: PanelFocus["moduleId"], rowIndex?: number, rowLabel?: string) => {
     setPanelFocus({ moduleId, rowIndex, rowLabel });
@@ -222,10 +195,7 @@ export function StrategistDashboard() {
 
       setAgencyCtx(ctx);
       setIntelBundle(bundle);
-
-      setBrief(
-        normalizeRadBrief(bundle.brief.data as Record<string, unknown> | null, null) as Brief | null,
-      );
+      setBrief(normalizeRadBrief(bundle.brief.data as Record<string, unknown> | null, null) as Brief | null);
       setThreats((bundle.threats.data ?? []) as Threat[]);
       setChallengers((bundle.challengers.data ?? []) as Challenger[]);
       setWhitespace((bundle.whitespace.data ?? []) as Whitespace[]);
@@ -240,235 +210,113 @@ export function StrategistDashboard() {
       );
       setLoading(false);
     })();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (loading) {
     return (
       <WorkspaceShell variant="dark-dense" title="Market Intel">
         <div className={cn(DC.empty, "text-center")}>
-          <span className="text-neutral-500">{">"} loading intelligence stream…</span>
+          <span className="text-neutral-400 text-sm">Loading market intel for your watchlist…</span>
         </div>
       </WorkspaceShell>
     );
   }
 
-  const topThreats = [...threats]
+  const leaders = [...threats]
+    .sort((a, b) => (Number(b.creative_volume) || Number(b.demand) || 0) - (Number(a.creative_volume) || Number(a.demand) || 0))
+    .slice(0, 5);
+
+  const pressureBrands = [...threats]
     .sort((a, b) => (Number(b.threat_score) || 0) - (Number(a.threat_score) || 0))
     .slice(0, 5);
 
-  const topChallengers = [...challengers]
-    .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
-    .slice(0, 6);
-
-  const topWhitespace = [...whitespace]
-    .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
-    .slice(0, 6);
-
-  const watchlist = [...momentum]
+  const gettingLouder = [...momentum]
     .sort((a, b) => (Number(b.latest_interest) || 0) - (Number(a.latest_interest) || 0))
-    .slice(0, 8);
+    .slice(0, 6);
+
+  const risingChallengers = [...challengers]
+    .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
+    .slice(0, 4);
+
+  const openAngles = [...whitespace]
+    .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
+    .slice(0, 5);
 
   const actionablePitch = pitch.filter((r) => r.action && r.recommendation);
 
-  // Competitor analytics (brief evidence + section aggregates)
-  const threatVals = topThreats.map((r) => Number(r.threat_score) || 0);
-  const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
-  const max = (xs: number[]) => (xs.length ? Math.max(...xs) : 0);
-  const avgThreat = avg(threatVals);
-  const maxThreat = max(threatVals);
+  const marketMessages = (() => {
+    const msgs = new Set<string>();
+    if (exec?.dominant_emotion) msgs.add(exec.dominant_emotion);
+    for (const c of challengers) {
+      if (c.keyword) msgs.add(c.keyword);
+    }
+    for (const p of pitch) {
+      if (p.dominant_emotion) msgs.add(p.dominant_emotion);
+    }
+    return Array.from(msgs).slice(0, 8);
+  })();
 
-  const delta = (v: number, a: number) => (a > 0 ? Math.round(((v - a) / a) * 100) : 0);
+  const hasAnyData =
+    brief ||
+    leaders.length > 0 ||
+    gettingLouder.length > 0 ||
+    openAngles.length > 0 ||
+    actionablePitch.length > 0 ||
+    exec;
 
-  // Evidence behind each R-AD conclusion — live data only
-  const threatTarget =
-    topThreats.find(
-      (t) =>
-        t.competitor_domain &&
-        brief?.strongest_threat &&
-        t.competitor_domain.toLowerCase().includes(brief.strongest_threat.toLowerCase()),
-    ) || topThreats[0];
-  const threatRank = threatTarget
-    ? topThreats.findIndex((t) => t.competitor_domain === threatTarget.competitor_domain) + 1
-    : 0;
-  const threatEvidence = threatTarget
-    ? ([
-        threatRank > 0 ? { label: "Threat Rank", value: `#${String(threatRank).padStart(2, "0")}` } : null,
-        threatTarget.threat_score != null
-          ? { label: "Threat Score", value: Number(threatTarget.threat_score).toFixed(1) }
-          : null,
-        threatTarget.demand != null
-          ? { label: "Demand", value: Number(threatTarget.demand).toLocaleString() }
-          : null,
-        threatTarget.threat_score != null && avgThreat > 0
-          ? {
-              label: "vs Market Avg",
-              value: `${delta(Number(threatTarget.threat_score), avgThreat) >= 0 ? "+" : ""}${delta(Number(threatTarget.threat_score), avgThreat)}%`,
-            }
-          : null,
-      ].filter(Boolean) as { label: string; value: string }[])
-    : [];
-
-  const challengerTarget =
-    topChallengers.find(
-      (c) =>
-        c.brand_domain &&
-        brief?.emerging_challenger &&
-        c.brand_domain.toLowerCase().includes(brief.emerging_challenger.toLowerCase()),
-    ) || topChallengers[0];
-  const challengerEvidence = challengerTarget
-    ? ([
-        challengerTarget.opportunity_score != null
-          ? { label: "Opportunity Score", value: Number(challengerTarget.opportunity_score).toFixed(1) }
-          : null,
-        challengerTarget.momentum ? { label: "Momentum", value: challengerTarget.momentum } : null,
-        challengerTarget.creative_volume != null
-          ? { label: "Creative Volume", value: Number(challengerTarget.creative_volume).toLocaleString() }
-          : null,
-        challengerTarget.latest_interest != null
-          ? { label: "Search Interest", value: Number(challengerTarget.latest_interest).toLocaleString() }
-          : null,
-      ].filter(Boolean) as { label: string; value: string }[])
-    : [];
-
-  const openingTarget =
-    topWhitespace.find(
-      (w) =>
-        w.emotion &&
-        brief?.whitespace_emotion &&
-        w.emotion.toLowerCase() === brief.whitespace_emotion.toLowerCase(),
-    ) || topWhitespace[0];
-  const openingEvidence = openingTarget
-    ? ([
-        openingTarget.opportunity_score != null
-          ? { label: "Opportunity Score", value: Number(openingTarget.opportunity_score).toFixed(1) }
-          : null,
-        openingTarget.market_density
-          ? { label: "Competitive Density", value: openingTarget.market_density }
-          : null,
-        openingTarget.category ? { label: "Category", value: openingTarget.category } : null,
-        openingTarget.strategic_priority
-          ? { label: "Priority", value: openingTarget.strategic_priority }
-          : null,
-      ].filter(Boolean) as { label: string; value: string }[])
-    : [];
-
-  const challengerSpark = topChallengers.map((r) => Number(r.opportunity_score) || 0);
-  const whitespaceSpark = topWhitespace.map((r) => Number(r.opportunity_score) || 0);
-  const momentumSpark = watchlist.map((r) => Number(r.latest_interest) || 0);
+  const happeningText =
+    brief?.summary ??
+    (exec?.dominant_market
+      ? `${exec.dominant_market} is active right now. ${exec.strongest_brand ? `${exec.strongest_brand} is setting the pace.` : "Leadership is still consolidating."}`
+      : null);
 
   return (
     <WorkspaceShell
       variant="dark-dense"
       title="Market Intel"
-      subtitle="Market snapshot · whitespace · recommended moves"
+      subtitle="What your client faces, what competitors are doing, and what to say in tomorrow's meeting"
       onExportPitch={handleExportPitch}
       exportPitchDisabled={!intelBundle}
     >
-      <div className="space-y-6">
-        {brief && (brief.headline || brief.summary) && (
+      <div className="space-y-8">
+        {/* 01 — What's happening */}
+        {(brief?.headline || happeningText) && (
           <section>
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 dense-meta uppercase tracking-wider">
-                <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
-                <span>Today&apos;s Brief</span>
-                <span className="text-neutral-600">·</span>
-                <span>{brief.client_name ?? "Client"}</span>
-                {brief.category && <><span className="text-neutral-600">·</span><span>{brief.category}</span></>}
-              </div>
-
-              {brief.headline && (
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight leading-tight max-w-4xl text-neutral-50">
+            <SectionHeader
+              index={MODULE_META.executive.index}
+              title={MODULE_META.executive.title}
+              subtitle={MODULE_META.executive.subtitle}
+              onEvidence={() => openPanel("executive")}
+            />
+            <div className={cn(DC.card, "space-y-3")}>
+              {(brief?.client_name || brief?.category) && (
+                <div className={cn(DC.meta, "uppercase tracking-wider")}>
+                  {[brief?.client_name, brief?.category].filter(Boolean).join(" · ")}
+                </div>
+              )}
+              {brief?.headline && (
+                <h1 className="text-xl md:text-2xl font-semibold tracking-tight leading-snug text-neutral-50">
                   {brief.headline}
                 </h1>
               )}
-              {brief.summary && (
-                <p className="text-sm leading-snug text-neutral-400 max-w-3xl">
-                  {brief.summary}
+              {happeningText && (
+                <p className="text-sm leading-relaxed text-neutral-300 max-w-3xl">{happeningText}</p>
+              )}
+              {brief?.strategic_opening && (
+                <p className="text-sm leading-relaxed text-neutral-400 border-l-2 border-amber-600/60 pl-3">
+                  {brief.strategic_opening}
                 </p>
               )}
-
-              <div className="grid md:grid-cols-3 gap-2 pt-1">
-                {brief.strongest_threat && (
-                  <div className={cn(DC.card, "flex flex-col gap-2")}>
-                    <div className="flex items-center gap-2 dense-label text-rose-400">
-                      <span className="inline-block size-1.5 rounded-full bg-rose-500" />
-                      Strongest Threat
-                    </div>
-                    <div className="text-lg font-semibold tracking-tight truncate text-neutral-100" title={brief.strongest_threat}>
-                      {brief.strongest_threat}
-                    </div>
-                    <EvidenceBlock items={threatEvidence} />
-                  </div>
-                )}
-                {brief.emerging_challenger && (
-                  <div className={cn(DC.card, "flex flex-col gap-2")}>
-                    <div className="flex items-center gap-2 dense-label text-amber-400">
-                      <span className="inline-block size-1.5 rounded-full bg-amber-500" />
-                      Emerging Challenger
-                    </div>
-                    <div className="text-lg font-semibold tracking-tight truncate text-neutral-100" title={brief.emerging_challenger}>
-                      {brief.emerging_challenger}
-                    </div>
-                    <EvidenceBlock items={challengerEvidence} />
-                  </div>
-                )}
-                {(brief.strategic_opening || brief.whitespace_emotion) && (
-                  <div className={cn(DC.card, "flex flex-col gap-2")}>
-                    <div className="flex items-center gap-2 dense-label text-emerald-400">
-                      <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
-                      Strategic Opening
-                    </div>
-                    {brief.strategic_opening ? (
-                      <p className="text-sm leading-snug font-medium text-neutral-200">{brief.strategic_opening}</p>
-                    ) : (
-                      <div className="text-lg font-semibold tracking-tight text-neutral-100">{brief.whitespace_emotion}</div>
-                    )}
-                    <EvidenceBlock items={openingEvidence} />
-                  </div>
-                )}
-              </div>
-
-              {brief.recommended_action && (
-                <div className={cn(DC.card, "bg-neutral-950 border-neutral-700 p-3")}>
-                  <div className={cn(DC.label, "mb-1 text-amber-500/90")}>Recommended Action</div>
-                  <p className="text-sm font-medium leading-snug text-neutral-100 max-w-4xl">
-                    {brief.recommended_action}
-                  </p>
-                </div>
-              )}
-
-              {confidence && (confidence.ads_analysed != null || confidence.brands_tracked != null || confidence.trend_points != null || confidence.classification_coverage != null) && (
-                <div className="flex flex-wrap items-end gap-x-6 gap-y-3 pt-1">
-                  <div className="flex items-center gap-2">
-                    <span className={DC.label}>Confidence</span>
-                    <span className={cn(DC.chip, "text-emerald-400 border-emerald-800/80 bg-emerald-950/50")}>
-                      High
-                    </span>
-                  </div>
-                  {confidence.ads_analysed != null && (
-                    <div>
-                      <div className="text-lg font-semibold tracking-tight tabular-nums text-neutral-100">{confidence.ads_analysed.toLocaleString()}</div>
-                      <div className={cn(DC.label, "mt-0.5")}>Creatives</div>
-                    </div>
-                  )}
+              {confidence && (confidence.ads_analysed != null || confidence.brands_tracked != null) && (
+                <div className={cn(DC.meta, "pt-2 border-t border-neutral-800 flex flex-wrap gap-x-4 gap-y-1")}>
                   {confidence.brands_tracked != null && (
-                    <div>
-                      <div className="text-lg font-semibold tracking-tight tabular-nums text-neutral-100">{confidence.brands_tracked.toLocaleString()}</div>
-                      <div className={cn(DC.label, "mt-0.5")}>Brands</div>
-                    </div>
+                    <span>{confidence.brands_tracked.toLocaleString()} brands tracked</span>
                   )}
-                  {confidence.trend_points != null && (
-                    <div>
-                      <div className="text-lg font-semibold tracking-tight tabular-nums text-neutral-100">{confidence.trend_points.toLocaleString()}</div>
-                      <div className={cn(DC.label, "mt-0.5")}>Trend points</div>
-                    </div>
-                  )}
-                  {confidence.classification_coverage != null && (
-                    <div>
-                      <div className="text-lg font-semibold tracking-tight tabular-nums text-neutral-100">{Number(confidence.classification_coverage).toFixed(0)}%</div>
-                      <div className={cn(DC.label, "mt-0.5")}>Coverage</div>
-                    </div>
+                  {confidence.ads_analysed != null && (
+                    <span>{confidence.ads_analysed.toLocaleString()} ads analysed</span>
                   )}
                 </div>
               )}
@@ -476,279 +324,225 @@ export function StrategistDashboard() {
           </section>
         )}
 
-        {topThreats.length > 0 && (
-          <DataUtilitySection
-            index={MODULE_META.competitors.index}
-            title={MODULE_META.competitors.title}
-            subtitle={MODULE_META.competitors.subtitle}
-            aggregateLabel="Avg threat"
-            aggregateValue={avgThreat > 0 ? avgThreat.toFixed(1) : "—"}
-            secondaryLabel="Peak"
-            secondaryValue={maxThreat > 0 ? String(maxThreat) : "—"}
-            sparklineValues={threatVals.length > 1 ? threatVals : trendSpark("portfolio-threats", avgThreat || maxThreat)}
-            onExpand={() => openPanel("competitors")}
-          >
-            {topThreats.map((r, i) => {
-              const t = Number(r.threat_score) || 0;
-              return (
-                <CompactDataRow
-                  key={r.competitor_domain ?? i}
-                  onOpen={() => openPanel("competitors", i, r.competitor_domain ?? undefined)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0 flex items-center gap-2">
-                      <span className={cn(DC.chip, "font-bold shrink-0 text-neutral-200")}>
-                        #{String(i + 1).padStart(2, "0")}
-                      </span>
-                      <span className="text-sm font-semibold truncate text-neutral-100" title={r.competitor_domain ?? ""}>
-                        {r.competitor_domain ?? "—"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="text-right">
-                        <div className={DC.label}>Threat</div>
-                        <div className="text-sm font-semibold tabular-nums text-neutral-50">{t || "—"}</div>
+        {/* 02 — Who is leading */}
+        {(exec?.strongest_brand || leaders.length > 0) && (
+          <section>
+            <SectionHeader
+              index={MODULE_META.competitors.index}
+              title={MODULE_META.competitors.title}
+              subtitle={MODULE_META.competitors.subtitle}
+              onEvidence={() => openPanel("competitors")}
+            />
+            <div className={cn(DC.card, "space-y-4")}>
+              {exec?.strongest_brand && (
+                <p className="text-sm text-neutral-200 leading-relaxed">
+                  <span className="font-semibold text-neutral-50">{exec.strongest_brand}</span>
+                  {exec.dominant_market ? ` is leading observed activity in ${exec.dominant_market}.` : " is leading observed activity in this category."}
+                </p>
+              )}
+              {leaders.length > 0 && (
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {leaders.map((r, i) => (
+                    <button
+                      key={r.competitor_domain ?? i}
+                      type="button"
+                      onClick={() => openPanel("competitors", i, r.competitor_domain ?? undefined)}
+                      className={cn(DC.card, "text-left py-2 px-3 hover:border-neutral-600 transition-colors")}
+                    >
+                      <div className="text-sm font-semibold text-neutral-100 truncate">
+                        {brandLabel(r.competitor_domain)}
                       </div>
-                      <Sparkline
-                        values={trendSpark(r.competitor_domain ?? `threat-${i}`, t)}
-                        width={56}
-                        height={20}
-                      />
-                    </div>
-                  </div>
-                </CompactDataRow>
-              );
-            })}
-          </DataUtilitySection>
+                      <div className={cn(DC.meta, "mt-1")}>
+                        {r.creative_volume != null
+                          ? `${Number(r.creative_volume).toLocaleString()} active creatives`
+                          : r.demand != null
+                            ? `${Number(r.demand).toLocaleString()} observed demand signals`
+                            : "Tracked competitor"}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
         )}
 
-        {topChallengers.length > 0 && (
-          <DataUtilitySection
-            index={MODULE_META.challengers.index}
-            title={MODULE_META.challengers.title}
-            subtitle={MODULE_META.challengers.subtitle}
-            aggregateLabel="Avg opp"
-            aggregateValue={
-              challengerSpark.length
-                ? (challengerSpark.reduce((a, b) => a + b, 0) / challengerSpark.length).toFixed(1)
-                : "—"
-            }
-            secondaryLabel="Tracked"
-            secondaryValue={String(topChallengers.length)}
-            sparklineValues={challengerSpark.length > 1 ? challengerSpark : trendSpark("challengers", challengerSpark[0] ?? 0)}
-            onExpand={() => openPanel("challengers")}
-          >
-            {topChallengers.map((r, i) => {
-              const score = Number(r.opportunity_score) || 0;
-              return (
-                <CompactDataRow
-                  key={r.brand_domain ?? r.keyword ?? i}
-                  onOpen={() => openPanel("challengers", i, r.brand_domain ?? r.keyword ?? undefined)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold truncate text-neutral-100" title={r.brand_domain ?? ""}>
-                        {r.brand_domain ?? r.keyword ?? "—"}
-                      </div>
-                      {r.keyword && r.brand_domain && (
-                        <div className={cn(DC.meta, "truncate")}>{r.keyword}</div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <MomentumChip value={r.momentum} />
-                      <div className="text-right">
-                        <div className={DC.label}>Opp</div>
-                        <div className="text-sm font-semibold tabular-nums text-neutral-50">{score || "—"}</div>
-                      </div>
-                      <Sparkline
-                        values={trendSpark(r.brand_domain ?? r.keyword ?? `ch-${i}`, score)}
-                        width={56}
-                        height={20}
-                      />
-                    </div>
-                  </div>
-                </CompactDataRow>
-              );
-            })}
-          </DataUtilitySection>
-        )}
-
-        {topWhitespace.length > 0 && (
-          <DataUtilitySection
-            index={MODULE_META.whitespace.index}
-            title={MODULE_META.whitespace.title}
-            subtitle={MODULE_META.whitespace.subtitle}
-            aggregateLabel="Top score"
-            aggregateValue={
-              whitespaceSpark.length ? String(Math.max(...whitespaceSpark)) : "—"
-            }
-            secondaryLabel="Signals"
-            secondaryValue={String(topWhitespace.length)}
-            sparklineValues={whitespaceSpark.length > 1 ? whitespaceSpark : trendSpark("whitespace", whitespaceSpark[0] ?? 0)}
-            onExpand={() => openPanel("whitespace")}
-          >
-            {topWhitespace.map((r, i) => {
-              const score = Number(r.opportunity_score) || 0;
-              const label = [r.category, r.emotion].filter(Boolean).join(" · ");
-              return (
-                <CompactDataRow
-                  key={`${r.category}-${r.emotion}-${i}`}
-                  onOpen={() => openPanel("whitespace", i, label || undefined)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className={cn(DC.meta, "truncate")}>{label || "—"}</div>
-                      <div className="text-xs truncate text-neutral-400">{r.recommendation ?? ""}</div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <PriorityChip priority={r.strategic_priority} />
-                      <div className="text-right">
-                        <div className={DC.label}>Score</div>
-                        <div className="text-sm font-semibold tabular-nums text-neutral-50">{score || "—"}</div>
-                      </div>
-                      <Sparkline
-                        values={trendSpark(label || `ws-${i}`, score)}
-                        width={56}
-                        height={20}
-                      />
-                    </div>
-                  </div>
-                </CompactDataRow>
-              );
-            })}
-          </DataUtilitySection>
-        )}
-
-        {watchlist.length > 0 && (
-          <DataUtilitySection
-            index={MODULE_META.momentum.index}
-            title={MODULE_META.momentum.title}
-            subtitle={MODULE_META.momentum.subtitle}
-            aggregateLabel="Peak interest"
-            aggregateValue={
-              momentumSpark.length ? String(Math.max(...momentumSpark)) : "—"
-            }
-            secondaryLabel="Brands"
-            secondaryValue={String(watchlist.length)}
-            sparklineValues={momentumSpark.length > 1 ? momentumSpark : trendSpark("momentum", momentumSpark[0] ?? 0)}
-            onExpand={() => openPanel("momentum")}
-          >
-            {watchlist.map((r, i) => {
-              const interest = Number(r.latest_interest) || 0;
-              return (
-                <CompactDataRow
-                  key={r.brand_domain ?? r.keyword ?? i}
-                  onOpen={() => openPanel("momentum", i, r.brand_domain ?? undefined)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold truncate text-neutral-100" title={r.brand_domain ?? ""}>
-                        {r.brand_domain ?? "—"}
-                      </div>
-                      {r.keyword && <div className={cn(DC.meta, "truncate")}>{r.keyword}</div>}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <MomentumChip value={r.momentum} />
-                      <div className="text-right">
-                        <div className={DC.label}>Interest</div>
-                        <div className="text-sm font-semibold tabular-nums text-neutral-50">{interest || "—"}</div>
-                      </div>
-                      <Sparkline
-                        values={trendSpark(r.brand_domain ?? r.keyword ?? `mo-${i}`, interest)}
-                        width={56}
-                        height={20}
-                      />
-                    </div>
-                  </div>
-                </CompactDataRow>
-              );
-            })}
-          </DataUtilitySection>
-        )}
-
-        {exec && (exec.dominant_market || exec.strongest_brand || exec.dominant_emotion) && (
-          <DataUtilitySection
-            index={MODULE_META.executive.index}
-            title={MODULE_META.executive.title}
-            subtitle={MODULE_META.executive.subtitle}
-            aggregateLabel="Leader"
-            aggregateValue={exec.strongest_brand ?? exec.dominant_market ?? "—"}
-            secondaryLabel="Market"
-            secondaryValue={exec.dominant_market ?? "—"}
-            sparklineValues={trendSpark(
-              exec.strongest_brand ?? exec.dominant_market ?? "executive",
-              exec.top_opportunity_category ? 72 : 48,
-            )}
-            onExpand={() => openPanel("executive")}
-          >
-            {[
-              { label: "Dominant Market", value: exec.dominant_market },
-              { label: "Strongest Brand", value: exec.strongest_brand },
-              { label: "Dominant Emotion", value: exec.dominant_emotion },
-              {
-                label: "Top Opportunity",
-                value: exec.top_opportunity_category
-                  ? `${exec.top_opportunity_category}${exec.top_opportunity_emotion ? ` · ${exec.top_opportunity_emotion}` : ""}`
-                  : null,
-              },
-            ]
-              .filter((row) => row.value)
-              .map((row) => (
-                <CompactDataRow key={row.label} onOpen={() => openPanel("executive", undefined, row.label)}>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className={DC.label}>{row.label}</div>
-                    <div className="text-sm font-semibold truncate text-neutral-100">{row.value}</div>
-                  </div>
-                </CompactDataRow>
-              ))}
-          </DataUtilitySection>
-        )}
-
-        {actionablePitch.length > 0 && (
-          <DataUtilitySection
-            index={MODULE_META.pitch.index}
-            title={MODULE_META.pitch.title}
-            subtitle={MODULE_META.pitch.subtitle}
-            aggregateLabel="Actions"
-            aggregateValue={String(actionablePitch.length)}
-            secondaryLabel="Categories"
-            secondaryValue={String(new Set(actionablePitch.map((r) => r.category).filter(Boolean)).size)}
-            sparklineValues={trendSpark("pitch-brief", actionablePitch.length * 10)}
-            onExpand={() => openPanel("pitch")}
-          >
-            {actionablePitch.map((r, i) => {
-              const pitchIndex = pitch.indexOf(r);
-              return (
-                <CompactDataRow
-                  key={`${r.category}-${r.action}-${i}`}
-                  onOpen={() => openPanel("pitch", pitchIndex >= 0 ? pitchIndex : i, r.category ?? undefined)}
-                >
-                  <div className="space-y-1">
+        {/* 03 — Who is getting louder */}
+        {(gettingLouder.length > 0 || risingChallengers.length > 0 || pressureBrands.length > 0) && (
+          <section>
+            <SectionHeader
+              index={MODULE_META.momentum.index}
+              title={MODULE_META.momentum.title}
+              subtitle={MODULE_META.momentum.subtitle}
+              onEvidence={() => openPanel("momentum")}
+            />
+            <div className="space-y-3">
+              {pressureBrands.length > 0 && (
+                <div className={cn(DC.card)}>
+                  <div className={cn(DC.label, "mb-2 text-rose-400/90")}>Who&apos;s putting pressure on the client</div>
+                  <ul className="space-y-2">
+                    {pressureBrands.map((r, i) => (
+                      <li key={r.competitor_domain ?? i} className="flex items-center justify-between gap-2 text-sm">
+                        <span className="font-medium text-neutral-100">{brandLabel(r.competitor_domain)}</span>
+                        <MomentumChip value={i === 0 && brief?.strongest_threat ? "Highest pressure" : r.demand != null ? "Active spend" : null} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div className="grid gap-2 md:grid-cols-2">
+                {gettingLouder.map((r, i) => (
+                  <button
+                    key={r.brand_domain ?? r.keyword ?? i}
+                    type="button"
+                    onClick={() => openPanel("momentum", i, r.brand_domain ?? undefined)}
+                    className={cn(DC.card, "text-left py-2 px-3 hover:border-neutral-600 transition-colors")}
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <div className={cn(DC.meta, "truncate")}>
-                        {r.category ?? "—"}
-                        {r.category_leader && <span className="ml-1 text-neutral-500">· {r.category_leader}</span>}
-                      </div>
+                      <span className="text-sm font-semibold text-neutral-100 truncate">
+                        {brandLabel(r.brand_domain)}
+                      </span>
+                      <MomentumChip value={r.momentum} />
+                    </div>
+                    {r.keyword && <div className={cn(DC.meta, "mt-1 truncate")}>Rising on: {r.keyword}</div>}
+                  </button>
+                ))}
+                {risingChallengers.map((r, i) => (
+                  <button
+                    key={`ch-${r.brand_domain ?? r.keyword ?? i}`}
+                    type="button"
+                    onClick={() => openPanel("challengers", i, r.brand_domain ?? r.keyword ?? undefined)}
+                    className={cn(DC.card, "text-left py-2 px-3 hover:border-neutral-600 transition-colors border-amber-900/40")}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-neutral-100 truncate">
+                        {brandLabel(r.brand_domain) || r.keyword}
+                      </span>
+                      <MomentumChip value={r.momentum ?? "Emerging"} />
+                    </div>
+                    {brief?.emerging_challenger &&
+                      r.brand_domain?.toLowerCase().includes(brief.emerging_challenger.toLowerCase()) && (
+                        <div className={cn(DC.meta, "mt-1 text-amber-400/80")}>Watch this brand</div>
+                      )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 04 — What the market keeps saying */}
+        {(marketMessages.length > 0 || exec?.dominant_emotion) && (
+          <section>
+            <SectionHeader
+              index={MODULE_META.challengers.index}
+              title={MODULE_META.challengers.title}
+              subtitle={MODULE_META.challengers.subtitle}
+              onEvidence={() => openPanel("challengers")}
+            />
+            <div className={cn(DC.card)}>
+              {exec?.dominant_emotion && (
+                <p className="text-sm text-neutral-200 leading-relaxed mb-3">
+                  The market keeps coming back to{" "}
+                  <span className="font-semibold text-neutral-50 capitalize">{exec.dominant_emotion}</span>.
+                  {contestedGround(pitch) ? ` Most brands are fighting over the same angle.` : " Few brands own a distinct message yet."}
+                </p>
+              )}
+              {marketMessages.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {marketMessages.map((msg) => (
+                    <span key={msg} className={cn(DC.chip, "text-neutral-200 border-neutral-700 capitalize")}>
+                      {msg}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* 05 — What nobody owns yet */}
+        {openAngles.length > 0 && (
+          <section>
+            <SectionHeader
+              index={MODULE_META.whitespace.index}
+              title={MODULE_META.whitespace.title}
+              subtitle={MODULE_META.whitespace.subtitle}
+              onEvidence={() => openPanel("whitespace")}
+            />
+            <div className="grid gap-2 md:grid-cols-2">
+              {openAngles.map((r, i) => {
+                const label = [r.category, r.emotion].filter(Boolean).join(" · ");
+                return (
+                  <button
+                    key={`${r.category}-${r.emotion}-${i}`}
+                    type="button"
+                    onClick={() => openPanel("whitespace", i, label || undefined)}
+                    className={cn(DC.card, "text-left py-3 px-3 hover:border-emerald-800/50 transition-colors")}
+                  >
+                    <div className={cn(DC.label, "text-emerald-400/90 mb-1")}>Open angle</div>
+                    <div className="text-sm font-medium text-neutral-100">{label || "Unclaimed positioning"}</div>
+                    {r.recommendation && (
+                      <p className="text-xs text-neutral-400 mt-2 leading-relaxed line-clamp-3">{r.recommendation}</p>
+                    )}
+                    {brief?.whitespace_emotion && r.emotion?.toLowerCase() === brief.whitespace_emotion.toLowerCase() && (
+                      <div className={cn(DC.meta, "mt-2 text-emerald-400/80")}>Best fit for your client</div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* 06 — What I'd recommend tomorrow */}
+        {(brief?.recommended_action || actionablePitch.length > 0) && (
+          <section>
+            <SectionHeader
+              index={MODULE_META.pitch.index}
+              title={MODULE_META.pitch.title}
+              subtitle={MODULE_META.pitch.subtitle}
+              onEvidence={() => openPanel("pitch")}
+            />
+            <div className="space-y-3">
+              {brief?.recommended_action && (
+                <div className={cn(DC.card, "bg-neutral-950 border-amber-800/40")}>
+                  <div className={cn(DC.label, "mb-2 text-amber-400/90")}>Recommended next moves</div>
+                  <p className="text-sm font-medium leading-relaxed text-neutral-100">{brief.recommended_action}</p>
+                </div>
+              )}
+              {actionablePitch.map((r, i) => {
+                const pitchIndex = pitch.indexOf(r);
+                return (
+                  <button
+                    key={`${r.category}-${r.action}-${i}`}
+                    type="button"
+                    onClick={() => openPanel("pitch", pitchIndex >= 0 ? pitchIndex : i, r.category ?? undefined)}
+                    className={cn(DC.card, "text-left w-full hover:border-neutral-600 transition-colors")}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className={cn(DC.meta)}>{r.category ?? "Category"}</span>
                       <span className={cn(DC.chip, "text-amber-400 border-amber-800/80 shrink-0")}>{r.action}</span>
                     </div>
-                    <p className="text-xs leading-snug line-clamp-2 text-neutral-400">{r.recommendation ?? "—"}</p>
-                  </div>
-                </CompactDataRow>
-              );
-            })}
-          </DataUtilitySection>
+                    <p className="text-sm text-neutral-200 leading-relaxed">{r.recommendation}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         )}
 
-        {!brief && topThreats.length === 0 && topChallengers.length === 0 && topWhitespace.length === 0 && (
-          <EmptyState agencyCtx={agencyCtx} />
-        )}
+        {!hasAnyData && <EmptyState agencyCtx={agencyCtx} />}
       </div>
 
-      <HardDataPanel
-        focus={panelFocus}
-        onClose={() => setPanelFocus(null)}
-        data={hardDataPayload}
-      />
+      <HardDataPanel focus={panelFocus} onClose={() => setPanelFocus(null)} data={hardDataPayload} />
     </WorkspaceShell>
   );
+}
+
+function contestedGround(pitchRows: Pitch[]): boolean {
+  const emotions = pitchRows.map((p) => p.dominant_emotion).filter(Boolean);
+  if (emotions.length < 2) return false;
+  const unique = new Set(emotions);
+  return unique.size <= emotions.length / 2;
 }

@@ -12,7 +12,6 @@ export function WorkspaceShell({
   title,
   subtitle,
   children,
-  demo = false,
   variant = "default",
   onExportPitch,
   exportPitchDisabled = false,
@@ -20,7 +19,6 @@ export function WorkspaceShell({
   title: string;
   subtitle?: string;
   children?: ReactNode;
-  demo?: boolean;
   variant?: "default" | "dark-dense";
   /** When set, shows Export PPTX in the header (strategist cockpit). */
   onExportPitch?: () => void | Promise<void>;
@@ -50,7 +48,7 @@ export function WorkspaceShell({
         className={cn("min-h-screen flex flex-col", isDense && "dark-dense bg-neutral-950 text-neutral-100")}
         style={isDense ? undefined : { background: "var(--canvas)" }}
       >
-        <TopBar demo={demo} />
+        <TopBar />
         <div className="flex flex-1 min-h-0">
           <aside
             className="shrink-0 flex flex-col"
@@ -114,7 +112,7 @@ export function WorkspaceShell({
                   <div className="label-eyebrow">Module</div>
                   <div style={{ fontSize: 16, fontWeight: 600, marginTop: 6 }}>{title}</div>
                   <p style={{ color: "var(--text-secondary)", marginTop: 4 }}>
-                    Section is provisioning. Live data wires up shortly.
+                    This section is loading. Check back shortly.
                   </p>
                 </div>
               )}

@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-/** Linen TopBar — 52px, logo + search + (demo pill) + avatar. */
-export function TopBar({ demo = false }: { demo?: boolean }) {
+/** Linen TopBar — 52px, logo + search + avatar. */
+export function TopBar() {
   const [initials, setInitials] = useState("YOU");
 
   useEffect(() => {
@@ -42,15 +42,6 @@ export function TopBar({ demo = false }: { demo?: boolean }) {
           signal
         </span>
       </a>
-
-      {demo && (
-        <span
-          className="pill pill-active"
-          style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px" }}
-        >
-          R-AD Demo
-        </span>
-      )}
 
       <div className="flex-1" />
 

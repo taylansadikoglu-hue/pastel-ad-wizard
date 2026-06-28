@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -228,6 +228,14 @@ function warChannelList(war: { channels?: unknown } | null | undefined): WarChan
 }
 
 
+function missingChannelsFromWar(war: War): string[] {
+  const ALL_BADGES = ["YouTube", "Search", "Display", "Meta", "TikTok", "LinkedIn"];
+  const activeBadges = warChannelList(war)
+    .map((c) => normaliseToBadge(c.channel ?? c.name))
+    .filter((b): b is string => Boolean(b));
+  return ALL_BADGES.filter((ch) => !activeBadges.includes(ch));
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function AdvertiserPage() {
@@ -369,17 +377,29 @@ function AdvertiserPage() {
   }, [war, channels]);
 
 
-  // Demo mode detection
-  const search = (useSearch({ strict: false }) as { demo?: string | boolean }) ?? {};
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
-  }, []);
-  const demoMode = useMemo(() => {
-    const q = String(search.demo ?? "").toLowerCase();
-    if (q === "true" || q === "1") return true;
-    return userEmail === "demo@revenuad.com";
-  }, [search.demo, userEmail]);
+  // Channel mix narrative for meeting-ready copy
+  const channelNarrative = useMemo(() => {
+    const byChannel = (war?.spend_weight?.byChannel ?? {}) as Record<string, { percentage?: number; adCount?: number } | number>;
+    const rows = CHANNEL_MIX.map((c) => {
+      const entry = byChannel[c.label];
+      const pct = typeof entry === "number" ? entry : Number(entry?.percentage ?? 0);
+      return { label: c.label, pct };
+    }).filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct);
+    const heavy = rows.filter((r) => r.pct >= 25);
+    const light = CHANNEL_MIX.map((c) => c.label).filter((l) => !rows.some((r) => r.label === l && r.pct >= 10));
+    if (heavy.length === 0) {
+      return `${brand} has limited channel data so far. As more ads are indexed, you'll see where they're putting attention.`;
+    }
+    const lead = heavy.map((r) => `${r.label} (${Math.round(r.pct)}%)`).join(" and ");
+    const lightNote = light.length ? ` ${light.slice(0, 2).join(" and ")} appear light.` : "";
+    const strategy =
+      heavy.some((r) => r.label === "YouTube" || r.label === "Display") && !heavy.some((r) => r.label === "Search" || r.label === "Meta")
+        ? " That suggests broad awareness is being prioritised over direct response right now."
+        : heavy.some((r) => r.label === "Search" || r.label === "Meta")
+          ? " That mix points to a balance of demand capture and brand reach."
+          : "";
+    return `${brand} is leaning heavily on ${lead}.${lightNote}${strategy}`;
+  }, [war, brand]);
 
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
   void (war?.total_sightings ?? 0);
@@ -535,15 +555,15 @@ function AdvertiserPage() {
 
   if (loading) {
     return (
-      <WorkspaceShell title={brand} subtitle={`War room · ${brand}`}>
-        <div style={emptyCard}>Reading signal…</div>
+      <WorkspaceShell title={brand} subtitle={`Ad library · ${brand}`}>
+        <div style={emptyCard}>Loading ad intelligence…</div>
       </WorkspaceShell>
     );
   }
 
   if (outOfScope) {
     return (
-      <WorkspaceShell title={brand} subtitle={`War room · ${brand}`}>
+      <WorkspaceShell title={brand} subtitle={`Ad library · ${brand}`}>
         <Link
           to="/app/clients"
           style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#6B6B62", marginBottom: 16, textDecoration: "none" }}
@@ -551,8 +571,8 @@ function AdvertiserPage() {
           <ArrowLeft size={14} /> Back to clients
         </Link>
         <div style={emptyCard}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 6 }}>Outside agency watchlist</div>
-          {brand} is not on your agency watchlist. Add the domain under My Clients to scope war room intelligence.
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 6 }}>Not on your watchlist</div>
+          Add {brand} to a client workspace to see their full ad intelligence here.
         </div>
       </WorkspaceShell>
     );
@@ -560,16 +580,18 @@ function AdvertiserPage() {
 
   if (!war) {
     return (
-      <WorkspaceShell title={brand} subtitle={`War room · ${brand}`}>
+      <WorkspaceShell title={brand} subtitle={`Ad library · ${brand}`}>
         <Link
           to="/app/advertisers"
           style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#6B6B62", marginBottom: 16, textDecoration: "none" }}
         >
-          <ArrowLeft size={14} /> Back to Advertisers
+          <ArrowLeft size={14} /> Back to Ad Library
         </Link>
         <div style={emptyCard}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 6 }}>No data found</div>
-          No intelligence for {brand} yet. Run a demo scan to seed placements and unlock the war room.
+          <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 6 }}>No ads indexed yet</div>
+          <p style={{ marginBottom: 16 }}>
+            We haven&apos;t picked up live ads for {brand} yet. Run a scan to index their placements and unlock channel mix, messaging, and recommendations.
+          </p>
           <button
             onClick={handleRunScan}
             disabled={scanning}
@@ -598,36 +620,14 @@ function AdvertiserPage() {
   }
 
   return (
-    <WorkspaceShell title={brand}>
+    <WorkspaceShell title={brand} subtitle={`Ad library · ${brand}`}>
       <style>{`@keyframes radPulse { 0%,100%{opacity:0.3} 50%{opacity:1} }`}</style>
       <Link
         to="/app/advertisers"
         style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#6B6B62", marginBottom: 16, textDecoration: "none" }}
       >
-        <ArrowLeft size={14} /> Back to Advertisers
+        <ArrowLeft size={14} /> Back to Ad Library
       </Link>
-
-      {demoMode && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            background: "#FDF6E8",
-            borderBottom: "1px solid #E8D5A0",
-            padding: "8px 24px",
-            margin: "0 -24px 16px",
-            fontSize: 12,
-            color: "#6B6B62",
-          }}
-        >
-          <span>Viewing demo data · Sign up to track any competitor</span>
-          <Link to="/auth" style={{ color: "#C9963A", fontSize: 12, fontWeight: 500, textDecoration: "none" }}>
-            Start free trial →
-          </Link>
-        </div>
-      )}
 
       <div style={{ marginBottom: 20 }}>
         <DataFeedPanel domain={domain} brandLabel={brand} />
@@ -698,7 +698,23 @@ function AdvertiserPage() {
           </div>
 
 
-          {/* B — Intel strip (5 cards) */}
+          {/* What they're doing — summary */}
+          <div
+            style={{
+              background: "#FFFFFF",
+              border: "1px solid #EBE9E4",
+              borderLeft: "3px solid #C9963A",
+              borderRadius: 8,
+              padding: "16px 20px",
+            }}
+          >
+            <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
+              What they&apos;re doing
+            </div>
+            <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.6, margin: 0 }}>{channelNarrative}</p>
+          </div>
+
+          {/* Activity metrics */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
             <MetricCard
               value={totalAds.toLocaleString()}
@@ -764,8 +780,8 @@ function AdvertiserPage() {
 
             return (
               <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 20 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Channel mix</div>
-                <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 14 }}>Where the budget flows</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Where they&apos;re spending attention</div>
+                <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 14 }}>Channel mix by share of observed activity</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {rows.map((r) => {
                     const pct = Math.max(0, Math.min(100, r.pct));
@@ -783,7 +799,7 @@ function AdvertiserPage() {
                           {pct > 0 ? `${pct.toFixed(0)}%` : "—"}
                         </div>
                         <div style={{ fontSize: 11, color: empty ? "#C4C2BA" : "#9E9D94", textAlign: "right" }}>
-                          {empty ? "No data" : `${r.ads} ad${r.ads === 1 ? "" : "s"}`}
+                          {empty ? "No activity yet" : `${r.ads} ad${r.ads === 1 ? "" : "s"}`}
                         </div>
                       </div>
                     );
@@ -898,7 +914,7 @@ function AdvertiserPage() {
                       ))}
                     </div>
                   ) : (
-                    <span style={{ fontSize: 13, color: "#9E9D94" }}>Signal incoming</span>
+                    <span style={{ fontSize: 13, color: "#9E9D94" }}>Themes will appear as more creatives are indexed.</span>
                   )}
                 </Field>
                 <Field label="Primary CTA">
@@ -906,7 +922,7 @@ function AdvertiserPage() {
                 </Field>
                 <Field label="Sentiment">
                   <div style={{ fontSize: 14, fontWeight: 500, color: sentimentColor, textTransform: "capitalize" }}>
-                    {sentimentRaw || "Not detected"}
+                    {sentimentRaw || "Not enough creatives to read tone yet"}
                   </div>
                 </Field>
               </div>
@@ -953,7 +969,7 @@ function AdvertiserPage() {
                       </div>
                     </div>
                   ) : (
-                    <span style={{ fontSize: 13, color: "#9E9D94" }}>Signal incoming</span>
+                    <span style={{ fontSize: 13, color: "#9E9D94" }}>Themes will appear as more creatives are indexed.</span>
                   )}
                 </Field>
               </div>
@@ -1003,20 +1019,18 @@ function AdvertiserPage() {
                   <CreativePill>~{creativeAnalysis.avgDuration}s avg</CreativePill>
                 )}
                 {!creativeAnalysis.colour && !creativeAnalysis.emotion && !firstAd?.ad_format && (
-                  <span style={{ fontSize: 12, color: "#9E9D94" }}>Signal incoming</span>
+                  <span style={{ fontSize: 12, color: "#9E9D94" }}>Creative tags will populate after the next scan.</span>
                 )}
               </div>
             </div>
           </Card>
 
-          {/* E — Opportunity */}
+          {/* What they're missing */}
           {(() => {
-            // FIX 4: derive missing channels from war.channels (normalised), not channelData ordering.
-            const ALL_BADGES = ["YouTube", "Search", "Display", "Meta", "TikTok", "LinkedIn"];
+            const missingChannels = missingChannelsFromWar(war);
             const activeBadges = warChannelList(war)
               .map((c) => normaliseToBadge(c.channel ?? c.name))
               .filter((b): b is string => Boolean(b));
-            const missingChannels = ALL_BADGES.filter((ch) => !activeBadges.includes(ch));
             const top = themes[0];
             const second = themes[1];
             const audienceLabel = demographics[0]?.label ?? "Their core audience";
@@ -1053,23 +1067,58 @@ function AdvertiserPage() {
                     marginBottom: 8,
                   }}
                 >
-                  Opportunity detected
+                  What they&apos;re missing
                 </div>
                 <div style={{ fontSize: 16, color: "#1C1C1A", lineHeight: 1.6, fontWeight: 400 }}>
                   {body}
                 </div>
-                <Link
-                  to="/app/categories"
-                  style={{ fontSize: 13, color: "#C9963A", fontWeight: 500, textDecoration: "none", display: "inline-block", marginTop: 10 }}
-                >
-                  Explore gap analysis →
-                </Link>
               </div>
             );
           })()}
 
+          {/* What we'd recommend next */}
+          <div
+            style={{
+              background: "#FFFFFF",
+              border: "1px solid #EBE9E4",
+              borderLeft: "3px solid #1C1C1A",
+              borderRadius: 8,
+              padding: "18px 22px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: "#6B6B62",
+                textTransform: "uppercase",
+                letterSpacing: "0.12em",
+                marginBottom: 8,
+              }}
+            >
+              What we&apos;d recommend next
+            </div>
+            <div style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.6 }}>
+              {(() => {
+                const cf = war.creative_fatigue ?? {};
+                const tier = Number(cf.score ?? 0) <= 30 ? "fresh" : Number(cf.score ?? 0) <= 60 ? "maturing" : "fatigued";
+                if (tier === "fatigued") {
+                  return `Their creative is tiring. Pitch a fresh angle on ${themes[0] ?? "their core message"} while they're vulnerable — especially on channels where you can move faster.`;
+                }
+                if (missingChannelsFromWar(war).length > 0) {
+                  return `Test ${missingChannelsFromWar(war)[0]} with a message they aren't running. ${brand} leaves that channel open.`;
+                }
+                return `Lead the meeting with channel mix: where they're heavy, where they're absent, and one open message angle from category intel.`;
+              })()}
+            </div>
+            <Link
+              to="/app/categories"
+              style={{ fontSize: 13, color: "#C9963A", fontWeight: 500, textDecoration: "none", display: "inline-block", marginTop: 10 }}
+            >
+              Compare with category benchmarks →
+            </Link>
+          </div>
 
-          {/* F — Recent ads */}
           <Card title="Recent ads">
             {/* Channel filter tabs */}
             <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
@@ -1163,7 +1212,7 @@ function AdvertiserPage() {
             <div style={{ textAlign: "center", padding: "24px 0" }}>
               <Newspaper size={16} style={{ color: "#C4C2BA", margin: "0 auto 6px" }} />
               <div style={{ fontSize: 12, color: "#9E9D94" }}>No recent coverage</div>
-              <div style={{ fontSize: 11, color: "#C4C2BA", marginTop: 2 }}>R-AD scans daily</div>
+              <div style={{ fontSize: 11, color: "#C4C2BA", marginTop: 2 }}>Checked daily</div>
             </div>
           ) : (
             <div>

@@ -45,9 +45,7 @@ function CategoriesPage() {
       try {
         const r = await fetch(`${API_BASE}/api/categories`);
         const raw: unknown = r.ok ? await r.json() : null;
-        console.log("categories raw:", raw);
 
-        // Try multiple shapes
         let items: Array<Record<string, unknown> | string> = [];
         if (Array.isArray(raw)) items = raw;
         else if (raw && typeof raw === "object") {
@@ -88,98 +86,33 @@ function CategoriesPage() {
     return () => { active = false; };
   }, []);
 
-  const grid = useMemo(() => rows, [rows]);
+  const { unlocked, lockedPreview } = useMemo(() => {
+    const unlockedRows = rows.filter((c) => isLaunchCategory(c.slug) || isLaunchCategory(c.name));
+    const lockedRows = rows.filter((c) => !isLaunchCategory(c.slug) && !isLaunchCategory(c.name));
+    return {
+      unlocked: unlockedRows,
+      lockedPreview: lockedRows.slice(0, 3),
+    };
+  }, [rows]);
 
   return (
     <WorkspaceShell
       title="Categories"
-      subtitle="Launch access: Banking, Retail, Insurance, Telco. Additional categories unlock with a category pack."
+      subtitle="Category benchmarks for Banking, Retail, Insurance, and Telco — included in your plan"
     >
       {loading ? (
         <div className="card-flat p-12 text-center text-sm text-muted-foreground">
-          Reading signal…
+          Loading categories…
         </div>
-      ) : grid.length === 0 ? (
+      ) : unlocked.length === 0 ? (
         <div className="card-flat p-12 text-center">
           <Grid3x3 size={24} className="mx-auto mb-2 opacity-50" />
-          <div className="text-sm text-muted-foreground">Signal incoming. R-AD is reading the market.</div>
+          <div className="text-sm text-muted-foreground">Categories will appear once market data is indexed.</div>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-          {grid.map((c) => {
-            const unlocked = isLaunchCategory(c.slug) || isLaunchCategory(c.name);
-            const inner = (
-              <>
-                <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A" }}>{c.name}</div>
-                <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 4 }}>
-                  {c.brandCount > 0 ? `${c.brandCount} brands` : "Signal incoming"}
-                </div>
-                {c.leader && unlocked && (
-                  <>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "#1C1C1A", marginTop: 12 }}>
-                      Leader: {displayBrand(c.leader)}
-                    </div>
-                    {c.leaderSov != null && (
-                      <div style={{ height: 3, background: "#F0EDE8", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
-                        <div style={{ width: `${Math.min(100, c.leaderSov)}%`, height: "100%", background: "#C9963A" }} />
-                      </div>
-                    )}
-                  </>
-                )}
-                {!unlocked && (
-                  <div
-                    style={{
-                      marginTop: 12,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "#6B6B62",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.06em",
-                    }}
-                  >
-                    <Lock size={12} /> Add category pack · $199/mo
-                  </div>
-                )}
-              </>
-            );
-
-            if (!unlocked) {
-              return (
-                <div
-                  key={c.slug}
-                  style={{
-                    position: "relative",
-                    background: "#FFFFFF",
-                    border: "1px solid #EBE9E4",
-                    borderRadius: 10,
-                    padding: 20,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div style={{ filter: "blur(5px)", opacity: 0.55, pointerEvents: "none" }}>{inner}</div>
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "grid",
-                      placeItems: "center",
-                      background: "rgba(255,255,255,0.72)",
-                    }}
-                  >
-                    <div style={{ textAlign: "center", padding: 12 }}>
-                      <Lock size={18} style={{ margin: "0 auto 8px", color: "#1C1C1A" }} />
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>Upgrade to unlock</div>
-                      <div style={{ fontSize: 11, color: "#6B6B62", marginTop: 4 }}>Category pack · $199/mo</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            return (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
+            {unlocked.map((c) => (
               <Link
                 key={c.slug}
                 to="/app/category/$slug"
@@ -197,11 +130,61 @@ function CategoriesPage() {
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#D4C4A0"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#EBE9E4"; }}
               >
-                {inner}
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A" }}>{c.name}</div>
+                <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 4 }}>
+                  {c.brandCount > 0
+                    ? `${c.brandCount} brands tracked`
+                    : "Add brands to your watchlist to populate this category"}
+                </div>
+                {c.leader && (
+                  <>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "#1C1C1A", marginTop: 12 }}>
+                      Leading: {displayBrand(c.leader)}
+                    </div>
+                    {c.leaderSov != null && (
+                      <div style={{ height: 3, background: "#F0EDE8", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
+                        <div style={{ width: `${Math.min(100, c.leaderSov)}%`, height: "100%", background: "#C9963A" }} />
+                      </div>
+                    )}
+                  </>
+                )}
               </Link>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+
+          {lockedPreview.length > 0 && (
+            <div style={{ marginTop: 28 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1A", marginBottom: 12 }}>
+                More categories
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {lockedPreview.map((c) => (
+                  <div
+                    key={c.slug}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      background: "#F7F6F3",
+                      border: "1px solid #EBE9E4",
+                      borderRadius: 8,
+                      padding: "10px 14px",
+                      fontSize: 13,
+                      color: "#6B6B62",
+                    }}
+                  >
+                    <Lock size={13} />
+                    <span>{c.name}</span>
+                    <span style={{ fontSize: 11, color: "#9E9D94" }}>Category pack</span>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: 12, color: "#9E9D94", marginTop: 10 }}>
+                Additional verticals unlock with a category pack. Your core categories above are ready to use today.
+              </p>
+            </div>
+          )}
+        </>
       )}
     </WorkspaceShell>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { MessageSquare, Star, X } from "lucide-react";
+import { useRouterState } from "@tanstack/react-router";
 
 const API_BASE = (import.meta.env.VITE_ENGINE_URL as string) || "https://api.revenuad.com";
 
@@ -14,7 +15,9 @@ function isDemo(): boolean {
   }
 }
 
+/** Demo feedback widget — marketing/demo routes only, never inside logged-in /app. */
 export function DemoFeedback() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [visible, setVisible] = useState(false);
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
@@ -23,8 +26,9 @@ export function DemoFeedback() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    setVisible(isDemo());
-  }, []);
+    const onApp = pathname.startsWith("/app");
+    setVisible(!onApp && isDemo());
+  }, [pathname]);
 
   if (!visible) return null;
 
@@ -113,7 +117,7 @@ export function DemoFeedback() {
                 rows={4}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Be brutal. R-AD can take it."
+                placeholder="Tell us what's working and what's not."
                 style={{
                   width: "100%",
                   resize: "none",
@@ -168,43 +172,6 @@ export function DemoFeedback() {
           )}
         </div>
       )}
-      <div
-        style={{
-          background: "#FFFFFF",
-          border: "1px solid #E8D5A0",
-          borderLeft: "3px solid #C9963A",
-          borderRadius: 8,
-          padding: "10px 14px",
-          fontSize: 12,
-          color: "#1C1C1A",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          maxWidth: 320,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-        }}
-      >
-        <div style={{ flex: 1, lineHeight: 1.4 }}>
-          <div style={{ fontWeight: 600 }}>You're on R-AD Demo.</div>
-          <div style={{ color: "#6B6B62" }}>Ready for the real thing?</div>
-        </div>
-        <a
-          href="/auth"
-          style={{
-            background: "#C9963A",
-            color: "#FFFFFF",
-            border: "none",
-            borderRadius: 6,
-            padding: "6px 10px",
-            fontSize: 11,
-            fontWeight: 600,
-            textDecoration: "none",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Start free trial →
-        </a>
-      </div>
       <button
         onClick={() => setOpen((o) => !o)}
         style={{

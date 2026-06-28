@@ -12,44 +12,45 @@ export type PanelFocus = {
   rowLabel?: string;
 };
 
+/** Market Intel sections — agency-facing titles only (no internal source names in UI). */
 export const MODULE_META: Record<
   DataModuleId,
   { index: string; title: string; subtitle: string; source: string }
 > = {
-  competitors: {
+  executive: {
     index: "01",
-    title: "Competitors",
-    subtitle: "agency_watchlist → client_threats",
+    title: "What's happening in the market",
+    subtitle: "Headline read for your client meeting",
+    source: "ra_executive_summary",
+  },
+  competitors: {
+    index: "02",
+    title: "Who is leading",
+    subtitle: "Share of observed activity in the category",
     source: "ra_client_threats",
   },
+  momentum: {
+    index: "03",
+    title: "Who is getting louder",
+    subtitle: "Brands gaining share of voice and search attention",
+    source: "ra_market_pressure",
+  },
   challengers: {
-    index: "02",
-    title: "Emerging Challengers",
-    subtitle: "brand_opportunities",
+    index: "04",
+    title: "What the market keeps saying",
+    subtitle: "Repeated messages and emotional angles",
     source: "ra_brand_opportunities",
   },
   whitespace: {
-    index: "03",
-    title: "Strategic Whitespace",
-    subtitle: "top_opportunities",
-    source: "ra_top_opportunities",
-  },
-  momentum: {
-    index: "04",
-    title: "Momentum Watchlist",
-    subtitle: "market_pressure",
-    source: "ra_market_pressure",
-  },
-  executive: {
     index: "05",
-    title: "Executive Summary",
-    subtitle: "executive_summary",
-    source: "ra_executive_summary",
+    title: "What nobody owns yet",
+    subtitle: "Open angles competitors haven't claimed",
+    source: "ra_top_opportunities",
   },
   pitch: {
     index: "06",
-    title: "Strategic Advisor",
-    subtitle: "pitch_brief",
+    title: "What I'd recommend tomorrow",
+    subtitle: "Recommended next moves for the pitch",
     source: "ra_pitch_brief",
   },
 };
