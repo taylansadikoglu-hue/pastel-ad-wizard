@@ -245,7 +245,7 @@ export function StrategistDashboard() {
 
   if (loading) {
     return (
-      <WorkspaceShell variant="dark-dense" title="Morning Signal">
+      <WorkspaceShell variant="dark-dense" title="Market Intel">
         <div className={cn(DC.empty, "text-center")}>
           <span className="text-neutral-500">{">"} loading intelligence stream…</span>
         </div>
@@ -360,8 +360,8 @@ export function StrategistDashboard() {
   return (
     <WorkspaceShell
       variant="dark-dense"
-      title="Morning Signal"
-      subtitle="Senior strategy director read · live agency scope"
+      title="Market Intel"
+      subtitle="Market snapshot · whitespace · recommended moves"
       onExportPitch={handleExportPitch}
       exportPitchDisabled={!intelBundle}
     >

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Radio, Target, TrendingUp, Settings, Home, ArrowRight } from "lucide-react";
+import { Loader2, Settings, Home, TrendingUp, Target, ArrowRight } from "lucide-react";
 import { ThemeProvider } from "@/components/adpalette/theme";
 import { OnboardingWizard } from "@/components/adpalette/Onboarding";
 import { StrategistDashboard } from "@/components/adpalette/StrategistDashboard";
@@ -25,12 +25,11 @@ type Stage = "loading" | "paywall" | "admin_picker" | "onboard" | "app";
 
 function AdminPicker({ email, onPick, onSignOut }: { email: string; onPick: () => void; onSignOut: () => void }) {
   const tiles = [
-    { to: "/app", label: "Ad Map", desc: "Live spend signal — totals, top spenders, latest ads.", icon: Home, choice: "dashboard" },
-    { to: "/app/advertisers", label: "Competitor Ads", desc: "Tracked competitor domains + creative feed.", icon: Target, choice: "advertisers" },
-    { to: "/app/pcr", label: "Market Intel", desc: "Category leaders, share of voice, positioning.", icon: TrendingUp, choice: "pcr" },
-    { to: "/app/sentiment", label: "Audience Intel", desc: "Emotion ownership and territory gaps.", icon: Radio, choice: "sentiment" },
-    { to: "/app/advisor", label: "Strategy", desc: "Pitch recommendations and next moves.", icon: ArrowRight, choice: "advisor" },
-    { to: "/app/settings", label: "Settings", desc: "Workspace and integrations.", icon: Settings, choice: "settings" },
+    { to: "/app/clients", label: "Client Workspaces", desc: "Choose client → competitors → pitch context.", icon: Home, choice: "clients" },
+    { to: "/app/pcr", label: "Market Intel", desc: "Snapshot, whitespace, recommended moves.", icon: TrendingUp, choice: "pcr" },
+    { to: "/app/advertisers", label: "Ad Library", desc: "Tracked competitor creatives and channel mix.", icon: Target, choice: "advertisers" },
+    { to: "/app/categories", label: "Categories", desc: "Launch categories + locked upgrade paths.", icon: TrendingUp, choice: "categories" },
+    { to: "/app/settings", label: "Settings", desc: "Agency billing and integrations.", icon: Settings, choice: "settings" },
   ] as const;
 
   return (
@@ -88,8 +87,8 @@ function AppPage() {
   const isChildWorkspaceRoute = pathname !== "/app" && pathname !== "/app/";
 
   const refresh = async () => {
-    const demoUnlocked = localStorage.getItem("revenuead_demo_unlocked") === "1";
-    const isLocalPreview = ["127.0.0.1", "localhost"].includes(window.location.hostname);
+    const demoUnlocked = typeof window !== "undefined" && localStorage.getItem("revenuead_demo_unlocked") === "1";
+    const isLocalPreview = typeof window !== "undefined" && ["127.0.0.1", "localhost"].includes(window.location.hostname);
 
     try {
       const { data: u } = await supabase.auth.getUser();
@@ -117,18 +116,16 @@ function AppPage() {
         return;
       }
 
-      // Admin: no auto-redirect — explicit picker, unless a choice is already stored
-      if (isAdmin) {
+      // Admin picker only on /app root — child routes (e.g. /app/clients) always render.
+      if (isAdmin && !isChildWorkspaceRoute) {
         const choice = localStorage.getItem(ADMIN_CHOICE_KEY);
         if (!choice) {
           setStage("admin_picker");
           return;
         }
-        setStage("app");
-        return;
       }
 
-      setStage(profile?.agency_domain ? "app" : "onboard");
+      setStage(profile?.agency_domain || isAdmin || demoUnlocked ? "app" : "onboard");
     } catch {
       if (demoUnlocked && isLocalPreview) {
         setEmail("demo@local");
@@ -145,7 +142,7 @@ function AppPage() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [pathname]);
 
   const logout = async () => {
     localStorage.removeItem(ADMIN_CHOICE_KEY);

@@ -7,7 +7,7 @@ import { getAgencyContext, domainInWatchlist } from "@/lib/agency-watchlist";
 import { runMockScan } from "@/lib/mock-scan.functions";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
-  Home, Layers, Target, Settings, LogOut, MessageSquare, X, Search,
+  Layers, Target, Settings, LogOut, MessageSquare, X, Search,
   TrendingUp, Clock, Activity, Calendar, ChevronDown, Lock, Play, Film,
   Grid3x3, Radio, Lightbulb,
   BarChart3, PieChart as PieIcon, Loader2,
@@ -1129,11 +1129,10 @@ function aiReply(q: string, visible: Competitor[]): string {
 }
 
 const NAV_ITEMS = [
-  { icon: Home, label: "Morning signal", href: "/app/dashboard" },
-  { icon: Target, label: "Advertisers", href: "/app/advertisers" },
+  { icon: Radio, label: "Client Workspaces", href: "/app/clients" },
+  { icon: BarChart3, label: "Market Intel", href: "/app/pcr" },
+  { icon: Target, label: "Ad Library", href: "/app/advertisers" },
   { icon: Grid3x3, label: "Categories", href: "/app/categories" },
-  { icon: Radio, label: "My Clients", href: "/app/clients" },
-  { icon: BarChart3, label: "Signal", href: "/app/pcr" },
 ];
 
 export function SidebarNav() {
@@ -1144,7 +1143,7 @@ export function SidebarNav() {
       {NAV_ITEMS.map((item) => {
         const active =
           pathname === item.href ||
-          (item.href === "/app/dashboard" && pathname === "/app") ||
+          (item.href === "/app/pcr" && (pathname === "/app" || pathname === "/app/")) ||
           (item.href === "/app/advertisers" && pathname.startsWith("/app/advertiser"));
         return (
           <Link

@@ -182,7 +182,7 @@ function AdvertisersPage() {
   }, [list, query, activeCat]);
 
   return (
-    <WorkspaceShell title="Advertisers" subtitle="Search any brand or competitor">
+    <WorkspaceShell title="Ad Library" subtitle="Tracked competitor creatives and channel mix">
       <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 1200 }}>
         {/* Search bar */}
         <div style={{ position: "relative" }}>
