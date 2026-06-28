@@ -22,6 +22,7 @@ import {
   type AgencyContext,
 } from "@/lib/agency-watchlist";
 import { runMockScan } from "@/lib/mock-scan.functions";
+import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
 
 const API_BASE = "https://api.revenuad.com";
@@ -627,6 +628,10 @@ function AdvertiserPage() {
           </Link>
         </div>
       )}
+
+      <div style={{ marginBottom: 20 }}>
+        <DataFeedPanel domain={domain} brandLabel={brand} />
+      </div>
 
       <div
         style={{

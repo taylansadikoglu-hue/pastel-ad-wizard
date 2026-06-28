@@ -8,11 +8,18 @@ export const getIntegrations = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("integrations")
-      .select("apify_token, dataforseo_login, dataforseo_password, resend_api_key")
+      .select("apify_token, dataforseo_login, dataforseo_password, resend_api_key, similarweb_rapidapi_key, newspi_api_key")
       .eq("user_id", userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return data ?? { apify_token: null, dataforseo_login: null, dataforseo_password: null, resend_api_key: null };
+    return data ?? {
+      apify_token: null,
+      dataforseo_login: null,
+      dataforseo_password: null,
+      resend_api_key: null,
+      similarweb_rapidapi_key: null,
+      newspi_api_key: null,
+    };
   });
 
 const SaveSchema = z.object({
@@ -20,6 +27,8 @@ const SaveSchema = z.object({
   dataforseo_login: z.string().max(255).optional().nullable(),
   dataforseo_password: z.string().max(500).optional().nullable(),
   resend_api_key: z.string().max(500).optional().nullable(),
+  similarweb_rapidapi_key: z.string().max(500).optional().nullable(),
+  newspi_api_key: z.string().max(500).optional().nullable(),
 });
 
 export const saveIntegrations = createServerFn({ method: "POST" })

@@ -701,7 +701,9 @@ export type Database = {
           created_at: string
           dataforseo_login: string | null
           dataforseo_password: string | null
+          newspi_api_key: string | null
           resend_api_key: string | null
+          similarweb_rapidapi_key: string | null
           updated_at: string
           user_id: string
         }
@@ -710,7 +712,9 @@ export type Database = {
           created_at?: string
           dataforseo_login?: string | null
           dataforseo_password?: string | null
+          newspi_api_key?: string | null
           resend_api_key?: string | null
+          similarweb_rapidapi_key?: string | null
           updated_at?: string
           user_id: string
         }
@@ -719,7 +723,9 @@ export type Database = {
           created_at?: string
           dataforseo_login?: string | null
           dataforseo_password?: string | null
+          newspi_api_key?: string | null
           resend_api_key?: string | null
+          similarweb_rapidapi_key?: string | null
           updated_at?: string
           user_id?: string
         }
