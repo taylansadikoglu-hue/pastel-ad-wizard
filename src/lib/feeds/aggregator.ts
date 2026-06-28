@@ -26,10 +26,13 @@ function emptySources(): Record<FeedSource, FeedSourceMeta> {
 function synthesizeInsights(input: {
   domain: string;
   trafficVisits: number | null;
+  globalRank: number | null;
   category: string | null;
   categoryRank: number | null;
+  topCountry: string | null;
   similarCount: number;
   topSimilar: string | null;
+  topSimilarTitle: string | null;
   paidSpend: number | null;
   creativeCount: number;
   apifyCount: number;
@@ -39,25 +42,31 @@ function synthesizeInsights(input: {
   const insights: SynthesizedInsight[] = [];
 
   if (input.trafficVisits != null) {
+    const rankParts = [
+      input.globalRank != null ? `#${input.globalRank} global` : null,
+      input.categoryRank != null ? `#${input.categoryRank} in category` : null,
+      input.topCountry ? `top geo ${input.topCountry}` : null,
+    ].filter(Boolean);
     insights.push({
       id: "traffic-weight",
       label: "Digital weight",
       value: `${formatVisits(input.trafficVisits)} monthly visits`,
-      detail: input.category
-        ? `${input.category}${input.categoryRank ? ` · #${input.categoryRank} in category` : ""}`
-        : "Category rank from Similarweb",
+      detail: [input.category, rankParts.join(" · ")].filter(Boolean).join(" — ") || "Similarweb traffic profile",
       sources: ["similarweb"],
       priority: "high",
     });
   }
 
   if (input.similarCount > 0) {
+    const peerLabel = input.topSimilarTitle
+      ? `${input.topSimilarTitle} (${input.topSimilar})`
+      : input.topSimilar;
     insights.push({
       id: "peer-set",
       label: "Competitive peer set",
       value: `${input.similarCount} similar domains`,
-      detail: input.topSimilar
-        ? `Closest peer: ${input.topSimilar}. Use for competitor workspace suggestions.`
+      detail: peerLabel
+        ? `Top peer by Similarweb overlap: ${peerLabel}. Add to client workspace competitors.`
         : "Audience-overlap peers from Similarweb Similar Sites.",
       sources: ["similarweb"],
       priority: "high",
@@ -217,10 +226,13 @@ export async function aggregateDomainIntelligence(
   const insights = synthesizeInsights({
     domain,
     trafficVisits: traffic?.monthlyVisits ?? null,
+    globalRank: traffic?.globalRank ?? null,
     category: traffic?.category ?? null,
     categoryRank: traffic?.categoryRank ?? null,
+    topCountry: traffic?.topCountry ?? null,
     similarCount: similarCompetitors.length,
     topSimilar: similarCompetitors[0]?.domain ?? null,
+    topSimilarTitle: similarCompetitors[0]?.title ?? null,
     paidSpend: paidMedia?.estimatedMonthlySpend ?? null,
     creativeCount: paidMedia?.creativeCount ?? 0,
     apifyCount: paidMedia?.byPlatform.apify ?? 0,

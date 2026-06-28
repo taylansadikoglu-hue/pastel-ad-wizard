@@ -14,14 +14,22 @@ export type SimilarwebBundle = {
   raw: Record<string, unknown>;
 };
 
-type RapidSite = {
+/** Shape returned by RapidAPI Similarweb API Pro — GET Similar Sites */
+export type SimilarwebSimilarSitesResponse = {
+  success?: boolean;
+  sourceSite?: SimilarwebSiteRecord;
+  similarSites?: SimilarwebSiteRecord[];
+};
+
+export type SimilarwebSiteRecord = {
   site?: string;
   domain?: string;
   url?: string;
-  title?: string;
-  description?: string;
+  title?: string | null;
+  description?: string | null;
   totalVisits?: number;
   visits?: number;
+  globalRank?: number;
   category?: string;
   categoryRank?: number;
   rank?: number;
@@ -30,6 +38,11 @@ type RapidSite = {
   affinity?: number;
   score?: number;
   tags?: string[];
+  images?: {
+    favicon?: string;
+    smartphone?: string;
+    desktop?: string;
+  };
 };
 
 function num(v: unknown): number | null {
@@ -37,47 +50,69 @@ function num(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function siteDomain(row: RapidSite): string | null {
+function siteDomain(row: SimilarwebSiteRecord): string | null {
   const raw = row.site ?? row.domain ?? row.url;
   if (!raw || typeof raw !== "string") return null;
   return normalizeDomain(raw);
 }
 
-function toTrafficProfile(site: RapidSite, fallbackDomain: string): TrafficProfile {
+function faviconFrom(row: SimilarwebSiteRecord): string | null {
+  const fav = row.images?.favicon;
+  return typeof fav === "string" && fav.length > 0 ? fav : null;
+}
+
+function toTrafficProfile(site: SimilarwebSiteRecord, fallbackDomain: string): TrafficProfile {
   const domain = siteDomain(site) ?? fallbackDomain;
   return {
     domain,
     title: typeof site.title === "string" ? site.title : null,
     description: typeof site.description === "string" ? site.description : null,
     monthlyVisits: num(site.totalVisits ?? site.visits),
+    globalRank: num(site.globalRank),
     category: typeof site.category === "string" ? site.category : null,
     categoryRank: num(site.categoryRank ?? site.rank),
     topCountry: typeof site.topCountry === "string" ? site.topCountry : null,
     topCountryRank: num(site.topCountryRank),
     tags: Array.isArray(site.tags) ? site.tags.filter((t): t is string => typeof t === "string") : [],
+    favicon: faviconFrom(site),
   };
 }
 
-function toSimilarCompetitor(row: RapidSite): SimilarCompetitor | null {
+function toSimilarCompetitor(row: SimilarwebSiteRecord, peerOrder: number): SimilarCompetitor | null {
   const domain = siteDomain(row);
   if (!domain) return null;
   return {
     domain,
+    title: typeof row.title === "string" ? row.title : null,
+    description: typeof row.description === "string" ? row.description : null,
     monthlyVisits: num(row.totalVisits ?? row.visits),
-    category: typeof row.category === "string" ? row.category : null,
+    globalRank: num(row.globalRank),
     categoryRank: num(row.categoryRank ?? row.rank),
+    topCountry: typeof row.topCountry === "string" ? row.topCountry : null,
+    topCountryRank: num(row.topCountryRank),
     affinity: num(row.affinity ?? row.score),
+    favicon: faviconFrom(row),
+    peerOrder,
   };
 }
 
-/** Parse RapidAPI Similarweb API Pro style payloads (flexible shapes). */
+/**
+ * Parse RapidAPI Similarweb API Pro — GET Similar Sites response.
+ * @see SimilarwebSimilarSitesResponse — `{ success, sourceSite, similarSites }`
+ */
 export function parseSimilarwebPayload(raw: unknown, domain: string): SimilarwebBundle {
   const body = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-  const sourceSite = (body.sourceSite ?? body.source_site ?? body.overview ?? body.data) as RapidSite | undefined;
+  const normalized = normalizeDomain(domain);
+
+  if (body.success === false) {
+    throw new Error("Similarweb API returned success: false");
+  }
+
+  const sourceSite = (body.sourceSite ?? body.source_site) as SimilarwebSiteRecord | undefined;
 
   let traffic: TrafficProfile | null = null;
   if (sourceSite && typeof sourceSite === "object") {
-    traffic = toTrafficProfile(sourceSite, domain);
+    traffic = toTrafficProfile(sourceSite, normalized);
   }
 
   const similarRaw =
@@ -88,18 +123,24 @@ export function parseSimilarwebPayload(raw: unknown, domain: string): Similarweb
 
   const similarCompetitors: SimilarCompetitor[] = [];
   if (Array.isArray(similarRaw)) {
-    for (const row of similarRaw) {
-      if (!row || typeof row !== "object") continue;
-      const mapped = toSimilarCompetitor(row as RapidSite);
-      if (mapped && mapped.domain !== domain) similarCompetitors.push(mapped);
-    }
+    similarRaw.forEach((row, index) => {
+      if (!row || typeof row !== "object") return;
+      const mapped = toSimilarCompetitor(row as SimilarwebSiteRecord, index);
+      if (mapped && mapped.domain !== normalized) similarCompetitors.push(mapped);
+    });
   }
 
-  similarCompetitors.sort((a, b) => (b.affinity ?? 0) - (a.affinity ?? 0) || (b.monthlyVisits ?? 0) - (a.monthlyVisits ?? 0));
+  // Similar Sites endpoint has no affinity — preserve API list order (most relevant first).
+  similarCompetitors.sort((a, b) => {
+    if (a.affinity != null && b.affinity != null && a.affinity !== b.affinity) {
+      return b.affinity - a.affinity;
+    }
+    return a.peerOrder - b.peerOrder;
+  });
 
   return {
     traffic,
-    similarCompetitors: similarCompetitors.slice(0, 12),
+    similarCompetitors: similarCompetitors.slice(0, 20),
     raw: body,
   };
 }
@@ -129,7 +170,11 @@ export function resolveSimilarwebConfig(opts?: {
   userKey?: string | null;
   systemKey?: string | null;
 }): SimilarwebConfig | null {
-  const apiKey = opts?.userKey?.trim() || opts?.systemKey?.trim() || process.env.SIMILARWEB_RAPIDAPI_KEY?.trim() || process.env.RAPIDAPI_KEY?.trim();
+  const apiKey =
+    opts?.userKey?.trim() ||
+    opts?.systemKey?.trim() ||
+    process.env.SIMILARWEB_RAPIDAPI_KEY?.trim() ||
+    process.env.RAPIDAPI_KEY?.trim();
   if (!apiKey) return null;
 
   const host =
@@ -165,6 +210,7 @@ export async function fetchSimilarwebBundle(domain: string, config: SimilarwebCo
       if (!similarCompetitors.length && parsed.similarCompetitors.length) {
         similarCompetitors = parsed.similarCompetitors;
       }
+      // Similar Sites returns sourceSite + similarSites in one call — stop when complete.
       if (traffic && similarCompetitors.length) break;
     } catch (err) {
       merged[`${attempt.label}_error`] = err instanceof Error ? err.message : String(err);
@@ -172,9 +218,10 @@ export async function fetchSimilarwebBundle(domain: string, config: SimilarwebCo
   }
 
   if (!traffic && !similarCompetitors.length) {
+    const errKey = Object.keys(merged).find((k) => k.endsWith("_error"));
     throw new Error(
-      typeof merged.similar_sites_error === "string"
-        ? merged.similar_sites_error
+      errKey && typeof merged[errKey] === "string"
+        ? (merged[errKey] as string)
         : "Similarweb returned no traffic or peer data",
     );
   }

@@ -133,8 +133,20 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
       {intel && (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-            <Metric icon={Globe} label="Monthly visits" value={formatVisits(intel.traffic?.monthlyVisits)} sub={intel.traffic?.category ?? "Similarweb"} />
-            <Metric icon={Radar} label="Category rank" value={intel.traffic?.categoryRank ? `#${intel.traffic.categoryRank}` : "—"} sub={intel.traffic?.topCountry ? `Top geo: ${intel.traffic.topCountry}` : undefined} />
+            <Metric icon={Globe} label="Monthly visits" value={formatVisits(intel.traffic?.monthlyVisits)} sub={intel.traffic?.title ?? intel.traffic?.category ?? "Similarweb"} />
+            <Metric
+              icon={Radar}
+              label="Global rank"
+              value={intel.traffic?.globalRank ? `#${intel.traffic.globalRank}` : intel.traffic?.categoryRank ? `Cat #${intel.traffic.categoryRank}` : "—"}
+              sub={
+                [
+                  intel.traffic?.category?.split(">").pop()?.trim(),
+                  intel.traffic?.topCountry ? `${intel.traffic.topCountry} #${intel.traffic.topCountryRank ?? "—"}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || undefined
+              }
+            />
             <Metric icon={Megaphone} label="Est. paid spend" value={formatCurrency(intel.paidMedia?.estimatedMonthlySpend)} sub={`${intel.paidMedia?.creativeCount ?? 0} placements tracked`} />
             <Metric icon={Newspaper} label="News headlines" value={String(intel.news.length)} sub="Newspi / engine layer" />
           </div>
@@ -160,13 +172,22 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
               <div style={{ fontSize: 12, fontWeight: 600, color: "#6B6B62", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Similarweb peer set
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
-                {intel.similarCompetitors.slice(0, 6).map((peer) => (
-                  <div key={peer.domain} style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #EBE9E4", background: "#FFFFFF" }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>{peer.domain}</div>
-                    <div style={{ fontSize: 12, color: "#9E9D94", marginTop: 4 }}>
-                      {formatVisits(peer.monthlyVisits)} visits
-                      {peer.affinity != null ? ` · ${Math.round(peer.affinity * (peer.affinity <= 1 ? 100 : 1))}% affinity` : ""}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
+                {intel.similarCompetitors.slice(0, 8).map((peer) => (
+                  <div key={peer.domain} style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #EBE9E4", background: "#FFFFFF", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    {peer.favicon && (
+                      <img src={peer.favicon} alt="" width={20} height={20} style={{ borderRadius: 4, marginTop: 2, flexShrink: 0 }} />
+                    )}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {peer.title ?? peer.domain}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#6B6B62", marginTop: 2 }}>{peer.domain}</div>
+                      <div style={{ fontSize: 12, color: "#9E9D94", marginTop: 4 }}>
+                        {formatVisits(peer.monthlyVisits)} visits
+                        {peer.globalRank != null ? ` · #${peer.globalRank} global` : ""}
+                        {peer.categoryRank != null ? ` · cat #${peer.categoryRank}` : ""}
+                      </div>
                     </div>
                   </div>
                 ))}

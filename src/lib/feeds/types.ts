@@ -11,10 +11,18 @@ export type FeedSourceMeta = {
 
 export type SimilarCompetitor = {
   domain: string;
+  title: string | null;
+  description: string | null;
   monthlyVisits: number | null;
-  category: string | null;
+  globalRank: number | null;
   categoryRank: number | null;
+  topCountry: string | null;
+  topCountryRank: number | null;
+  /** Similarity score when API provides it; Similar Sites endpoint uses list order instead. */
   affinity: number | null;
+  favicon: string | null;
+  /** Preserves Similarweb Similar Sites response order (most relevant first). */
+  peerOrder: number;
 };
 
 export type TrafficProfile = {
@@ -22,11 +30,13 @@ export type TrafficProfile = {
   title: string | null;
   description: string | null;
   monthlyVisits: number | null;
+  globalRank: number | null;
   category: string | null;
   categoryRank: number | null;
   topCountry: string | null;
   topCountryRank: number | null;
   tags: string[];
+  favicon: string | null;
 };
 
 export type PaidMediaSnapshot = {
