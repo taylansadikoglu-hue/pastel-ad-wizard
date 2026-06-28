@@ -60,7 +60,7 @@ export type HardDataPayload = {
   momentum: Momentum[];
   exec: Exec | null;
   pitch: Pitch[];
-  agencyId: number | null;
+  agencyId: string | null;
 };
 
 function avg(nums: number[]): string {

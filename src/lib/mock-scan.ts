@@ -6,7 +6,7 @@ type AdminClient = SupabaseClient<Database>;
 export type MockScanInput = {
   domain: string;
   userId: string;
-  agencyId: number;
+  agencyId: string;
   clientName?: string;
   category?: string;
   country?: string;
@@ -139,17 +139,14 @@ export async function seedMockScanSuccess(
     .from("agency_watchlist")
     .select("id")
     .eq("agency_id", input.agencyId)
-    .eq("client_domain", domain)
+    .eq("domain", domain)
     .limit(1);
 
   if (!existing?.length) {
     await supabase.from("agency_watchlist").insert({
       agency_id: input.agencyId,
-      client_name: input.clientName ?? brand,
-      client_domain: domain,
-      competitor_domain: domain,
-      category: input.category ?? "General",
-      country: input.country ?? "Australia",
+      domain,
+      label: input.clientName ?? brand,
     });
   }
 

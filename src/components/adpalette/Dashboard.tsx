@@ -126,7 +126,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [hasNoData, setHasNoData] = useState(false);
   const [scanDomain, setScanDomain] = useState("commbank.com.au");
   const [scanning, setScanning] = useState(false);
-  const [agencyId, setAgencyId] = useState<number | null>(null);
+  const [agencyId, setAgencyId] = useState<string | null>(null);
   const [watchlistDomains, setWatchlistDomains] = useState<Set<string>>(new Set());
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -528,7 +528,7 @@ export function Dashboard({ onLogout }: { onLogout: () => void }) {
               <h2 className="text-2xl font-bold">Your agency watchlist has no completed scans</h2>
               <p className="text-sm text-muted-foreground">
                 Run a demo scan to seed placements for your portfolio
-                {agencyId != null ? ` (agency #${agencyId})` : ""}.
+                {agencyId != null ? " · agency workspace active" : ""}.
               </p>
               <div className="flex flex-col sm:flex-row gap-2 justify-center items-stretch sm:items-center max-w-md mx-auto">
                 <input

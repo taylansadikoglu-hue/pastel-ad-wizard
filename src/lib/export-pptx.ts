@@ -5,6 +5,7 @@ import {
   type StrategistIntelBundle,
 } from "@/lib/api-gateway";
 import type { AgencyContext } from "@/lib/agency-watchlist";
+import { watchlistDisplayName } from "@/lib/agency-watchlist";
 import {
   MODULE_META,
   type DataModuleId,
@@ -209,8 +210,8 @@ function resolveConfidence(bundle: StrategistIntelBundle): ConfidenceShape | nul
 function resolveAgencyBrand(bundle: StrategistIntelBundle, ctx?: AgencyContext | null): string {
   const brief = resolveBrief(bundle);
   if (brief?.client_name?.trim()) return brief.client_name.trim();
-  const fromWatchlist = ctx?.entries.find((e) => e.client_name?.trim())?.client_name;
-  if (fromWatchlist?.trim()) return fromWatchlist.trim();
+  const fromWatchlist = ctx?.entries.find((e) => e.label?.trim() || e.domain);
+  if (fromWatchlist) return watchlistDisplayName(fromWatchlist);
   return "Intelligence Brief";
 }
 

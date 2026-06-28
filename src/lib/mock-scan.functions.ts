@@ -31,7 +31,7 @@ export const runMockScan = createServerFn({ method: "POST" })
     if (!agencyId) {
       const { data: agency, error: agencyErr } = await supabaseAdmin
         .from("agencies")
-        .insert({ name: profile?.agency_name ?? "My Agency" })
+        .insert({ name: profile?.agency_name ?? "My Agency", owner_id: userId })
         .select("id")
         .single();
       if (agencyErr || !agency) {

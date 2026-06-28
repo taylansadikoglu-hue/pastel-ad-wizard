@@ -773,6 +773,7 @@ export type Database = {
       profiles: {
         Row: {
           agency_domain: string | null
+          agency_id: string | null
           agency_name: string | null
           created_at: string
           id: string
@@ -781,6 +782,7 @@ export type Database = {
         }
         Insert: {
           agency_domain?: string | null
+          agency_id?: string | null
           agency_name?: string | null
           created_at?: string
           id: string
@@ -789,6 +791,7 @@ export type Database = {
         }
         Update: {
           agency_domain?: string | null
+          agency_id?: string | null
           agency_name?: string | null
           created_at?: string
           id?: string

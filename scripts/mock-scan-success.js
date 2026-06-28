@@ -5,7 +5,7 @@
  *
  * Usage:
  *   set -a && . ./.env && set +a
- *   node scripts/mock-scan-success.js --domain commbank.com.au --agency-id 1 --user-id <uuid>
+ *   node scripts/mock-scan-success.js --domain commbank.com.au --agency-id <uuid> --user-id <uuid>
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -147,17 +147,14 @@ async function seedMockScanSuccess(supabase, input) {
     .from("agency_watchlist")
     .select("id")
     .eq("agency_id", input.agencyId)
-    .eq("client_domain", domain)
+    .eq("domain", domain)
     .limit(1);
 
   if (!existing?.length) {
     await supabase.from("agency_watchlist").insert({
       agency_id: input.agencyId,
-      client_name: input.clientName ?? brand,
-      client_domain: domain,
-      competitor_domain: domain,
-      category: input.category ?? "General",
-      country: input.country ?? "Australia",
+      domain,
+      label: input.clientName ?? brand,
     });
   }
 
@@ -167,7 +164,7 @@ async function seedMockScanSuccess(supabase, input) {
 async function main() {
   const args = parseArgs(process.argv);
   const domain = args.domain;
-  const agencyId = Number(args["agency-id"] ?? args.agencyId ?? 1);
+  const agencyId = String(args["agency-id"] ?? args.agencyId ?? "").trim();
   const userId = args["user-id"] ?? args.userId;
 
   if (!domain) {
@@ -178,8 +175,8 @@ async function main() {
     console.error("Missing required --user-id (Supabase auth.users UUID)");
     process.exit(1);
   }
-  if (!Number.isFinite(agencyId)) {
-    console.error("Invalid --agency-id");
+  if (!agencyId) {
+    console.error("Missing required --agency-id (agencies UUID)");
     process.exit(1);
   }
 

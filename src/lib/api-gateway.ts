@@ -111,15 +111,15 @@ function resolveCategorySlug(
   if (typeof fromParams === "string" && fromParams.trim()) {
     return categoryToSlug(fromParams);
   }
-  const firstCategory = ctx?.entries.find((e) => e.category)?.category ?? null;
+  const firstCategory = null;
   return categoryToSlug(firstCategory);
 }
 
 function resolveBrand(ctx?: AgencyContext): string {
-  const entry = ctx?.entries.find((e) => e.client_name || e.client_domain);
-  if (entry?.client_name?.trim()) return entry.client_name.trim();
-  if (entry?.client_domain) {
-    const root = entry.client_domain.split(".")[0] ?? "";
+  const entry = ctx?.entries.find((e) => e.label || e.domain);
+  if (entry?.label?.trim()) return entry.label.trim();
+  if (entry?.domain) {
+    const root = entry.domain.split(".")[0] ?? "";
     if (root) return root.charAt(0).toUpperCase() + root.slice(1);
   }
   return "CommBank";

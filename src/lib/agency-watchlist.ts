@@ -1,17 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
-export type AgencyWatchlistRow = {
-  id: number;
-  agency_id: number;
-  client_name: string;
-  client_domain: string;
-  competitor_domain: string | null;
-  category: string | null;
-  country: string | null;
-};
+export type AgencyWatchlistRow = Database["public"]["Tables"]["agency_watchlist"]["Row"];
 
 export type AgencyContext = {
-  agencyId: number | null;
+  agencyId: string | null;
   entries: AgencyWatchlistRow[];
   domains: Set<string>;
 };
@@ -25,11 +18,16 @@ function normalizeDomain(domain: string): string {
     .replace(/\/.*$/, "");
 }
 
+export function watchlistDisplayName(row: Pick<AgencyWatchlistRow, "domain" | "label">): string {
+  if (row.label?.trim()) return row.label.trim();
+  const root = row.domain.split(".")[0] ?? row.domain;
+  return root.charAt(0).toUpperCase() + root.slice(1);
+}
+
 export function domainsFromWatchlist(entries: AgencyWatchlistRow[]): Set<string> {
   const domains = new Set<string>();
   for (const row of entries) {
-    if (row.client_domain) domains.add(normalizeDomain(row.client_domain));
-    if (row.competitor_domain) domains.add(normalizeDomain(row.competitor_domain));
+    if (row.domain) domains.add(normalizeDomain(row.domain));
   }
   return domains;
 }
@@ -61,7 +59,7 @@ export function filterByAgencyWatchlist<T extends Record<string, unknown>>(
 
 /**
  * Resolve agency_id and watchlist rows for the authenticated user.
- * All strategist queries MUST scope through this before reading intel views.
+ * Live schema: agencies.id uuid · profiles.agency_id uuid · watchlist domain/label.
  */
 export async function getAgencyContext(): Promise<AgencyContext> {
   const { data: auth } = await supabase.auth.getUser();
@@ -89,15 +87,16 @@ export async function getAgencyContext(): Promise<AgencyContext> {
 
   const { data: entries, error } = await supabase
     .from("agency_watchlist")
-    .select("id, agency_id, client_name, client_domain, competitor_domain, category, country")
-    .eq("agency_id", agencyId);
+    .select("id, agency_id, domain, label, created_at")
+    .eq("agency_id", agencyId)
+    .order("label");
 
   if (error) {
     console.error("[agency_watchlist] query failed", error);
     return { agencyId, entries: [], domains: new Set() };
   }
 
-  const rows = (entries ?? []) as AgencyWatchlistRow[];
+  const rows = entries ?? [];
   return {
     agencyId,
     entries: rows,

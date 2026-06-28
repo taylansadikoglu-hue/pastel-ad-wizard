@@ -5,12 +5,11 @@ import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { displayBrand } from "@/utils/brandDisplay";
+import { watchlistDisplayName } from "@/lib/agency-watchlist";
 
 type ClientRow = {
-  client_name: string;
-  client_domain: string | null;
-  category: string | null;
-  country: string | null;
+  domain: string;
+  label: string | null;
 };
 
 function ClientsPage() {
@@ -23,21 +22,22 @@ function ClientsPage() {
     (async () => {
       const { data } = await supabase
         .from("agency_watchlist")
-        .select("client_name, client_domain, category, country")
-        .order("client_name");
+        .select("domain, label")
+        .order("label");
       if (!active) return;
       const seen = new Set<string>();
       const unique: ClientRow[] = [];
       for (const r of (data ?? []) as ClientRow[]) {
-        const key = (r.client_name ?? "").trim().toLowerCase();
-        if (!key) continue;
-        // Hide placeholder/demo seed rows.
-        if (key === "demo client" || key === "demo" || r.client_domain === "bendigo.com.au") continue;
-        if (seen.has(key)) continue;
-        seen.add(key);
+        const domain = (r.domain ?? "").trim().toLowerCase();
+        if (!domain) continue;
+        if (domain === "bendigo.com.au") continue;
+        const label = (r.label ?? "").trim().toLowerCase();
+        if (label === "demo client" || label === "demo") continue;
+        if (seen.has(domain)) continue;
+        seen.add(domain);
         unique.push(r);
       }
-      unique.sort((a, b) => a.client_name.localeCompare(b.client_name));
+      unique.sort((a, b) => watchlistDisplayName(a).localeCompare(watchlistDisplayName(b)));
       setRows(unique);
       setLoading(false);
     })();
@@ -51,9 +51,9 @@ function ClientsPage() {
     if (!term) return rows;
     return rows.filter(
       (r) =>
-        r.client_name?.toLowerCase().includes(term) ||
-        r.client_domain?.toLowerCase().includes(term) ||
-        r.category?.toLowerCase().includes(term),
+        watchlistDisplayName(r).toLowerCase().includes(term) ||
+        r.domain?.toLowerCase().includes(term) ||
+        r.label?.toLowerCase().includes(term),
     );
   }, [rows, q]);
 
@@ -164,9 +164,9 @@ function ClientsPage() {
           >
             {filtered.map((r) => (
               <Link
-                key={r.client_name}
+                key={r.domain}
                 to="/app/advertiser/$domain"
-                params={{ domain: r.client_domain ?? r.client_name }}
+                params={{ domain: r.domain }}
                 style={{
                   background: "#FFFFFF",
                   border: "1px solid #EBE9E4",
@@ -183,49 +183,18 @@ function ClientsPage() {
               >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>
-                    {displayBrand(r.client_name)}
+                    {displayBrand(watchlistDisplayName(r))}
                   </div>
-                  {r.country && (
-                    <span
-                      style={{
-                        fontSize: 10,
-                        color: "#9E9D94",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                      }}
-                    >
-                      {r.country}
-                    </span>
-                  )}
                 </div>
-                {r.client_domain && (
-                  <div style={{ fontSize: 12, color: "#9E9D94" }}>{r.client_domain}</div>
-                )}
+                <div style={{ fontSize: 12, color: "#9E9D94" }}>{r.domain}</div>
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
+                    justifyContent: "flex-end",
                     marginTop: 6,
                   }}
                 >
-                  {r.category ? (
-                    <span
-                      style={{
-                        background: "#FDF6E8",
-                        border: "1px solid #E8D5A0",
-                        color: "#A07830",
-                        fontSize: 10,
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                        padding: "3px 10px",
-                        borderRadius: 999,
-                      }}
-                    >
-                      {r.category}
-                    </span>
-                  ) : <span />}
                   <span
                     style={{
                       display: "inline-flex",
