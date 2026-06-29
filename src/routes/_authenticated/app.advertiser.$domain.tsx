@@ -25,6 +25,8 @@ import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
+import { CampaignIntelligenceBlock } from "@/components/adpalette/CampaignIntelligenceBlock";
+import { CampaignStoryBlock } from "@/components/adpalette/CampaignStoryBlock";
 import {
   buildAdvertiserChannelMix,
   buildAdvertiserRecommendedMoves,
@@ -40,9 +42,12 @@ import {
   fetchAdvertiserPlacements,
   hasPlacementIntel,
   mergeAdvertiserIntel,
+  PLACEMENT_INTEL_UNAVAILABLE,
   type AdvertiserIntelWar,
   type AdvertiserPlacementRow,
 } from "@/lib/advertiserPlacements";
+import { buildCampaignIntelligence } from "@/lib/campaignIntelligence";
+import { buildCampaignStory } from "@/lib/campaignStory";
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -173,6 +178,7 @@ function AdvertiserPage() {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [outOfScope, setOutOfScope] = useState(false);
+  const [placementRowCount, setPlacementRowCount] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -222,10 +228,11 @@ function AdvertiserPage() {
         );
       }
 
-      const placementRows = await fetchAdvertiserPlacements(supabase, domain, 100);
-      const merged = mergeAdvertiserIntel(w, placementRows, resolved, domain);
+      const placementFetch = await fetchAdvertiserPlacements(supabase, domain, 100);
+      const merged = mergeAdvertiserIntel(w, placementFetch.rows, resolved, domain);
 
       if (!alive) return;
+      setPlacementRowCount(placementFetch.rows.length);
       setWar(merged as War | null);
       setSpend(null);
       setChannels(null);
@@ -241,6 +248,8 @@ function AdvertiserPage() {
     return () => { alive = false; };
   }, [domain]);
 
+  const placementIntelUnavailable = placementRowCount === 0;
+
   const advertiserBrief = useMemo(() => {
     if (!war) return null;
     return {
@@ -254,6 +263,16 @@ function AdvertiserPage() {
       moves: buildAdvertiserRecommendedMoves(brand, war),
       talkingPoints: buildMeetingTalkingPoints(brand, war),
     };
+  }, [war, brand]);
+
+  const campaignIntel = useMemo(() => {
+    if (!war) return null;
+    return buildCampaignIntelligence(brand, war);
+  }, [war, brand]);
+
+  const campaignStory = useMemo(() => {
+    if (!war) return null;
+    return buildCampaignStory(brand, war);
   }, [war, brand]);
 
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
@@ -312,12 +331,6 @@ function AdvertiserPage() {
       return aliases.some((v) => platform.includes(v.toLowerCase()));
     });
   }, [war?.placements, war?.recent_ads, channelFilter]);
-
-  // Mount flag for spend-bar animation.
-  // Debug: log API responses to see what's coming back
-  useEffect(() => {
-    if (war) console.log("[WarRoom]", { war, channels, spend, news });
-  }, [war, channels, spend, news]);
 
   const category = war?.category ?? war?.industry ?? "—";
   const updatedAgo = formatTimeAgo(war?.last_seen ?? null);
@@ -519,9 +532,30 @@ function AdvertiserPage() {
           </div>
 
 
-          {/* Account-director summary */}
+          <CampaignStoryBlock
+            brand={brand}
+            loading={loading}
+            placementIntelUnavailable={placementIntelUnavailable}
+            story={campaignStory}
+          />
+
           {advertiserBrief && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div
+                style={{
+                  paddingTop: 8,
+                  borderTop: "1px solid #EBE9E4",
+                  marginTop: 4,
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  Supporting evidence
+                </div>
+                <p style={{ fontSize: 13, color: "#6B6B62", margin: "6px 0 0", lineHeight: 1.5 }}>
+                  Channel mix, spend estimates, products, and campaign detail for deeper prep.
+                </p>
+              </div>
+
               <InsightSection title="Current marketing read" accent>
                 <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.65, margin: 0 }}>
                   {advertiserBrief.marketingRead}
@@ -576,8 +610,25 @@ function AdvertiserPage() {
                   </ul>
                 ) : (
                   <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>
-                    No product fields on indexed placements yet.
+                    {placementIntelUnavailable
+                      ? PLACEMENT_INTEL_UNAVAILABLE
+                      : "No product fields on indexed placements."}
                   </p>
+                )}
+              </InsightSection>
+
+              <InsightSection title="What they're saying">
+                {placementIntelUnavailable ? (
+                  <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>{PLACEMENT_INTEL_UNAVAILABLE}</p>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    <BriefList label="Emotional driver" items={advertiserBrief.saying.emotionalDrivers} />
+                    <BriefList label="Buyer stage" items={advertiserBrief.saying.buyerStages} />
+                    <BriefList label="Offer type" items={advertiserBrief.saying.offerTypes} />
+                    <BriefList label="CTAs" items={advertiserBrief.saying.ctas} />
+                    <BriefList label="Hooks" items={advertiserBrief.saying.hooks} />
+                    <BriefList label="Offer themes" items={advertiserBrief.saying.offerThemes} />
+                  </div>
                 )}
               </InsightSection>
 
@@ -608,7 +659,9 @@ function AdvertiserPage() {
                   </ul>
                 ) : (
                   <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>
-                    No audience signals inferred from indexed placements.
+                    {placementIntelUnavailable
+                      ? PLACEMENT_INTEL_UNAVAILABLE
+                      : "No audience signals inferred from indexed placements."}
                   </p>
                 )}
               </InsightSection>
@@ -648,6 +701,13 @@ function AdvertiserPage() {
               </InsightSection>
             </div>
           )}
+
+          <CampaignIntelligenceBlock
+            brand={brand}
+            loading={loading}
+            placementIntelUnavailable={placementIntelUnavailable}
+            intel={campaignIntel}
+          />
 
           <div style={{ marginBottom: 4 }}>
             <DataFeedPanel domain={domain} brandLabel={brand} />
@@ -748,7 +808,11 @@ function AdvertiserPage() {
                 return fmt ? <CreativePill><span style={{ textTransform: "capitalize" }}>{fmt}</span></CreativePill> : null;
               })()}
               {!creativeAnalysis.emotion && !creativeAnalysis.stage && !creativeAnalysis.offerType && !firstAd?.ad_type && (
-                <span style={{ fontSize: 12, color: "#9E9D94" }}>No strategist fields on indexed placements.</span>
+                <span style={{ fontSize: 12, color: "#9E9D94" }}>
+                  {placementIntelUnavailable
+                    ? PLACEMENT_INTEL_UNAVAILABLE
+                    : "No strategist fields on indexed placements."}
+                </span>
               )}
             </div>
             {creativeAnalysis.hook && (
@@ -974,6 +1038,25 @@ function InsightSection({
         {meta && <div style={{ fontSize: 11, color: "#9E9D94" }}>{meta}</div>}
       </div>
       {children}
+    </div>
+  );
+}
+
+function BriefList({ label, items }: { label: string; items: string[] }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+        {label}
+      </div>
+      {items.length ? (
+        <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 6 }}>
+          {items.map((item) => (
+            <li key={item} style={{ fontSize: 13, color: "#1C1C1A", lineHeight: 1.45 }}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <div style={{ fontSize: 13, color: "#9E9D94" }}>—</div>
+      )}
     </div>
   );
 }

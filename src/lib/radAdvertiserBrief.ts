@@ -252,8 +252,8 @@ export function buildProductsPromoted(war: AdvertiserIntelWar | null | undefined
   for (const row of rows) {
     for (const field of [row.normalized_product, row.product_type, row.product_category, row.page_title]) {
       if (!isUsableText(field)) continue;
-      if (field.trim().toLowerCase() === "other") continue;
-      if (field.trim().toLowerCase() === "unknown") continue;
+      const key = field.trim().toLowerCase();
+      if (key === "other" || key === "unknown" || key === "unclassified") continue;
       candidates.push(field.trim());
     }
   }
@@ -326,6 +326,7 @@ export function buildCtAs(war: AdvertiserIntelWar | null | undefined): string[] 
 
 export type SayingSection = {
   emotionalDrivers: string[];
+  buyerStages: string[];
   offerTypes: string[];
   offerThemes: string[];
   hooks: string[];
@@ -338,6 +339,7 @@ export function buildWhatTheyreSaying(war: AdvertiserIntelWar | null | undefined
   const rows = placements(war);
   return {
     emotionalDrivers: topByFrequency(rows.map((r) => r.emotional_driver), 4),
+    buyerStages: topByFrequency(rows.map((r) => r.buyer_stage), 4),
     offerTypes: topByFrequency(rows.map((r) => r.offer_type), 4),
     offerThemes: topByFrequency(rows.map((r) => r.offer_theme), 4),
     hooks: uniqueStrings(rows.map((r) => r.hook_analysis), 3),
