@@ -7,6 +7,12 @@ import {
 import type { AgencyContext } from "@/lib/agency-watchlist";
 import { watchlistDisplayName } from "@/lib/agency-watchlist";
 import {
+  buildRecommendedMoves,
+  buildWhatThisMeans,
+  sanitizeInsightCopy,
+  translateTerritory,
+} from "@/lib/radInsightTranslator";
+import {
   MODULE_META,
   type DataModuleId,
 } from "@/components/adpalette/strategist/data-module-types";
@@ -237,8 +243,6 @@ function fileSlug(name: string): string {
 function activeModules(bundle: StrategistIntelBundle): DataModuleId[] {
   const brief = resolveBrief(bundle);
   const exec = bundle.executive.data as Record<string, unknown> | null;
-  const pitch = (bundle.pitch.data ?? []) as Record<string, unknown>[];
-  const actionablePitch = pitch.filter((r) => r.action && r.recommendation);
 
   const hasExec = Boolean(
     exec &&
@@ -250,11 +254,10 @@ function activeModules(bundle: StrategistIntelBundle): DataModuleId[] {
     challengers: (bundle.challengers.data ?? []).length > 0,
     whitespace: (bundle.whitespace.data ?? []).length > 0,
     momentum: (bundle.momentum.data ?? []).length > 0,
-    executive: hasExec,
-    pitch: actionablePitch.length > 0,
+    executive: hasExec || Boolean(brief),
+    pitch: Boolean(brief),
   };
 
-  void brief;
   return MODULE_ORDER.filter((id) => flags[id]);
 }
 
@@ -325,16 +328,45 @@ function buildTitleSlide(pptx: pptxgen, brand: string, category: string | null) 
 function buildExecutiveSlide(pptx: pptxgen, bundle: StrategistIntelBundle) {
   const brief = resolveBrief(bundle);
   const confidence = resolveConfidence(bundle);
+  const exec = bundle.executive.data as Record<string, unknown> | null;
   if (!brief) return;
 
   const slide = pptx.addSlide();
   slideBackground(slide);
   addSlideLabel(slide, "Market Intel · RevenuAD Signal");
-  addSlideTitle(slide, brief.headline ?? "Market intelligence brief");
+  addSlideTitle(slide, sanitizeInsightCopy(brief.headline) ?? "Market intelligence brief");
 
   let y = 1.25;
+  const clientName = brief.client_name ?? "Your client";
+  const whatThisMeans = buildWhatThisMeans({
+    clientName,
+    category: brief.category ?? String(exec?.dominant_market ?? "This category"),
+    dominantTheme: exec?.dominant_emotion ? String(exec.dominant_emotion) : "trust",
+    openTheme: brief.whitespace_emotion ?? (exec?.top_opportunity_emotion ? String(exec.top_opportunity_emotion) : null),
+  });
+  slide.addText("WHAT THIS MEANS", {
+    x: 0.55,
+    y,
+    w: 8.9,
+    h: 0.2,
+    fontFace: THEME.fontMono,
+    fontSize: 7,
+    color: THEME.accent,
+  });
+  slide.addText(whatThisMeans, {
+    x: 0.55,
+    y: y + 0.22,
+    w: 8.9,
+    h: 0.65,
+    fontFace: THEME.fontBody,
+    fontSize: 10,
+    color: THEME.textSecondary,
+    valign: "top",
+  });
+  y += 0.95;
+
   if (brief.summary) {
-    slide.addText(brief.summary, {
+    slide.addText(sanitizeInsightCopy(brief.summary), {
       x: 0.55,
       y,
       w: 8.9,
@@ -353,7 +385,9 @@ function buildExecutiveSlide(pptx: pptxgen, bundle: StrategistIntelBundle) {
   if (brief.strategic_opening || brief.whitespace_emotion) {
     pillars.push({
       label: "Open angle",
-      value: brief.strategic_opening ?? brief.whitespace_emotion ?? "—",
+      value: brief.whitespace_emotion
+        ? translateTerritory(brief.whitespace_emotion)
+        : sanitizeInsightCopy(brief.strategic_opening ?? "—"),
     });
   }
 
@@ -362,7 +396,7 @@ function buildExecutiveSlide(pptx: pptxgen, bundle: StrategistIntelBundle) {
     y += 0.85;
   }
 
-  if (brief.recommended_action) {
+  if (brief.recommended_action || buildRecommendedMoves(clientName).length) {
     slide.addText("RECOMMENDED NEXT MOVES", {
       x: 0.55,
       y,
@@ -372,18 +406,21 @@ function buildExecutiveSlide(pptx: pptxgen, bundle: StrategistIntelBundle) {
       fontSize: 7,
       color: THEME.accent,
     });
-    slide.addText(brief.recommended_action, {
+    const moves = buildRecommendedMoves(clientName);
+    slide.addText(
+      moves.map((m, i) => `${i + 1}. ${m}`).join("\n"),
+      {
       x: 0.55,
       y: y + 0.22,
       w: 8.9,
-      h: 0.55,
+      h: 0.75,
       fontFace: THEME.fontBody,
       fontSize: 10,
       bold: true,
       color: THEME.text,
       valign: "top",
     });
-    y += 0.9;
+    y += 1.0;
   }
 
   if (confidence) {
@@ -433,12 +470,12 @@ function buildModuleSlide(pptx: pptxgen, moduleId: DataModuleId, bundle: Strateg
       const scores = rows.map((r) => num(r.threat_score));
       addAggregateRow(slide, [
         { label: "Tracked competitors", value: String(rows.length) },
-        { label: "Avg pressure index", value: scores.length ? avg(scores).toFixed(1) : "—" },
-        { label: "Peak pressure", value: scores.length ? String(Math.max(...scores)) : "—" },
+        { label: "Avg observed pressure", value: scores.length ? avg(scores).toFixed(1) : "—" },
+        { label: "Peak observed pressure", value: scores.length ? String(Math.max(...scores)) : "—" },
       ]);
       addDataTable(
         slide,
-        ["Brand", "Pressure index", "Observed demand", "Creatives"],
+        ["Brand", "Observed pressure", "Observed demand", "Creatives"],
         rows.map((r) => [
           str(r.competitor_domain),
           str(r.threat_score),
@@ -486,7 +523,7 @@ function buildModuleSlide(pptx: pptxgen, moduleId: DataModuleId, bundle: Strateg
         ["Category", "Emotion", "Priority", "Competition", "Signal strength"],
         rows.map((r) => [
           str(r.category),
-          str(r.emotion),
+          translateTerritory(str(r.emotion)),
           str(r.strategic_priority),
           str(r.market_density),
           str(r.opportunity_score),
@@ -523,38 +560,28 @@ function buildModuleSlide(pptx: pptxgen, moduleId: DataModuleId, bundle: Strateg
       addAggregateRow(slide, [
         { label: "Category", value: str(exec.dominant_market) },
         { label: "Market leader", value: str(exec.strongest_brand) },
-        { label: "Dominant message", value: str(exec.dominant_emotion) },
+        { label: "Dominant message", value: translateTerritory(str(exec.dominant_emotion)) },
       ]);
       addDataTable(slide, ["Field", "Value"], [
         ["Category", str(exec.dominant_market)],
         ["Market leader", str(exec.strongest_brand)],
-        ["Dominant message", str(exec.dominant_emotion)],
+        ["Dominant message", translateTerritory(str(exec.dominant_emotion))],
         ["Top open category", str(exec.top_opportunity_category)],
-        ["Top open message", str(exec.top_opportunity_emotion)],
+        ["Top open message", translateTerritory(str(exec.top_opportunity_emotion))],
       ]);
       break;
     }
     case "pitch": {
-      const rows = (bundle.pitch.data ?? [])
-        .filter((r) => r.action && r.recommendation)
-        .slice(0, 8);
+      const brief = resolveBrief(bundle);
+      const moves = buildRecommendedMoves(brief?.client_name);
       addAggregateRow(slide, [
-        { label: "Actions", value: String(rows.length) },
-        {
-          label: "Categories",
-          value: String(new Set(rows.map((r) => r.category).filter(Boolean)).size),
-        },
-        { label: "Ready to pitch", value: rows.length ? "Yes" : "—" },
+        { label: "Actions", value: String(moves.length) },
+        { label: "Ready to pitch", value: moves.length ? "Yes" : "—" },
       ]);
       addDataTable(
         slide,
-        ["Category", "Leader", "Action", "Recommendation"],
-        rows.map((r) => [
-          str(r.category),
-          str(r.category_leader),
-          str(r.action),
-          str(r.recommendation),
-        ]),
+        ["#", "Recommended move"],
+        moves.map((m, i) => [String(i + 1), m]),
       );
       break;
     }
