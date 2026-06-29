@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { aggregateDomainIntelligence } from "@/lib/feeds/aggregator";
+import { enrichDomainScanWithMarketSignals } from "@/lib/feeds/enrich-domain-scan";
 import { normalizeDomain } from "@/lib/feeds/normalize-domain";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -32,9 +32,9 @@ export const loadDomainIntelligence = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .maybeSingle();
 
-    return aggregateDomainIntelligence(domain, {
-      supabase,
+    return enrichDomainScanWithMarketSignals(supabase, {
       userId,
+      domain,
       similarwebUserKey: integrations?.similarweb_rapidapi_key ?? null,
       brandLabel: data.brandLabel ?? null,
       persist: data.persist ?? false,
@@ -57,9 +57,9 @@ export const refreshSimilarwebForScan = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .maybeSingle();
 
-    const intel = await aggregateDomainIntelligence(domain, {
-      supabase,
+    const intel = await enrichDomainScanWithMarketSignals(supabase, {
       userId,
+      domain,
       similarwebUserKey: integrations?.similarweb_rapidapi_key ?? null,
       brandLabel: data.brandLabel ?? null,
       persist: true,

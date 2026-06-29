@@ -17,6 +17,9 @@ interface Props {
   advertiserCount?: number
   estMonthlySpend?: number | null
   primaryChannel?: string | null
+  monthlyVisits?: string | null
+  visitsChangeLabel?: string | null
+  categoryPosition?: string | null
   dashboardUrl: string
   recipientName?: string | null
 }
@@ -35,6 +38,9 @@ const ScanReadyEmail = ({
   advertiserCount,
   estMonthlySpend,
   primaryChannel,
+  monthlyVisits,
+  visitsChangeLabel,
+  categoryPosition,
   dashboardUrl,
   recipientName,
 }: Props) => (
@@ -67,8 +73,18 @@ const ScanReadyEmail = ({
               <Text style={statLabel}>Advertisers</Text>
             </Section>
             <Section style={statCell}>
-              <Text style={statValue}>{formatCurrency(estMonthlySpend)}</Text>
-              <Text style={statLabel}>Est. monthly spend</Text>
+              <Text style={statValue}>{monthlyVisits ?? formatCurrency(estMonthlySpend)}</Text>
+              <Text style={statLabel}>
+                {monthlyVisits
+                  ? visitsChangeLabel
+                    ? `Visits (${visitsChangeLabel} MoM)`
+                    : 'Monthly visits'
+                  : 'Est. monthly spend'}
+              </Text>
+            </Section>
+            <Section style={statCell}>
+              <Text style={statValue}>{categoryPosition ?? '—'}</Text>
+              <Text style={statLabel}>Category position</Text>
             </Section>
             <Section style={statCell}>
               <Text style={statValue}>{primaryChannel ?? '—'}</Text>
