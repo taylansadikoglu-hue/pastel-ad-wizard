@@ -10,7 +10,14 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "mock-scan": "node scripts/mock-scan-success.js"
+    "mock-scan": "node scripts/mock-scan-success.js",
+    "adlibrary:test": "npx tsx scripts/test-adlibrary-client.ts",
+    "adlibrary:discover": "npx tsx scripts/adlibrary-discover-advertisers.ts",
+    "adlibrary:ingest": "npx tsx scripts/adlibrary-ingest-top-advertisers.ts",
+    "adlibrary:enrich": "npx tsx scripts/adlibrary-enrich-new-ads.ts",
+    "adlibrary:winners-pilot": "npx tsx scripts/adlibrary-winners-pilot.ts",
+    "adlibrary:daily": "npx tsx scripts/adlibrary-daily.ts",
+    "adlibrary:weekly-discovery": "npx tsx scripts/adlibrary-weekly-discovery.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -89,6 +96,7 @@
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
     "prettier": "^3.7.3",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"

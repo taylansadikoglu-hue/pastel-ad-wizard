@@ -49,6 +49,11 @@ import {
 } from "@/lib/advertiserPlacements";
 import { buildCampaignIntelligence } from "@/lib/campaignIntelligence";
 import { buildCampaignStory } from "@/lib/campaignStory";
+import { AdlibraryAdvertiserPanel } from "@/components/adpalette/AdlibraryAdvertiserPanel";
+import {
+  fetchAdlibraryAdvertiserIntel,
+  type AdlibraryAdvertiserIntel,
+} from "@/lib/adlibraryCoverage";
 import {
   fetchAdvertiserStrategistIntel,
   type AdvertiserStrategistIntel,
@@ -185,6 +190,7 @@ function AdvertiserPage() {
   const [outOfScope, setOutOfScope] = useState(false);
   const [placementRowCount, setPlacementRowCount] = useState(0);
   const [strategistIntel, setStrategistIntel] = useState<AdvertiserStrategistIntel | null>(null);
+  const [adlibraryIntel, setAdlibraryIntel] = useState<AdlibraryAdvertiserIntel | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -236,11 +242,13 @@ function AdvertiserPage() {
 
       const placementFetch = await fetchAdvertiserPlacements(supabase, domain, 100);
       const strategistFetch = await fetchAdvertiserStrategistIntel(supabase, domain);
+      const adlibraryFetch = await fetchAdlibraryAdvertiserIntel(supabase, domain, resolved);
       const merged = mergeAdvertiserIntel(w, placementFetch.rows, resolved, domain);
 
       if (!alive) return;
       setPlacementRowCount(placementFetch.rows.length);
       setStrategistIntel(strategistFetch);
+      setAdlibraryIntel(adlibraryFetch);
       setWar(merged as War | null);
       setSpend(null);
       setChannels(null);
@@ -552,6 +560,7 @@ function AdvertiserPage() {
             loading={loading}
             intel={strategistIntel}
           />
+          <AdlibraryAdvertiserPanel intel={adlibraryIntel} />
 
           {advertiserBrief && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
-import { MarketIntelDeepSections } from "@/components/adpalette/MarketIntelDeepSections";
+import { AdlibraryCoverageCard } from "@/components/adpalette/AdlibraryCoverageCard";
 import { WorkspaceShell } from "./WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -28,6 +28,7 @@ import {
   translateTerritory,
 } from "@/lib/radInsightTranslator";
 import { fetchMarketStrategistIntel, type MarketStrategistIntel } from "@/lib/marketStrategistIntel";
+import { fetchAdlibraryCoverage, type AdlibraryCoverage } from "@/lib/adlibraryCoverage";
 
 const DC = {
   card: "card-dense",
@@ -183,6 +184,7 @@ export function StrategistDashboard() {
   const [agencyCtx, setAgencyCtx] = useState<AgencyContext | null>(null);
   const [intelBundle, setIntelBundle] = useState<StrategistIntelBundle | null>(null);
   const [marketIntel, setMarketIntel] = useState<MarketStrategistIntel | null>(null);
+  const [adlibraryCoverage, setAdlibraryCoverage] = useState<AdlibraryCoverage | null>(null);
   const [panelFocus, setPanelFocus] = useState<PanelFocus | null>(null);
 
   const hardDataPayload = {
@@ -211,11 +213,13 @@ export function StrategistDashboard() {
       const ctx = await getAgencyContext();
       const bundle = await loadStrategistIntelligence(ctx);
       const deepIntel = await fetchMarketStrategistIntel(supabase);
+      const coverage = await fetchAdlibraryCoverage(supabase);
       if (!active) return;
 
       setAgencyCtx(ctx);
       setIntelBundle(bundle);
       setMarketIntel(deepIntel);
+      setAdlibraryCoverage(coverage);
       setBrief(normalizeRadBrief(bundle.brief.data as Record<string, unknown> | null, null) as Brief | null);
       setThreats((bundle.threats.data ?? []) as Threat[]);
       setChallengers((bundle.challengers.data ?? []) as Challenger[]);
@@ -555,6 +559,8 @@ export function StrategistDashboard() {
             </div>
           </section>
         )}
+
+        <AdlibraryCoverageCard coverage={adlibraryCoverage} />
 
         <MarketIntelDeepSections
           intel={marketIntel}
