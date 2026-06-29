@@ -3,6 +3,7 @@ import { Lock } from "lucide-react";
 import {
   DEMO_ADVERTISER_BLOCKED_MESSAGE,
   DEMO_READ_ONLY_MESSAGE,
+  DEMO_SHOWCASE_ADVERTISERS,
 } from "@/lib/demo-account";
 
 const cardStyle: React.CSSProperties = {
@@ -25,20 +26,23 @@ export function DemoAdvertiserRestricted() {
       <p style={{ fontSize: 14, color: "#6B6B62", lineHeight: 1.6, margin: 0 }}>
         {DEMO_ADVERTISER_BLOCKED_MESSAGE}
       </p>
-      <Link
-        to="/app/advertiser/$domain"
-        params={{ domain: "commbank.com.au" }}
-        style={{
-          display: "inline-block",
-          marginTop: 18,
-          fontSize: 13,
-          fontWeight: 600,
-          color: "#C9963A",
-          textDecoration: "none",
-        }}
-      >
-        View CommBank war room →
-      </Link>
+      <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+        {DEMO_SHOWCASE_ADVERTISERS.map((a) => (
+          <Link
+            key={a.domain}
+            to="/app/advertiser/$domain"
+            params={{ domain: a.domain }}
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#C9963A",
+              textDecoration: "none",
+            }}
+          >
+            View {a.name} war room ({a.category}) →
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
