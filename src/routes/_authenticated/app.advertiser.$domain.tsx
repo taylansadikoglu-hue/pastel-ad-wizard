@@ -29,10 +29,11 @@ import {
   buildAdvertiserChannelMix,
   buildAdvertiserRecommendedMoves,
   buildAdvertiserSpendBand,
+  buildAudiencesPersonas,
   buildCurrentMarketingRead,
   buildMeetingTalkingPoints,
+  buildProductsPromoted,
   buildWhatTheyreMissing,
-  buildWhatTheyreSaying,
 } from "@/lib/radAdvertiserBrief";
 
 const API_BASE = "https://api.revenuad.com";
@@ -292,7 +293,8 @@ function AdvertiserPage() {
       marketingRead: buildCurrentMarketingRead(brand, war),
       channelMix: buildAdvertiserChannelMix(war),
       spend: buildAdvertiserSpendBand(war),
-      saying: buildWhatTheyreSaying(war),
+      products: buildProductsPromoted(war),
+      audiences: buildAudiencesPersonas(war),
       missing: buildWhatTheyreMissing(brand, war),
       moves: buildAdvertiserRecommendedMoves(brand, war),
       talkingPoints: buildMeetingTalkingPoints(brand, war),
@@ -503,10 +505,6 @@ function AdvertiserPage() {
         </div>
       )}
 
-      <div style={{ marginBottom: 20 }}>
-        <DataFeedPanel domain={domain} brandLabel={brand} />
-      </div>
-
       <div
         style={{
           display: "grid",
@@ -581,7 +579,7 @@ function AdvertiserPage() {
                 </p>
               </InsightSection>
 
-              <InsightSection title="Estimated channel mix">
+              <InsightSection title="Channel mix">
                 <ChannelMixBars
                   rows={advertiserBrief.channelMix.rows}
                   overallConfidence={advertiserBrief.channelMix.overallConfidence}
@@ -593,7 +591,7 @@ function AdvertiserPage() {
                 />
               </InsightSection>
 
-              <InsightSection title="Estimated spend">
+              <InsightSection title="Estimated spend range">
                 {advertiserBrief.spend.label ? (
                   <>
                     <div style={{ fontSize: 20, fontWeight: 600, color: "#1C1C1A", letterSpacing: "-0.02em" }}>
@@ -608,13 +606,58 @@ function AdvertiserPage() {
                 )}
               </InsightSection>
 
-              <InsightSection title="What they're saying">
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                  <BriefList label="Messaging themes" items={advertiserBrief.saying.themes} empty="Themes will appear as more creatives are indexed." />
-                  <BriefList label="CTAs" items={advertiserBrief.saying.ctas} empty="No consistent CTA pattern yet." />
-                  <BriefList label="Offers" items={advertiserBrief.saying.offers} empty="No explicit offer language detected in indexed copy." />
-                  <BriefList label="Audience signals" items={advertiserBrief.saying.audienceSignals} empty="Audience tags will populate after more ads are analysed." />
-                </div>
+              <InsightSection title="Products being promoted">
+                {advertiserBrief.products.length ? (
+                  <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {advertiserBrief.products.map((product) => (
+                      <li
+                        key={product}
+                        style={{
+                          fontSize: 13,
+                          color: "#1C1C1A",
+                          background: "#F7F6F3",
+                          border: "1px solid #EBE9E4",
+                          borderRadius: 6,
+                          padding: "6px 10px",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {product}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>
+                    Product tags will populate as more creatives are analysed.
+                  </p>
+                )}
+              </InsightSection>
+
+              <InsightSection title="Audiences / personas">
+                {advertiserBrief.audiences.length ? (
+                  <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {advertiserBrief.audiences.map((audience) => (
+                      <li
+                        key={audience}
+                        style={{
+                          fontSize: 13,
+                          color: "#1C1C1A",
+                          background: "#F7F6F3",
+                          border: "1px solid #EBE9E4",
+                          borderRadius: 6,
+                          padding: "6px 10px",
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {audience}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>
+                    Audience tags will populate after more ads are analysed.
+                  </p>
+                )}
               </InsightSection>
 
               <InsightSection title="What they're missing">
@@ -652,6 +695,10 @@ function AdvertiserPage() {
               </InsightSection>
             </div>
           )}
+
+          <div style={{ marginBottom: 4 }}>
+            <DataFeedPanel domain={domain} brandLabel={brand} />
+          </div>
 
           {/* Activity metrics */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
@@ -981,25 +1028,6 @@ function InsightSection({
         {meta && <div style={{ fontSize: 11, color: "#9E9D94" }}>{meta}</div>}
       </div>
       {children}
-    </div>
-  );
-}
-
-function BriefList({ label, items, empty }: { label: string; items: string[]; empty: string }) {
-  return (
-    <div>
-      <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-        {label}
-      </div>
-      {items.length ? (
-        <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 6 }}>
-          {items.map((item) => (
-            <li key={item} style={{ fontSize: 13, color: "#1C1C1A", lineHeight: 1.45, textTransform: "capitalize" }}>{item}</li>
-          ))}
-        </ul>
-      ) : (
-        <div style={{ fontSize: 13, color: "#9E9D94" }}>{empty}</div>
-      )}
     </div>
   );
 }

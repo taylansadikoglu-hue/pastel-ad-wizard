@@ -241,12 +241,18 @@ function humanizeTheme(raw: string): string {
   return key.replace(/_/g, " ");
 }
 
+function parseAdTags(raw: Record<string, unknown> | string | null | undefined): Record<string, unknown> {
+  if (!raw) return {};
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
+  }
+  return raw;
+}
+
 function collectOffers(war: AdvertiserWarInput | null | undefined): string[] {
   const offers = new Set<string>();
   for (const ad of war?.recent_ads ?? []) {
-    const tags = typeof ad.ai_tags === "string"
-      ? (() => { try { return JSON.parse(ad.ai_tags) as Record<string, unknown>; } catch { return {}; } })()
-      : (ad.ai_tags ?? {});
+    const tags = parseAdTags(ad.ai_tags);
     for (const key of ["finance_offer", "offer", "promotion"]) {
       const v = tags[key];
       if (typeof v === "string" && v.trim() && !v.includes("{{")) offers.add(v.trim());
@@ -259,9 +265,7 @@ function collectCtas(war: AdvertiserWarInput | null | undefined): string[] {
   const ctas = new Set<string>();
   if (war?.top_cta?.trim()) ctas.add(war.top_cta.trim());
   for (const ad of war?.recent_ads ?? []) {
-    const tags = typeof ad.ai_tags === "string"
-      ? (() => { try { return JSON.parse(ad.ai_tags) as Record<string, unknown>; } catch { return {}; } })()
-      : (ad.ai_tags ?? {});
+    const tags = parseAdTags(ad.ai_tags);
     const cta = tags.call_to_action;
     if (typeof cta === "string" && cta.trim()) ctas.add(cta.trim());
   }
@@ -271,9 +275,7 @@ function collectCtas(war: AdvertiserWarInput | null | undefined): string[] {
 function collectAudienceSignals(war: AdvertiserWarInput | null | undefined): string[] {
   const signals = new Set<string>();
   for (const ad of war?.recent_ads ?? []) {
-    const tags = typeof ad.ai_tags === "string"
-      ? (() => { try { return JSON.parse(ad.ai_tags) as Record<string, unknown>; } catch { return {}; } })()
-      : (ad.ai_tags ?? {});
+    const tags = parseAdTags(ad.ai_tags);
     const demo = tags.demographics;
     if (Array.isArray(demo)) {
       for (const d of demo) if (typeof d === "string" && d.trim()) signals.add(d.trim());
@@ -285,6 +287,59 @@ function collectAudienceSignals(war: AdvertiserWarInput | null | undefined): str
     }
   }
   return [...signals].slice(0, 5);
+}
+
+function humanizeProductLabel(raw: string): string {
+  return raw.trim().replace(/_/g, " ").replace(/\s+/g, " ");
+}
+
+/** Products and services surfaced in indexed ad copy. */
+export function buildProductsPromoted(war: AdvertiserWarInput | null | undefined): string[] {
+  const counts = new Map<string, number>();
+  for (const ad of war?.recent_ads ?? []) {
+    const tags = parseAdTags(ad.ai_tags);
+    for (const key of ["finance_product", "product_type", "product", "product_category"]) {
+      const v = tags[key];
+      if (typeof v === "string" && v.trim() && !v.includes("{{")) {
+        const label = humanizeProductLabel(v);
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+      }
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([label]) => label)
+    .slice(0, 6);
+}
+
+/** Audience and persona signals from indexed creatives. */
+export function buildAudiencesPersonas(war: AdvertiserWarInput | null | undefined): string[] {
+  const counts = new Map<string, number>();
+  for (const ad of war?.recent_ads ?? []) {
+    const tags = parseAdTags(ad.ai_tags);
+    for (const key of ["persona", "audience", "target_audience"]) {
+      const v = tags[key];
+      if (typeof v === "string" && v.trim()) {
+        const label = humanizeProductLabel(v);
+        counts.set(label, (counts.get(label) ?? 0) + 1);
+      }
+    }
+    const demo = tags.demographics;
+    if (Array.isArray(demo)) {
+      for (const d of demo) {
+        if (typeof d === "string" && d.trim()) {
+          counts.set(d.trim(), (counts.get(d.trim()) ?? 0) + 1);
+        }
+      }
+    }
+    if (tags.australian_context === true) {
+      counts.set("Australian market", (counts.get("Australian market") ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([label]) => label)
+    .slice(0, 6);
 }
 
 /** One-paragraph account-director read. */
