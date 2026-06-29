@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
+import { MarketIntelDeepSections } from "@/components/adpalette/MarketIntelDeepSections";
 import { WorkspaceShell } from "./WorkspaceShell";
+import { supabase } from "@/integrations/supabase/client";
 import {
   loadStrategistIntelligence,
   normalizeRadBrief,
@@ -10,7 +12,7 @@ import {
 import { getAgencyContext, type AgencyContext } from "@/lib/agency-watchlist";
 import { generatePitchDeck } from "@/lib/export-pptx";
 import { cn } from "@/lib/utils";
-import { MODULE_META, type PanelFocus } from "./strategist/data-module-types";
+import { MODULE_META, type DataModuleId, type PanelFocus } from "./strategist/data-module-types";
 import { HardDataPanel } from "./strategist/HardDataPanel";
 import {
   buildLouderRankList,
@@ -25,6 +27,7 @@ import {
   selectSurfacedThemes,
   translateTerritory,
 } from "@/lib/radInsightTranslator";
+import { fetchMarketStrategistIntel, type MarketStrategistIntel } from "@/lib/marketStrategistIntel";
 
 const DC = {
   card: "card-dense",
@@ -179,6 +182,7 @@ export function StrategistDashboard() {
   const [loading, setLoading] = useState(true);
   const [agencyCtx, setAgencyCtx] = useState<AgencyContext | null>(null);
   const [intelBundle, setIntelBundle] = useState<StrategistIntelBundle | null>(null);
+  const [marketIntel, setMarketIntel] = useState<MarketStrategistIntel | null>(null);
   const [panelFocus, setPanelFocus] = useState<PanelFocus | null>(null);
 
   const hardDataPayload = {
@@ -189,9 +193,10 @@ export function StrategistDashboard() {
     exec,
     pitch,
     agencyId: agencyCtx?.agencyId ?? null,
+    marketIntel,
   };
 
-  const openPanel = (moduleId: PanelFocus["moduleId"], rowIndex?: number, rowLabel?: string) => {
+  const openPanel = (moduleId: DataModuleId, rowIndex?: number, rowLabel?: string) => {
     setPanelFocus({ moduleId, rowIndex, rowLabel });
   };
 
@@ -205,10 +210,12 @@ export function StrategistDashboard() {
     (async () => {
       const ctx = await getAgencyContext();
       const bundle = await loadStrategistIntelligence(ctx);
+      const deepIntel = await fetchMarketStrategistIntel(supabase);
       if (!active) return;
 
       setAgencyCtx(ctx);
       setIntelBundle(bundle);
+      setMarketIntel(deepIntel);
       setBrief(normalizeRadBrief(bundle.brief.data as Record<string, unknown> | null, null) as Brief | null);
       setThreats((bundle.threats.data ?? []) as Threat[]);
       setChallengers((bundle.challengers.data ?? []) as Challenger[]);
@@ -250,7 +257,11 @@ export function StrategistDashboard() {
     .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
     .slice(0, 4);
 
-  const recommendedMoves = buildRecommendedMoves(brief?.client_name);
+  const recommendedMoves = [
+    ...(marketIntel?.executivePack?.recommendedAction ? [marketIntel.executivePack.recommendedAction] : []),
+    ...(marketIntel?.strategicActions.map((a) => a.action) ?? []),
+    ...buildRecommendedMoves(brief?.client_name),
+  ].filter((v, i, arr) => v && arr.indexOf(v) === i).slice(0, 3);
 
   const channelMix = parseMarketChannelMix(intelBundle?.brief.data as Record<string, unknown> | null);
   const spendRange = parseSpendRange(intelBundle?.brief.data as Record<string, unknown> | null);
@@ -272,7 +283,8 @@ export function StrategistDashboard() {
     louderRank.length > 0 ||
     openAngles.length > 0 ||
     recommendedMoves.length > 0 ||
-    exec;
+    exec ||
+    marketIntel?.available;
 
   const happeningText = brief?.summary ? sanitizeInsightCopy(brief.summary) : null;
 
@@ -543,6 +555,11 @@ export function StrategistDashboard() {
             </div>
           </section>
         )}
+
+        <MarketIntelDeepSections
+          intel={marketIntel}
+          onEvidence={(moduleId, rowIndex, rowLabel) => openPanel(moduleId, rowIndex, rowLabel)}
+        />
 
         {!hasAnyData && <EmptyState agencyCtx={agencyCtx} />}
       </div>

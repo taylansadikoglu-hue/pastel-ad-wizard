@@ -10,6 +10,7 @@ export const PLACEMENT_INTEL_SELECT = [
   "id",
   "advertiser_name",
   "domain",
+  "ad_title",
   "channel",
   "channel_platform",
   "ad_type",
@@ -39,11 +40,13 @@ export const PLACEMENT_INTEL_SELECT = [
   "media_url",
   "creative_url",
   "landing_url",
+  "source_archive_url",
 ].join(", ");
 
 export type AdvertiserPlacementRow = {
   id: number | string;
   advertiser_name?: string | null;
+  ad_title?: string | null;
   domain?: string | null;
   channel?: string | null;
   channel_platform?: string | null;
@@ -74,6 +77,7 @@ export type AdvertiserPlacementRow = {
   media_url?: string | null;
   creative_url?: string | null;
   landing_url?: string | null;
+  source_archive_url?: string | null;
 };
 
 export type PlacementChannelEntry = {
@@ -116,6 +120,7 @@ export function normalisePlacementRow(row: Record<string, unknown>): AdvertiserP
   return {
     id: (row.id as number | string) ?? crypto.randomUUID(),
     advertiser_name: (row.advertiser_name as string | null) ?? null,
+    ad_title: (row.ad_title as string | null) ?? null,
     domain: (row.domain as string | null) ?? null,
     channel: (row.channel as string | null) ?? null,
     channel_platform: (row.channel_platform as string | null) ?? null,
@@ -146,6 +151,7 @@ export function normalisePlacementRow(row: Record<string, unknown>): AdvertiserP
     media_url: (row.media_url as string | null) ?? null,
     creative_url: (row.creative_url as string | null) ?? null,
     landing_url: (row.landing_url as string | null) ?? null,
+    source_archive_url: (row.source_archive_url as string | null) ?? null,
   };
 }
 

@@ -1,6 +1,8 @@
 import type { PanelFocus } from "./data-module-types";
 import { HardDataSection, HardDataTable, HardDataTrend } from "./hard-data-content";
 
+import type { MarketStrategistIntel } from "@/lib/marketStrategistIntel";
+
 type Threat = {
   competitor_domain: string | null;
   creative_volume: number | null;
@@ -61,6 +63,7 @@ export type HardDataPayload = {
   exec: Exec | null;
   pitch: Pitch[];
   agencyId: string | null;
+  marketIntel: MarketStrategistIntel | null;
 };
 
 function avg(nums: number[]): string {
@@ -191,6 +194,97 @@ export function renderHardDataBody(focus: PanelFocus, data: HardDataPayload) {
           />
         </HardDataSection>
       );
+    case "territories": {
+      const rows = data.marketIntel?.territories ?? [];
+      return (
+        <HardDataSection title="Emotional territories">
+          <HardDataTable
+            highlightRow={hi}
+            columns={["Emotion", "Brands", "Avg share %", "Status"]}
+            rows={rows.map((r) => [r.emotion, r.brandsUsing, r.avgShare.toFixed(1), r.status])}
+          />
+        </HardDataSection>
+      );
+    }
+    case "threats": {
+      const rows = data.marketIntel?.risks ?? [];
+      return (
+        <HardDataSection title="Strategic risks">
+          <HardDataTable
+            highlightRow={hi}
+            columns={["Competitor", "Threat score", "Risk level", "Narrative"]}
+            rows={rows.map((r) => [r.competitorDomain, r.threatScore, r.riskLevel, r.narrative])}
+          />
+        </HardDataSection>
+      );
+    }
+    case "meeting": {
+      const rows = data.marketIntel?.meetingPrep ?? [];
+      return (
+        <HardDataSection title="Meeting prep">
+          <HardDataTable
+            columns={["Section", "Content"]}
+            rows={rows.map((r) => [r.section, r.content])}
+          />
+        </HardDataSection>
+      );
+    }
+    case "changes": {
+      const rows = data.marketIntel?.dailyChanges ?? [];
+      return (
+        <HardDataSection title="Weekly changes">
+          <HardDataTable
+            highlightRow={hi}
+            columns={["Brand", "Change", "Momentum", "Pressure", "Interest"]}
+            rows={rows.map((r) => [r.brandDomain, r.marketChange, r.momentum, r.pressure, r.latestInterest])}
+          />
+        </HardDataSection>
+      );
+    }
+    case "positioning": {
+      const rows = data.marketIntel?.positioningMap ?? [];
+      return (
+        <HardDataSection title="Positioning map">
+          <HardDataTable
+            highlightRow={hi}
+            columns={["Brand", "Category", "SOV %", "Placements", "Emotion", "X", "Y"]}
+            rows={rows.map((r) => [r.brand, r.category, r.shareOfVoice, r.placements, r.topEmotion, r.x, r.y])}
+          />
+        </HardDataSection>
+      );
+    }
+    case "evidence": {
+      const rows = data.marketIntel?.evidencePack ?? [];
+      const exec = data.marketIntel?.executivePack;
+      return (
+        <>
+          {exec && (
+            <HardDataSection title="Executive pack">
+              <HardDataTable
+                columns={["Field", "Value"]}
+                rows={[
+                  ["Headline", exec.headline],
+                  ["CEO summary", exec.ceoSummary],
+                  ["Market temperature", exec.marketTemperature],
+                  ["Outlook", exec.outlook],
+                  ["Pressure", exec.pressureSummary],
+                  ["Recommended action", exec.recommendedAction],
+                ]}
+              />
+            </HardDataSection>
+          )}
+          <HardDataSection title="Evidence pack">
+            <HardDataTable
+              highlightRow={hi}
+              columns={["Competitor", "Threat", "Creatives", "Demand", "Context", "Confidence"]}
+              rows={rows.map((r) => [
+                r.competitorDomain, r.threatScore, r.creativeVolume, r.demand, r.threatContext, r.confidence,
+              ])}
+            />
+          </HardDataSection>
+        </>
+      );
+    }
     default:
       return null;
   }

@@ -4,7 +4,13 @@ export type DataModuleId =
   | "whitespace"
   | "momentum"
   | "executive"
-  | "pitch";
+  | "pitch"
+  | "territories"
+  | "threats"
+  | "meeting"
+  | "changes"
+  | "positioning"
+  | "evidence";
 
 export type PanelFocus = {
   moduleId: DataModuleId;
@@ -52,5 +58,41 @@ export const MODULE_META: Record<
     title: "Recommended next moves",
     subtitle: "What to say in tomorrow's client meeting",
     source: "ra_pitch_brief",
+  },
+  territories: {
+    index: "09",
+    title: "Emotional territory map",
+    subtitle: "Crowded vs open messaging space",
+    source: "ra_strategic_territories",
+  },
+  threats: {
+    index: "10",
+    title: "Threat radar",
+    subtitle: "Competitors requiring immediate attention",
+    source: "ra_strategic_risks",
+  },
+  meeting: {
+    index: "11",
+    title: "Meeting prep",
+    subtitle: "Structured client-call talking points",
+    source: "ra_meeting_prep",
+  },
+  changes: {
+    index: "12",
+    title: "What changed this week",
+    subtitle: "Momentum and pressure shifts",
+    source: "ra_daily_change_feed",
+  },
+  positioning: {
+    index: "13",
+    title: "Category positioning map",
+    subtitle: "Share of voice across tracked brands",
+    source: "ra_market_intelligence",
+  },
+  evidence: {
+    index: "07",
+    title: "Executive evidence pack",
+    subtitle: "Quantified threat and demand signals",
+    source: "ra_barbs_evidence_pack",
   },
 };
