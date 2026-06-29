@@ -25,6 +25,7 @@ import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
+import { CampaignIntelligenceBlock } from "@/components/adpalette/CampaignIntelligenceBlock";
 import {
   buildAdvertiserChannelMix,
   buildAdvertiserRecommendedMoves,
@@ -44,6 +45,7 @@ import {
   type AdvertiserIntelWar,
   type AdvertiserPlacementRow,
 } from "@/lib/advertiserPlacements";
+import { buildCampaignIntelligence } from "@/lib/campaignIntelligence";
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -259,6 +261,11 @@ function AdvertiserPage() {
       moves: buildAdvertiserRecommendedMoves(brand, war),
       talkingPoints: buildMeetingTalkingPoints(brand, war),
     };
+  }, [war, brand]);
+
+  const campaignIntel = useMemo(() => {
+    if (!war) return null;
+    return buildCampaignIntelligence(brand, war);
   }, [war, brand]);
 
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
@@ -683,6 +690,13 @@ function AdvertiserPage() {
               </InsightSection>
             </div>
           )}
+
+          <CampaignIntelligenceBlock
+            brand={brand}
+            loading={loading}
+            placementIntelUnavailable={placementIntelUnavailable}
+            intel={campaignIntel}
+          />
 
           <div style={{ marginBottom: 4 }}>
             <DataFeedPanel domain={domain} brandLabel={brand} />

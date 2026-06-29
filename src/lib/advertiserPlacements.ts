@@ -27,6 +27,7 @@ export const PLACEMENT_INTEL_SELECT = [
   "detected_cta",
   "primary_cta",
   "product_type",
+  "offer_signal",
   "market_signal",
   "normalized_product",
   "headline",
@@ -34,6 +35,7 @@ export const PLACEMENT_INTEL_SELECT = [
   "first_seen",
   "last_seen",
   "times_seen",
+  "campaign_cluster",
   "media_url",
   "creative_url",
   "landing_url",
@@ -60,6 +62,7 @@ export type AdvertiserPlacementRow = {
   detected_cta?: string | null;
   primary_cta?: string | null;
   product_type?: string | null;
+  offer_signal?: string | null;
   market_signal?: string | null;
   normalized_product?: string | null;
   headline?: string | null;
@@ -67,6 +70,7 @@ export type AdvertiserPlacementRow = {
   first_seen?: string | null;
   last_seen?: string | null;
   times_seen?: number | null;
+  campaign_cluster?: string | null;
   media_url?: string | null;
   creative_url?: string | null;
   landing_url?: string | null;
@@ -130,6 +134,7 @@ export function normalisePlacementRow(row: Record<string, unknown>): AdvertiserP
     detected_cta: (row.detected_cta as string | null) ?? null,
     primary_cta: (row.primary_cta as string | null) ?? null,
     product_type: (row.product_type as string | null) ?? null,
+    offer_signal: (row.offer_signal as string | null) ?? null,
     market_signal: (row.market_signal as string | null) ?? null,
     normalized_product: (row.normalized_product as string | null) ?? null,
     headline: (row.headline as string | null) ?? null,
@@ -137,6 +142,7 @@ export function normalisePlacementRow(row: Record<string, unknown>): AdvertiserP
     first_seen: (row.first_seen as string | null) ?? null,
     last_seen: (row.last_seen as string | null) ?? null,
     times_seen: row.times_seen != null ? Number(row.times_seen) : null,
+    campaign_cluster: (row.campaign_cluster as string | null) ?? null,
     media_url: (row.media_url as string | null) ?? null,
     creative_url: (row.creative_url as string | null) ?? null,
     landing_url: (row.landing_url as string | null) ?? null,
