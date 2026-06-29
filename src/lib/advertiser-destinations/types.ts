@@ -17,14 +17,21 @@ export type AdvertiserDestinationRow = {
   offer: string | null;
   cta: string | null;
   persona: string | null;
+  audience: string | null;
   theme: string | null;
   funnel_stage: string | null;
+  campaign_objective: string | null;
+  promise: string | null;
+  pain_point: string | null;
+  proof_point: string | null;
   first_seen: string;
   last_seen: string;
   ad_count: number;
   enrichment_status: DestinationEnrichmentStatus;
   enriched_at: string | null;
   raw_snapshot: Record<string, unknown> | null;
+  ai_tags: Record<string, unknown> | null;
+  ai_tagged_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -43,13 +50,20 @@ export type AdvertiserDestinationUpsertInput = {
   offer?: string | null;
   cta?: string | null;
   persona?: string | null;
+  audience?: string | null;
   theme?: string | null;
   funnel_stage?: string | null;
+  campaign_objective?: string | null;
+  promise?: string | null;
+  pain_point?: string | null;
+  proof_point?: string | null;
   first_seen?: string | null;
   last_seen?: string | null;
   enrichment_status?: DestinationEnrichmentStatus;
   enriched_at?: string | null;
   raw_snapshot?: Record<string, unknown> | null;
+  ai_tags?: Record<string, unknown> | null;
+  ai_tagged_at?: string | null;
 };
 
 export type AdvertiserDestinationUpsertResult = {

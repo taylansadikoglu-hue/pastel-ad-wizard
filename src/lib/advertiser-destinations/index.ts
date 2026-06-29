@@ -1,5 +1,17 @@
 export { enrichAndStoreDestination, mapExtractionToDestinationFields } from "./enrich";
 export { extractLandingPage, parseLandingPageHtml } from "./extract-landing-page";
+export {
+  formatLandingPageSummary,
+  landingSummaryFromExtraction,
+  landingSummaryFromRow,
+} from "./landing-summary";
+export {
+  DestinationAiTagsSchema,
+  tagDestinationWithOpenAi,
+  tagsFromRow,
+  tagsToRowPatch,
+} from "./openai-tag";
+export { tagAndStoreDestination } from "./tag-destination";
 export { upsertAdvertiserDestination } from "./upsert";
 export {
   destinationHost,
@@ -15,3 +27,6 @@ export type {
 } from "./types";
 export type { EnrichDestinationInput, EnrichDestinationResult } from "./enrich";
 export type { LandingPageExtraction } from "./extract-landing-page";
+export type { LandingPageSummary } from "./landing-summary";
+export type { DestinationAiTags } from "./openai-tag";
+export type { TagDestinationInput, TagDestinationResult } from "./tag-destination";

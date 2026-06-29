@@ -277,6 +277,10 @@ export type Database = {
         Row: {
           ad_count: number
           advertiser: string
+          ai_tagged_at: string | null
+          ai_tags: Json | null
+          audience: string | null
+          campaign_objective: string | null
           created_at: string
           cta: string | null
           domain: string
@@ -291,8 +295,11 @@ export type Database = {
           meta_description: string | null
           offer: string | null
           page_title: string | null
+          pain_point: string | null
           persona: string | null
           product: string | null
+          promise: string | null
+          proof_point: string | null
           raw_snapshot: Json | null
           theme: string | null
           updated_at: string
@@ -303,6 +310,10 @@ export type Database = {
         Insert: {
           ad_count?: number
           advertiser: string
+          ai_tagged_at?: string | null
+          ai_tags?: Json | null
+          audience?: string | null
+          campaign_objective?: string | null
           created_at?: string
           cta?: string | null
           domain: string
@@ -317,8 +328,11 @@ export type Database = {
           meta_description?: string | null
           offer?: string | null
           page_title?: string | null
+          pain_point?: string | null
           persona?: string | null
           product?: string | null
+          promise?: string | null
+          proof_point?: string | null
           raw_snapshot?: Json | null
           theme?: string | null
           updated_at?: string
@@ -329,6 +343,10 @@ export type Database = {
         Update: {
           ad_count?: number
           advertiser?: string
+          ai_tagged_at?: string | null
+          ai_tags?: Json | null
+          audience?: string | null
+          campaign_objective?: string | null
           created_at?: string
           cta?: string | null
           domain?: string
@@ -343,8 +361,11 @@ export type Database = {
           meta_description?: string | null
           offer?: string | null
           page_title?: string | null
+          pain_point?: string | null
           persona?: string | null
           product?: string | null
+          promise?: string | null
+          proof_point?: string | null
           raw_snapshot?: Json | null
           theme?: string | null
           updated_at?: string
