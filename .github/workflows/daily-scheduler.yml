@@ -2,7 +2,9 @@ name: Daily destination scheduler
 
 on:
   schedule:
-    # 07:00 Australia/Sydney (AEST UTC+10). During AEDT (UTC+11) this runs at 08:00 local.
+    # 07:00 Australia/Sydney — dual UTC triggers cover AEST (UTC+10) and AEDT (UTC+11).
+    # Gate step below exits unless Sydney local hour is 07.
+    - cron: "0 20 * * *"
     - cron: "0 21 * * *"
   workflow_dispatch:
     inputs:
@@ -34,15 +36,34 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Gate — 7am Australia/Sydney only
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Manual dispatch — skipping Sydney hour gate"
+            exit 0
+          fi
+          HOUR=$(TZ=Australia/Sydney date +%H)
+          echo "Sydney local hour: ${HOUR}"
+          if [ "$HOUR" = "07" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping: expected 07:00 Australia/Sydney"
+          fi
+
       - name: Run daily scheduler
+        if: steps.gate.outputs.run == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           META_ADS_LIMIT: ${{ github.event.inputs.limit || '40' }}
+          MAX_GPT_CALLS_PER_RUN: ${{ vars.MAX_GPT_CALLS_PER_RUN || '50' }}
         run: |
-          ARGS=""
+          ARGS="--scheduled"
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
           if [ -n "${{ github.event.inputs.brand }}" ]; then ARGS="$ARGS --brand ${{ github.event.inputs.brand }}"; fi
           if [ -n "${{ github.event.inputs.limit }}" ]; then ARGS="$ARGS --limit ${{ github.event.inputs.limit }}"; fi

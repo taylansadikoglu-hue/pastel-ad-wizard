@@ -1,5 +1,5 @@
 /**
- * Tag advertiser_destinations with OpenAI — cached by url_hash.
+ * Tag advertiser_destinations with OpenAI — cached by url_hash (30-day freshness).
  */
 
 import {
@@ -12,6 +12,7 @@ import {
   tagsToRowPatch,
   type DestinationAiTags,
 } from "./openai-tag";
+import { tagCacheStatus, type TagCacheStatus } from "./tag-cache";
 import type { AdvertiserDestinationRow } from "./types";
 import {
   destinationHost,
@@ -27,13 +28,17 @@ export type TagDestinationInput = {
   landingSummary?: LandingPageSummary;
   model?: string;
   apiKey?: string;
+  /** When true, never calls OpenAI — reports what would happen. */
+  dryRun?: boolean;
 };
 
 export type TagDestinationResult = {
-  id: number;
+  id: number | null;
   cached: boolean;
-  tags: DestinationAiTags;
-  row: AdvertiserDestinationRow;
+  cache_status: TagCacheStatus;
+  tags: DestinationAiTags | null;
+  row: AdvertiserDestinationRow | null;
+  gpt_called: boolean;
 };
 
 type SupabaseClient = {
@@ -77,10 +82,10 @@ type SupabaseClient = {
   };
 };
 
-async function findCachedTagsByUrl(
+async function findTaggedRowByUrlHash(
   supabase: SupabaseClient,
   urlHash: string,
-): Promise<{ tags: DestinationAiTags; row: AdvertiserDestinationRow } | null> {
+): Promise<AdvertiserDestinationRow | null> {
   const { data, error } = await supabase
     .from("advertiser_destinations")
     .select("*")
@@ -92,22 +97,35 @@ async function findCachedTagsByUrl(
   if (error) {
     throw new Error(`advertiser_destinations tag cache lookup failed: ${error.message}`);
   }
-  if (!data) return null;
 
-  const tags = tagsFromRow(data);
-  if (!tags) return null;
+  return data;
+}
 
-  return { tags, row: data };
+export async function getDestinationTagCacheStatus(
+  supabase: SupabaseClient,
+  url: string,
+): Promise<{ status: TagCacheStatus; row: AdvertiserDestinationRow | null; tags: DestinationAiTags | null }> {
+  const normalized = normalizeDestinationUrl(url);
+  if (!normalized) {
+    return { status: "new", row: null, tags: null };
+  }
+
+  const row = await findTaggedRowByUrlHash(supabase, destinationUrlHash(normalized));
+  if (!row?.ai_tagged_at) {
+    return { status: "new", row: null, tags: null };
+  }
+
+  const status = tagCacheStatus(row.ai_tagged_at);
+  const tags = tagsFromRow(row);
+  return { status, row, tags };
 }
 
 export async function isDestinationUrlTagged(
   supabase: SupabaseClient,
   url: string,
 ): Promise<boolean> {
-  const normalized = normalizeDestinationUrl(url);
-  if (!normalized) return false;
-  const cached = await findCachedTagsByUrl(supabase, destinationUrlHash(normalized));
-  return Boolean(cached);
+  const { status } = await getDestinationTagCacheStatus(supabase, url);
+  return status === "fresh";
 }
 
 async function findAdvertiserRow(
@@ -193,6 +211,24 @@ async function insertTaggedRow(
   return inserted;
 }
 
+async function copyFreshCacheToAdvertiserRow(
+  supabase: SupabaseClient,
+  advertiserRow: AdvertiserDestinationRow | null,
+  seed: {
+    advertiser: string;
+    domain: string;
+    url: string;
+    urlHash: string;
+    landingSummary: LandingPageSummary;
+  },
+  cached: { tags: DestinationAiTags; taggedAt: string },
+): Promise<AdvertiserDestinationRow> {
+  if (advertiserRow) {
+    return applyTagsToRow(supabase, advertiserRow.id, cached.tags, cached.taggedAt);
+  }
+  return insertTaggedRow(supabase, seed, cached.tags, cached.taggedAt);
+}
+
 export async function tagAndStoreDestination(
   supabase: SupabaseClient,
   input: TagDestinationInput,
@@ -213,32 +249,35 @@ export async function tagAndStoreDestination(
     landingSummary = landingSummaryFromRow(advertiserRow);
   }
 
-  const cached = await findCachedTagsByUrl(supabase, urlHash);
-  if (cached) {
-    if (advertiserRow?.ai_tagged_at) {
-      const tags = tagsFromRow(advertiserRow) ?? cached.tags;
-      return { id: advertiserRow.id, cached: true, tags, row: advertiserRow };
-    }
+  const seed = { advertiser, domain, url: normalizedUrl, urlHash, landingSummary };
+  const cacheLookup = await getDestinationTagCacheStatus(supabase, normalizedUrl);
 
-    if (advertiserRow) {
-      const row = await applyTagsToRow(supabase, advertiserRow.id, cached.tags, cached.row.ai_tagged_at!);
-      return { id: row.id, cached: true, tags: cached.tags, row };
-    }
-
-    const row = await insertTaggedRow(
-      supabase,
-      { advertiser, domain, url: normalizedUrl, urlHash, landingSummary },
-      cached.tags,
-      cached.row.ai_tagged_at!,
-    );
-    return { id: row.id, cached: true, tags: cached.tags, row };
+  if (cacheLookup.status === "fresh" && cacheLookup.tags && cacheLookup.row) {
+    const row = await copyFreshCacheToAdvertiserRow(supabase, advertiserRow, seed, {
+      tags: cacheLookup.tags,
+      taggedAt: cacheLookup.row.ai_tagged_at!,
+    });
+    return {
+      id: row.id,
+      cached: true,
+      cache_status: "fresh",
+      tags: cacheLookup.tags,
+      row,
+      gpt_called: false,
+    };
   }
 
-  if (advertiserRow?.ai_tagged_at) {
-    const tags = tagsFromRow(advertiserRow);
-    if (tags) {
-      return { id: advertiserRow.id, cached: true, tags, row: advertiserRow };
-    }
+  if (input.dryRun) {
+    const status: TagCacheStatus =
+      cacheLookup.status === "stale" ? "stale" : advertiserRow?.ai_tagged_at ? "stale" : "new";
+    return {
+      id: advertiserRow?.id ?? null,
+      cached: false,
+      cache_status: status,
+      tags: cacheLookup.tags,
+      row: advertiserRow,
+      gpt_called: status === "new" || status === "stale",
+    };
   }
 
   const tags = await tagDestinationWithOpenAi({
@@ -249,18 +288,28 @@ export async function tagAndStoreDestination(
   });
 
   const taggedAt = new Date().toISOString();
+  const cacheStatus: TagCacheStatus =
+    cacheLookup.status === "stale" || advertiserRow?.ai_tagged_at ? "stale" : "new";
 
   if (advertiserRow) {
     const row = await applyTagsToRow(supabase, advertiserRow.id, tags, taggedAt);
-    return { id: row.id, cached: false, tags, row };
+    return {
+      id: row.id,
+      cached: false,
+      cache_status: cacheStatus,
+      tags,
+      row,
+      gpt_called: true,
+    };
   }
 
-  const row = await insertTaggedRow(
-    supabase,
-    { advertiser, domain, url: normalizedUrl, urlHash, landingSummary },
+  const row = await insertTaggedRow(supabase, seed, tags, taggedAt);
+  return {
+    id: row.id,
+    cached: false,
+    cache_status: "new",
     tags,
-    taggedAt,
-  );
-
-  return { id: row.id, cached: false, tags, row };
+    row,
+    gpt_called: true,
+  };
 }

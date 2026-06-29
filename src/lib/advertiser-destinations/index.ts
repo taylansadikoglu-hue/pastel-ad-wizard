@@ -6,12 +6,21 @@ export {
   landingSummaryFromRow,
 } from "./landing-summary";
 export {
+  TAG_RETAG_DAYS,
+  isAiTagFresh,
+  tagCacheStatus,
+} from "./tag-cache";
+export {
   DestinationAiTagsSchema,
   tagDestinationWithOpenAi,
   tagsFromRow,
   tagsToRowPatch,
 } from "./openai-tag";
-export { tagAndStoreDestination, isDestinationUrlTagged } from "./tag-destination";
+export {
+  tagAndStoreDestination,
+  isDestinationUrlTagged,
+  getDestinationTagCacheStatus,
+} from "./tag-destination";
 export { upsertAdvertiserDestination } from "./upsert";
 export {
   destinationHost,
