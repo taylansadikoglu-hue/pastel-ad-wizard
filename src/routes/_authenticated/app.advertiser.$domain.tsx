@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  ChevronDown,
+  ChevronUp,
   Presentation,
   Loader2,
   Newspaper,
@@ -25,6 +27,8 @@ import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
+import { SIGNAL_MAP_ENABLED } from "@/lib/feature-flags";
+import { peersFromWatchlist } from "@/lib/advertiserSignalMap";
 import {
   buildAdvertiserChannelMix,
   buildAdvertiserRecommendedMoves,
@@ -34,6 +38,10 @@ import {
   buildWhatTheyreMissing,
   buildWhatTheyreSaying,
 } from "@/lib/radAdvertiserBrief";
+
+const SignalMapPanel = lazy(() =>
+  import("@/components/adpalette/SignalMap").then((m) => ({ default: m.SignalMapPanel })),
+);
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -299,6 +307,11 @@ function AdvertiserPage() {
     };
   }, [war, brand]);
 
+  const signalMapPeers = useMemo(
+    () => peersFromWatchlist(domain, agencyCtx?.entries ?? []),
+    [domain, agencyCtx?.entries],
+  );
+
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
   void (war?.total_sightings ?? 0);
   const adsThisWeek = war?.ads_this_week ?? 0;
@@ -350,6 +363,8 @@ function AdvertiserPage() {
 
   // Channel filter for recent ads — uses ad.channel_platform per spec.
   const [channelFilter, setChannelFilter] = useState<string>("all");
+  const [signalMapOpen, setSignalMapOpen] = useState(false);
+  const [highlightedSections, setHighlightedSections] = useState<Set<string>>(new Set());
   const filteredAds = useMemo(() => {
     const ads = war?.recent_ads ?? [];
     if (channelFilter === "all") return ads;
@@ -575,13 +590,70 @@ function AdvertiserPage() {
           {/* Account-director summary */}
           {advertiserBrief && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <InsightSection title="Current marketing read" accent>
+              {SIGNAL_MAP_ENABLED && (
+                <div
+                  style={{
+                    background: "#FFFFFF",
+                    border: "1px solid #EBE9E4",
+                    borderRadius: 8,
+                    padding: "14px 22px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSignalMapOpen((open) => !open)}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      border: "none",
+                      background: "transparent",
+                      padding: 0,
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6B62", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                        Marketing DNA map
+                      </div>
+                      <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 4 }}>
+                        Optional signal view — channels, messaging, gaps, and moves
+                      </div>
+                    </div>
+                    {signalMapOpen ? <ChevronUp size={18} color="#6B6B62" /> : <ChevronDown size={18} color="#6B6B62" />}
+                  </button>
+                  {signalMapOpen && (
+                    <div style={{ marginTop: 16 }}>
+                      <Suspense
+                        fallback={
+                          <div style={{ fontSize: 13, color: "#9E9D94", padding: "24px 0", textAlign: "center" }}>
+                            Loading signal map…
+                          </div>
+                        }
+                      >
+                        <SignalMapPanel
+                          brand={brand}
+                          war={war}
+                          peers={signalMapPeers}
+                          highlightedSections={highlightedSections}
+                          onHighlightSections={(sections) => setHighlightedSections(new Set(sections))}
+                        />
+                      </Suspense>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <InsightSection title="Current marketing read" accent sectionId="marketing-read" highlighted={highlightedSections.has("marketing-read")}>
                 <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.65, margin: 0 }}>
                   {advertiserBrief.marketingRead}
                 </p>
               </InsightSection>
 
-              <InsightSection title="Estimated channel mix">
+              <InsightSection title="Estimated channel mix" sectionId="channel-mix" highlighted={highlightedSections.has("channel-mix")}>
                 <ChannelMixBars
                   rows={advertiserBrief.channelMix.rows}
                   overallConfidence={advertiserBrief.channelMix.overallConfidence}
@@ -608,16 +680,20 @@ function AdvertiserPage() {
                 )}
               </InsightSection>
 
-              <InsightSection title="What they're saying">
+              <InsightSection title="What they're saying" sectionId="saying" highlighted={highlightedSections.has("saying-themes") || highlightedSections.has("saying-audience")}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                  <BriefList label="Messaging themes" items={advertiserBrief.saying.themes} empty="Themes will appear as more creatives are indexed." />
+                  <div id="insight-saying-themes" data-insight-section="saying-themes" style={insightSubHighlight(highlightedSections.has("saying-themes"))}>
+                    <BriefList label="Messaging themes" items={advertiserBrief.saying.themes} empty="Themes will appear as more creatives are indexed." />
+                  </div>
                   <BriefList label="CTAs" items={advertiserBrief.saying.ctas} empty="No consistent CTA pattern yet." />
                   <BriefList label="Offers" items={advertiserBrief.saying.offers} empty="No explicit offer language detected in indexed copy." />
-                  <BriefList label="Audience signals" items={advertiserBrief.saying.audienceSignals} empty="Audience tags will populate after more ads are analysed." />
+                  <div id="insight-saying-audience" data-insight-section="saying-audience" style={insightSubHighlight(highlightedSections.has("saying-audience"))}>
+                    <BriefList label="Audience signals" items={advertiserBrief.saying.audienceSignals} empty="Audience tags will populate after more ads are analysed." />
+                  </div>
                 </div>
               </InsightSection>
 
-              <InsightSection title="What they're missing">
+              <InsightSection title="What they're missing" sectionId="missing" highlighted={highlightedSections.has("missing")}>
                 <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8 }}>
                   {advertiserBrief.missing.map((item) => (
                     <li key={item} style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.55 }}>{item}</li>
@@ -625,7 +701,7 @@ function AdvertiserPage() {
                 </ul>
               </InsightSection>
 
-              <InsightSection title="Recommended next moves" accentDark>
+              <InsightSection title="Recommended next moves" accentDark sectionId="moves" highlighted={highlightedSections.has("moves")}>
                 <ol style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
                   {advertiserBrief.moves.map((move, i) => (
                     <li key={move} style={{ display: "flex", gap: 12, fontSize: 14, color: "#1C1C1A", lineHeight: 1.55 }}>
@@ -643,7 +719,7 @@ function AdvertiserPage() {
                 </ol>
               </InsightSection>
 
-              <InsightSection title="Meeting talking points">
+              <InsightSection title="Meeting talking points" sectionId="talking-points" highlighted={highlightedSections.has("talking-points")}>
                 <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 10 }}>
                   {advertiserBrief.talkingPoints.map((point) => (
                     <li key={point} style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.55 }}>{point}</li>
@@ -951,27 +1027,47 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
+function insightSubHighlight(active: boolean): React.CSSProperties {
+  return active
+    ? {
+        borderRadius: 6,
+        boxShadow: "0 0 0 2px #E8D5A0",
+        background: "#FFFCF5",
+        padding: 8,
+        margin: -8,
+      }
+    : {};
+}
+
 function InsightSection({
   title,
   meta,
   accent,
   accentDark,
+  sectionId,
+  highlighted,
   children,
 }: {
   title: string;
   meta?: string;
   accent?: boolean;
   accentDark?: boolean;
+  sectionId?: string;
+  highlighted?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div
+      id={sectionId ? `insight-${sectionId}` : undefined}
+      data-insight-section={sectionId}
       style={{
-        background: "#FFFFFF",
-        border: "1px solid #EBE9E4",
-        borderLeft: accent ? "3px solid #C9963A" : accentDark ? "3px solid #1C1C1A" : "1px solid #EBE9E4",
+        background: highlighted ? "#FFFCF5" : "#FFFFFF",
+        border: highlighted ? "1px solid #E8D5A0" : "1px solid #EBE9E4",
+        borderLeft: accent ? "3px solid #C9963A" : accentDark ? "3px solid #1C1C1A" : highlighted ? "3px solid #C9963A" : "1px solid #EBE9E4",
         borderRadius: 8,
         padding: "18px 22px",
+        boxShadow: highlighted ? "0 0 0 1px #F5E6C4" : undefined,
+        transition: "box-shadow 200ms ease, border-color 200ms ease, background 200ms ease",
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 12 }}>
