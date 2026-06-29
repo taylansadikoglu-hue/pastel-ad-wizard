@@ -232,6 +232,24 @@ function warChannelList(war: { channels?: unknown } | null | undefined): WarChan
   return [];
 }
 
+function channelByBadgeFromWar(war: { channels?: unknown } | null | undefined): Record<string, { pct: number; ads: number }> {
+  const channelByBadge: Record<string, { pct: number; ads: number }> = {};
+  for (const entry of warChannelList(war)) {
+    const badge = normaliseToBadge(entry.channel ?? entry.name);
+    if (!badge) continue;
+    const ads = Number(entry.ad_count ?? entry.count ?? 0);
+    const pct = Number(entry.pct ?? 0);
+    const existing = channelByBadge[badge];
+    if (existing) {
+      existing.ads += ads;
+      if (entry.pct != null) existing.pct = pct;
+    } else {
+      channelByBadge[badge] = { pct, ads };
+    }
+  }
+  return channelByBadge;
+}
+
 
 function missingChannelsFromWar(war: War): string[] {
   const ALL_BADGES = ["YouTube", "Search", "Display", "Meta", "TikTok", "LinkedIn"];
@@ -384,12 +402,11 @@ function AdvertiserPage() {
 
   // Channel mix narrative for meeting-ready copy
   const channelNarrative = useMemo(() => {
-    const byChannel = (war?.spend_weight?.byChannel ?? {}) as Record<string, { percentage?: number; adCount?: number } | number>;
-    const rows = CHANNEL_MIX.map((c) => {
-      const entry = byChannel[c.label];
-      const pct = typeof entry === "number" ? entry : Number(entry?.percentage ?? 0);
-      return { label: c.label, pct };
-    }).filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct);
+    const channelByBadge = channelByBadgeFromWar(war);
+    const rows = CHANNEL_MIX.map((c) => ({
+      label: c.label,
+      pct: channelByBadge[c.label]?.pct ?? 0,
+    })).filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct);
     const heavy = rows.filter((r) => r.pct >= 25);
     const light = CHANNEL_MIX.map((c) => c.label).filter((l) => !rows.some((r) => r.label === l && r.pct >= 10));
     if (heavy.length === 0) {
@@ -774,21 +791,7 @@ function AdvertiserPage() {
 
           {/* B2 — Channel mix */}
           {(() => {
-            const warList = warChannelList(war);
-            const channelByBadge: Record<string, { pct: number; ads: number }> = {};
-            for (const entry of warList) {
-              const badge = normaliseToBadge(entry.channel ?? entry.name);
-              if (!badge) continue;
-              const ads = Number(entry.ad_count ?? entry.count ?? 0);
-              const pct = Number(entry.pct ?? 0);
-              const existing = channelByBadge[badge];
-              if (existing) {
-                existing.ads += ads;
-                if (entry.pct != null) existing.pct = pct;
-              } else {
-                channelByBadge[badge] = { pct, ads };
-              }
-            }
+            const channelByBadge = channelByBadgeFromWar(war);
             const rows = CHANNEL_MIX.map((c) => {
               const fromServer = channelByBadge[c.label];
               return { ...c, pct: fromServer?.pct ?? 0, ads: fromServer?.ads ?? 0 };
