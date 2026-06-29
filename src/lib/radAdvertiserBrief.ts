@@ -61,7 +61,8 @@ export type AdvertiserWarInput = {
     fatigued?: number;
     fresh?: number;
   };
-  recent_ads?: { ai_tags?: Record<string, unknown> | string | null }[];
+  recent_ads?: { ai_tags?: Record<string, unknown> | string | null; landing_url?: string | null; destination_url?: string | null }[];
+  destinations?: import("@/lib/destination-intelligence/types").AdvertiserDestinationSummary | null;
 };
 
 function normaliseBadge(ch: unknown): string | null {
