@@ -25,53 +25,47 @@ import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
+import { CampaignIntelligenceBlock } from "@/components/adpalette/CampaignIntelligenceBlock";
+import { CampaignStoryBlock } from "@/components/adpalette/CampaignStoryBlock";
 import {
   buildAdvertiserChannelMix,
   buildAdvertiserRecommendedMoves,
   buildAdvertiserSpendBand,
+  buildAudiencesPersonas,
   buildCurrentMarketingRead,
   buildMeetingTalkingPoints,
+  buildProductsPromoted,
   buildWhatTheyreMissing,
   buildWhatTheyreSaying,
 } from "@/lib/radAdvertiserBrief";
+import {
+  fetchAdvertiserPlacements,
+  hasPlacementIntel,
+  mergeAdvertiserIntel,
+  PLACEMENT_INTEL_UNAVAILABLE,
+  type AdvertiserIntelWar,
+  type AdvertiserPlacementRow,
+} from "@/lib/advertiserPlacements";
+import { buildCampaignIntelligence } from "@/lib/campaignIntelligence";
+import { buildCampaignStory } from "@/lib/campaignStory";
 
 const API_BASE = "https://api.revenuad.com";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type RecentAd = {
-  id: number | string;
+type RecentAd = AdvertiserPlacementRow & {
   image_url?: string | null;
   video_url?: string | null;
   thumbnail_url?: string | null;
   ad_format?: string | null;
-  channel?: string | null;
-  channel_platform?: string | null;
   advertiser?: string | null;
-  first_seen?: string | null;
-  last_seen?: string | null;
   sighting_count?: number | string | null;
-  ai_tags?: Record<string, unknown> | string | null;
 };
 
-type War = {
-  advertiser?: string;
-  name?: string;
-  domain?: string;
-  industry?: string;
-  category?: string;
-  total_ads?: number;
+type War = AdvertiserIntelWar & {
   total_sightings?: number;
-  first_seen?: string;
-  last_seen?: string;
-  ads_this_week?: number;
-  spend_signal?: number;
   channel_split?: Record<string, number> | string[];
-  channels?: Record<string, number> | string[] | { channel?: string; name?: string; ad_count?: number; count?: number; last_seen?: string }[];
-
-  top_themes?: { theme: string; count: number; pct: number }[];
   sentiment_breakdown?: { positive?: number; neutral?: number; urgency?: number };
-  recent_ads?: RecentAd[];
   gap?: string;
   insight?: string;
   reach_frequency?: {
@@ -79,14 +73,6 @@ type War = {
     avgFrequency?: number;
     channels?: Record<string, { reach?: number; adCount?: number } | number>;
   };
-  spend_weight?: {
-    total?: number;
-    byChannel?: Record<string, { percentage?: number; adCount?: number; spend?: number } | number>;
-  };
-  creative_fatigue?: { score?: number; fatigueLabel?: string; label?: string; needsRefresh?: number; fresh?: number; portfolioFatigueScore?: number; fatigued?: number };
-  spend?: { est_monthly_aud?: number; spend_confidence?: string; total_lifetime_aud?: number };
-  top_cta?: string | null;
-  themes?: { theme: string; count?: number }[];
 };
 
 type Spend = { estimated_monthly_spend?: number };
@@ -114,12 +100,11 @@ function rootSlug(d: string): string {
   return d.toLowerCase().replace(/^www\./, "").split(".")[0] ?? d;
 }
 
-function asTags(raw: RecentAd["ai_tags"]): Record<string, unknown> {
-  if (!raw) return {};
-  if (typeof raw === "string") {
-    try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
-  }
-  return raw;
+function isUsableCopy(value: string | null | undefined): boolean {
+  if (!value?.trim()) return false;
+  if (/creative detected for/i.test(value)) return false;
+  if (/copy unavailable from source feed/i.test(value)) return false;
+  return true;
 }
 
 function fmtDate(iso?: string | null): string {
@@ -171,7 +156,7 @@ const CHANNEL_MIX: { key: string; label: string; aliases: string[]; colour: stri
 // Recent-ads tab filter map (spec).
 const CHANNEL_TAB_MAP: Record<string, string[]> = {
   YouTube: ["YouTube", "youtube"],
-  Search: ["Google Search", "search"],
+  Search: ["Google Search", "search", "google"],
   Display: ["Google Display", "Programmatic", "DCO", "display", "programmatic"],
   Meta: ["Meta", "Facebook", "Instagram", "meta", "facebook"],
   TikTok: ["TikTok", "tiktok"],
@@ -193,6 +178,7 @@ function AdvertiserPage() {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [outOfScope, setOutOfScope] = useState(false);
+  const [placementRowCount, setPlacementRowCount] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -242,36 +228,12 @@ function AdvertiserPage() {
         );
       }
 
-      if (!w) {
-        const { data: placements } = await supabase
-          .from("ad_placements")
-          .select("id, domain, channel, channel_platform, ad_type, hook, headline, first_seen, last_seen, times_seen, ai_tags")
-          .ilike("domain", `%${root}%`)
-          .order("created_at", { ascending: false })
-          .limit(12);
-        if (placements?.length) {
-          w = {
-            domain,
-            advertiser: resolved,
-            total_ads: placements.length,
-            recent_ads: placements.map((p) => ({
-              id: p.id,
-              channel: p.channel,
-              channel_platform: p.channel_platform,
-              first_seen: p.first_seen,
-              last_seen: p.last_seen,
-              sighting_count: p.times_seen,
-              ai_tags: p.ai_tags,
-            })),
-            spend_signal: 3,
-            first_seen: placements[placements.length - 1]?.first_seen ?? undefined,
-            last_seen: placements[0]?.last_seen ?? undefined,
-          };
-        }
-      }
+      const placementFetch = await fetchAdvertiserPlacements(supabase, domain, 100);
+      const merged = mergeAdvertiserIntel(w, placementFetch.rows, resolved, domain);
 
       if (!alive) return;
-      setWar(w);
+      setPlacementRowCount(placementFetch.rows.length);
+      setWar(merged as War | null);
       setSpend(null);
       setChannels(null);
       const newsField = (w as { news?: unknown } | null)?.news;
@@ -286,17 +248,31 @@ function AdvertiserPage() {
     return () => { alive = false; };
   }, [domain]);
 
+  const placementIntelUnavailable = placementRowCount === 0;
+
   const advertiserBrief = useMemo(() => {
     if (!war) return null;
     return {
       marketingRead: buildCurrentMarketingRead(brand, war),
       channelMix: buildAdvertiserChannelMix(war),
       spend: buildAdvertiserSpendBand(war),
+      products: buildProductsPromoted(war),
+      audiences: buildAudiencesPersonas(war),
       saying: buildWhatTheyreSaying(war),
       missing: buildWhatTheyreMissing(brand, war),
       moves: buildAdvertiserRecommendedMoves(brand, war),
       talkingPoints: buildMeetingTalkingPoints(brand, war),
     };
+  }, [war, brand]);
+
+  const campaignIntel = useMemo(() => {
+    if (!war) return null;
+    return buildCampaignIntelligence(brand, war);
+  }, [war, brand]);
+
+  const campaignStory = useMemo(() => {
+    if (!war) return null;
+    return buildCampaignStory(brand, war);
   }, [war, brand]);
 
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
@@ -308,65 +284,53 @@ function AdvertiserPage() {
     return Math.max(1, Math.floor(diff / 86_400_000));
   }, [war?.first_seen]);
 
-  const firstAd = war?.recent_ads?.[0];
-  const firstTags = asTags(firstAd?.ai_tags);
-  const sentimentRaw = (firstTags.sentiment as string | undefined) ?? "";
+  const firstAd = war?.placements?.[0] ?? war?.recent_ads?.[0];
+  const sentimentRaw = firstAd?.emotional_driver ?? "";
   const sentimentColor =
-    /positive|trust|happy/i.test(sentimentRaw) ? "#2D7D46"
-      : /negative|fear|urgen/i.test(sentimentRaw) ? "#C0392B"
+    /security|trust|positive/i.test(sentimentRaw) ? "#2D7D46"
+      : /fear|urgency|negative/i.test(sentimentRaw) ? "#C0392B"
       : "#9E9D94";
 
-  // Creative analysis (AI read)
+  // Creative analysis from placement intel columns
   const creativeAnalysis = useMemo(() => {
-    const ads = war?.recent_ads ?? [];
-    const colours = new Map<string, number>();
+    const ads = war?.placements ?? war?.recent_ads ?? [];
     const emotions = new Map<string, number>();
-    let hasPeople = 0, hasLogo = 0, peopleCounted = 0, logoCounted = 0;
-    const durations: number[] = [];
+    const stages = new Map<string, number>();
+    const offerTypes = new Map<string, number>();
     for (const ad of ads) {
-      const t = asTags(ad.ai_tags);
-      const pc = t.primary_colours;
-      if (Array.isArray(pc) && typeof pc[0] === "string") {
-        colours.set(pc[0], (colours.get(pc[0]) ?? 0) + 1);
+      if (isUsableCopy(ad.emotional_driver)) {
+        emotions.set(ad.emotional_driver!, (emotions.get(ad.emotional_driver!) ?? 0) + 1);
       }
-      const s = t.sentiment ?? t.dominant_emotion;
-      if (typeof s === "string" && s.trim()) emotions.set(s, (emotions.get(s) ?? 0) + 1);
-      if (typeof t.has_people === "boolean") { peopleCounted++; if (t.has_people) hasPeople++; }
-      if (typeof t.has_logo === "boolean") { logoCounted++; if (t.has_logo) hasLogo++; }
-      const d = Number(t.ad_duration_seconds);
-      if (Number.isFinite(d) && d > 0) durations.push(d);
+      if (isUsableCopy(ad.buyer_stage)) {
+        stages.set(ad.buyer_stage!, (stages.get(ad.buyer_stage!) ?? 0) + 1);
+      }
+      if (isUsableCopy(ad.offer_type)) {
+        offerTypes.set(ad.offer_type!, (offerTypes.get(ad.offer_type!) ?? 0) + 1);
+      }
     }
-    const topColour = [...colours.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
     const topEmotion = [...emotions.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    const avgDur = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : null;
+    const topStage = [...stages.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const topOfferType = [...offerTypes.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const hook = ads.map((a) => a.hook_analysis).find(isUsableCopy) ?? null;
     return {
-      colour: topColour,
       emotion: topEmotion,
-      hasPeople: peopleCounted > 0 ? hasPeople / peopleCounted >= 0.5 : null,
-      hasLogo: logoCounted > 0 ? hasLogo / logoCounted >= 0.5 : null,
-      avgDuration: avgDur,
+      stage: topStage,
+      offerType: topOfferType,
+      hook,
     };
-  }, [war?.recent_ads]);
+  }, [war?.placements, war?.recent_ads]);
 
   // Channel filter for recent ads — uses ad.channel_platform per spec.
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const filteredAds = useMemo(() => {
-    const ads = war?.recent_ads ?? [];
+    const ads = war?.placements ?? war?.recent_ads ?? [];
     if (channelFilter === "all") return ads;
     const aliases = CHANNEL_TAB_MAP[channelFilter] ?? [];
     return ads.filter((ad) => {
       const platform = String(ad.channel_platform ?? ad.channel ?? "").toLowerCase();
-      const tagCh = String(asTags(ad.ai_tags).channel ?? "").toLowerCase();
-      const hay = `${platform} ${tagCh}`;
-      return aliases.some((v) => hay.includes(v.toLowerCase()));
+      return aliases.some((v) => platform.includes(v.toLowerCase()));
     });
-  }, [war?.recent_ads, channelFilter]);
-
-  // Mount flag for spend-bar animation.
-  // Debug: log API responses to see what's coming back
-  useEffect(() => {
-    if (war) console.log("[WarRoom]", { war, channels, spend, news });
-  }, [war, channels, spend, news]);
+  }, [war?.placements, war?.recent_ads, channelFilter]);
 
   const category = war?.category ?? war?.industry ?? "—";
   const updatedAgo = formatTimeAgo(war?.last_seen ?? null);
@@ -434,7 +398,7 @@ function AdvertiserPage() {
     );
   }
 
-  if (!war) {
+  if (!war || !hasPlacementIntel(war)) {
     return (
       <WorkspaceShell title={brand} subtitle={`Ad library · ${brand}`}>
         <Link
@@ -503,10 +467,6 @@ function AdvertiserPage() {
         </div>
       )}
 
-      <div style={{ marginBottom: 20 }}>
-        <DataFeedPanel domain={domain} brandLabel={brand} />
-      </div>
-
       <div
         style={{
           display: "grid",
@@ -572,16 +532,37 @@ function AdvertiserPage() {
           </div>
 
 
-          {/* Account-director summary */}
+          <CampaignStoryBlock
+            brand={brand}
+            loading={loading}
+            placementIntelUnavailable={placementIntelUnavailable}
+            story={campaignStory}
+          />
+
           {advertiserBrief && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div
+                style={{
+                  paddingTop: 8,
+                  borderTop: "1px solid #EBE9E4",
+                  marginTop: 4,
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  Supporting evidence
+                </div>
+                <p style={{ fontSize: 13, color: "#6B6B62", margin: "6px 0 0", lineHeight: 1.5 }}>
+                  Channel mix, spend estimates, products, and campaign detail for deeper prep.
+                </p>
+              </div>
+
               <InsightSection title="Current marketing read" accent>
                 <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.65, margin: 0 }}>
                   {advertiserBrief.marketingRead}
                 </p>
               </InsightSection>
 
-              <InsightSection title="Estimated channel mix">
+              <InsightSection title="Channel mix">
                 <ChannelMixBars
                   rows={advertiserBrief.channelMix.rows}
                   overallConfidence={advertiserBrief.channelMix.overallConfidence}
@@ -593,7 +574,7 @@ function AdvertiserPage() {
                 />
               </InsightSection>
 
-              <InsightSection title="Estimated spend">
+              <InsightSection title="Estimated spend range">
                 {advertiserBrief.spend.label ? (
                   <>
                     <div style={{ fontSize: 20, fontWeight: 600, color: "#1C1C1A", letterSpacing: "-0.02em" }}>
@@ -608,13 +589,81 @@ function AdvertiserPage() {
                 )}
               </InsightSection>
 
+              <InsightSection title="Products being promoted">
+                {advertiserBrief.products.length ? (
+                  <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {advertiserBrief.products.map((product) => (
+                      <li
+                        key={product}
+                        style={{
+                          fontSize: 13,
+                          color: "#1C1C1A",
+                          background: "#F7F6F3",
+                          border: "1px solid #EBE9E4",
+                          borderRadius: 6,
+                          padding: "6px 10px",
+                        }}
+                      >
+                        {product}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>
+                    {placementIntelUnavailable
+                      ? PLACEMENT_INTEL_UNAVAILABLE
+                      : "No product fields on indexed placements."}
+                  </p>
+                )}
+              </InsightSection>
+
               <InsightSection title="What they're saying">
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                  <BriefList label="Messaging themes" items={advertiserBrief.saying.themes} empty="Themes will appear as more creatives are indexed." />
-                  <BriefList label="CTAs" items={advertiserBrief.saying.ctas} empty="No consistent CTA pattern yet." />
-                  <BriefList label="Offers" items={advertiserBrief.saying.offers} empty="No explicit offer language detected in indexed copy." />
-                  <BriefList label="Audience signals" items={advertiserBrief.saying.audienceSignals} empty="Audience tags will populate after more ads are analysed." />
-                </div>
+                {placementIntelUnavailable ? (
+                  <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>{PLACEMENT_INTEL_UNAVAILABLE}</p>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    <BriefList label="Emotional driver" items={advertiserBrief.saying.emotionalDrivers} />
+                    <BriefList label="Buyer stage" items={advertiserBrief.saying.buyerStages} />
+                    <BriefList label="Offer type" items={advertiserBrief.saying.offerTypes} />
+                    <BriefList label="CTAs" items={advertiserBrief.saying.ctas} />
+                    <BriefList label="Hooks" items={advertiserBrief.saying.hooks} />
+                    <BriefList label="Offer themes" items={advertiserBrief.saying.offerThemes} />
+                  </div>
+                )}
+              </InsightSection>
+
+              <InsightSection title="Audiences / personas">
+                {advertiserBrief.audiences.length ? (
+                  <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                    {advertiserBrief.audiences.map((audience) => (
+                      <li
+                        key={audience.label}
+                        style={{
+                          fontSize: 13,
+                          color: "#1C1C1A",
+                          background: "#F7F6F3",
+                          border: "1px solid #EBE9E4",
+                          borderRadius: 6,
+                          padding: "8px 10px",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        {audience.label}
+                        {audience.inferred && (
+                          <span style={{ display: "block", fontSize: 11, color: "#9E9D94", marginTop: 2 }}>
+                            Inferred from page copy
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>
+                    {placementIntelUnavailable
+                      ? PLACEMENT_INTEL_UNAVAILABLE
+                      : "No audience signals inferred from indexed placements."}
+                  </p>
+                )}
               </InsightSection>
 
               <InsightSection title="What they're missing">
@@ -652,6 +701,17 @@ function AdvertiserPage() {
               </InsightSection>
             </div>
           )}
+
+          <CampaignIntelligenceBlock
+            brand={brand}
+            loading={loading}
+            placementIntelUnavailable={placementIntelUnavailable}
+            intel={campaignIntel}
+          />
+
+          <div style={{ marginBottom: 4 }}>
+            <DataFeedPanel domain={domain} brandLabel={brand} />
+          </div>
 
           {/* Activity metrics */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
@@ -732,40 +792,37 @@ function AdvertiserPage() {
           {/* Creative tags — supporting detail */}
           <Card title="Creative analysis">
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {creativeAnalysis.colour && (
-                <CreativePill>
-                  <span
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      background: creativeAnalysis.colour,
-                      border: "1px solid rgba(0,0,0,0.1)",
-                      display: "inline-block",
-                    }}
-                  />
-                  <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.colour}</span>
-                </CreativePill>
-              )}
               {creativeAnalysis.emotion && (
                 <CreativePill>
                   <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.emotion}</span>
                 </CreativePill>
               )}
+              {creativeAnalysis.stage && (
+                <CreativePill>{creativeAnalysis.stage} stage</CreativePill>
+              )}
+              {creativeAnalysis.offerType && (
+                <CreativePill>{creativeAnalysis.offerType} offer</CreativePill>
+              )}
               {(() => {
-                const fmt = (firstAd?.ad_format ?? "").trim();
+                const fmt = (firstAd?.ad_type ?? "").trim();
                 return fmt ? <CreativePill><span style={{ textTransform: "capitalize" }}>{fmt}</span></CreativePill> : null;
               })()}
-              {creativeAnalysis.avgDuration && (
-                <CreativePill>~{creativeAnalysis.avgDuration}s avg</CreativePill>
-              )}
-              {!creativeAnalysis.colour && !creativeAnalysis.emotion && !firstAd?.ad_format && (
-                <span style={{ fontSize: 12, color: "#9E9D94" }}>Creative tags will populate after the next scan.</span>
+              {!creativeAnalysis.emotion && !creativeAnalysis.stage && !creativeAnalysis.offerType && !firstAd?.ad_type && (
+                <span style={{ fontSize: 12, color: "#9E9D94" }}>
+                  {placementIntelUnavailable
+                    ? PLACEMENT_INTEL_UNAVAILABLE
+                    : "No strategist fields on indexed placements."}
+                </span>
               )}
             </div>
+            {creativeAnalysis.hook && (
+              <p style={{ marginTop: 12, fontSize: 13, color: "#6B6B62", lineHeight: 1.5 }}>
+                {creativeAnalysis.hook}
+              </p>
+            )}
             {sentimentRaw && (
-              <div style={{ marginTop: 12, fontSize: 13, color: sentimentColor, textTransform: "capitalize" }}>
-                Overall tone: {sentimentRaw}
+              <div style={{ marginTop: 12, fontSize: 13, color: sentimentColor }}>
+                Emotional driver: {sentimentRaw}
               </div>
             )}
           </Card>
@@ -985,7 +1042,7 @@ function InsightSection({
   );
 }
 
-function BriefList({ label, items, empty }: { label: string; items: string[]; empty: string }) {
+function BriefList({ label, items }: { label: string; items: string[] }) {
   return (
     <div>
       <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
@@ -994,11 +1051,11 @@ function BriefList({ label, items, empty }: { label: string; items: string[]; em
       {items.length ? (
         <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 6 }}>
           {items.map((item) => (
-            <li key={item} style={{ fontSize: 13, color: "#1C1C1A", lineHeight: 1.45, textTransform: "capitalize" }}>{item}</li>
+            <li key={item} style={{ fontSize: 13, color: "#1C1C1A", lineHeight: 1.45 }}>{item}</li>
           ))}
         </ul>
       ) : (
-        <div style={{ fontSize: 13, color: "#9E9D94" }}>{empty}</div>
+        <div style={{ fontSize: 13, color: "#9E9D94" }}>—</div>
       )}
     </div>
   );
@@ -1026,12 +1083,7 @@ function CreativePill({ children }: { children: React.ReactNode }) {
 
 
 function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
-  const tags = asTags(ad.ai_tags);
-  const themes = (() => {
-    const t = tags.themes;
-    return Array.isArray(t) ? (t as string[]).slice(0, 2) : [];
-  })();
-  const channel = (ad.channel_platform ?? ad.channel ?? (tags.channel as string | undefined) ?? "").trim();
+  const channel = (ad.channel_platform ?? ad.channel ?? "").trim();
   const channelLow = channel.toLowerCase();
   const isYouTube = /youtube|video/.test(channelLow);
   const isDisplay = /display|programmatic|banner/.test(channelLow);
@@ -1048,15 +1100,23 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
     return "#C9963A";
   })();
 
-  // Thumbnail fallback hierarchy: thumbnail_url → YouTube derived → image_url (proxied)
+  // Thumbnail fallback hierarchy: media_url → creative_url → thumbnail_url
   let imgSrc: string | null = ad.thumbnail_url ?? null;
+  if (!imgSrc && ad.media_url) imgSrc = proxyImage(ad.media_url);
+  if (!imgSrc && ad.creative_url) imgSrc = proxyImage(ad.creative_url);
   if (!imgSrc && ad.video_url) {
     const id = youtubeId(ad.video_url);
     if (id) imgSrc = `https://img.youtube.com/vi/${id}/mqdefault.jpg`;
   }
   if (!imgSrc && ad.image_url) imgSrc = proxyImage(ad.image_url);
 
-  const sightings = Number(ad.sighting_count ?? 0);
+  const sightings = Number(ad.times_seen ?? ad.sighting_count ?? 0);
+  const pills = [ad.emotional_driver, ad.offer_type, ad.buyer_stage].filter(isUsableCopy);
+  const title = isUsableCopy(ad.headline)
+    ? ad.headline
+    : isUsableCopy(ad.page_title)
+      ? ad.page_title
+      : null;
   const openVideo = () => {
     if (ad.video_url) window.open(ad.video_url, "_blank", "noopener,noreferrer");
   };
@@ -1142,7 +1202,7 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 2, flexWrap: "wrap" }}>
-          {ad.ad_format && (
+          {ad.ad_type && (
             <span
               style={{
                 fontSize: 10,
@@ -1155,7 +1215,7 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
                 borderRadius: 4,
               }}
             >
-              {ad.ad_format}
+              {ad.ad_type}
             </span>
           )}
           {isDisplay && (
@@ -1178,17 +1238,20 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
             <span style={{ fontSize: 11, color: "#9E9D94" }}>{channel}</span>
           )}
         </div>
+        {title && (
+          <div style={{ fontSize: 13, color: "#1C1C1A", marginBottom: 4, lineHeight: 1.4 }}>{title}</div>
+        )}
         <div style={{ fontSize: 12, color: "#6B6B62" }}>
           {ad.first_seen ? formatTimeAgo(ad.first_seen) : "—"}
           {ad.last_seen ? ` → ${formatTimeAgo(ad.last_seen)}` : ""}
           {sightings > 0 && ` · ${sightings.toLocaleString()} impressions`}
         </div>
       </div>
-      {themes.length > 0 && (
-        <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-          {themes.map((t, i) => (
+      {pills.length > 0 && (
+        <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "wrap", maxWidth: 180 }}>
+          {pills.map((t) => (
             <span
-              key={i}
+              key={t}
               style={{
                 fontSize: 10,
                 fontWeight: 500,

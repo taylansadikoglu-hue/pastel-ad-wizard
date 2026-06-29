@@ -1,8 +1,17 @@
 /**
- * Advertiser detail insights — derived from existing warroom data only.
+ * Advertiser detail insights — derived from placement rows and warroom metadata.
+ * Uses flattened ad_placements / normalized_ad_placements columns only.
  */
 
-import { translateTerritory, territoryNounPhrase } from "@/lib/radInsightTranslator";
+import {
+  type AdvertiserIntelWar,
+  type AdvertiserPlacementRow,
+  buildChannelsFromPlacements,
+  hasPlacementIntel,
+  isUsableText,
+  normaliseChannelBadge,
+  placementCount,
+} from "@/lib/advertiserPlacements";
 
 export type ChannelConfidence = "Observed" | "Modelled" | "Partial coverage" | "No signal detected";
 
@@ -43,54 +52,68 @@ export type WarChannelEntry = {
   pct?: number;
 };
 
-export type AdvertiserWarInput = {
-  channels?: unknown;
-  spend?: { est_monthly_aud?: number; spend_confidence?: string } | null;
-  spend_weight?: {
-    byChannel?: Record<string, { percentage?: number; adCount?: number; spend?: number } | number>;
-  };
-  top_themes?: ({ theme: string; count?: number; pct?: number } | string)[];
-  themes?: { theme: string; count?: number }[];
-  top_cta?: string | null;
-  total_ads?: number;
-  creative_fatigue?: {
-    score?: number;
-    portfolioFatigueScore?: number;
-    fatigueLabel?: string;
-    needsRefresh?: number;
-    fatigued?: number;
-    fresh?: number;
-  };
-  recent_ads?: { ai_tags?: Record<string, unknown> | string | null }[];
-};
+/** @deprecated Use AdvertiserIntelWar from advertiserPlacements */
+export type AdvertiserWarInput = AdvertiserIntelWar;
 
-function normaliseBadge(ch: unknown): string | null {
-  const r = String(ch ?? "").toLowerCase();
-  if (!r) return null;
-  if (r.includes("youtube")) return "YouTube";
-  if (r.includes("search")) return "Search";
-  if (r.includes("display") || r.includes("programmatic")) return "Display";
-  if (r.includes("meta") || r.includes("facebook") || r.includes("instagram")) return "Meta";
-  if (r.includes("tiktok")) return "TikTok";
-  if (r.includes("linkedin") || r.includes("programmatic")) return "Other";
-  return "Other";
+function placements(war: AdvertiserIntelWar | null | undefined): AdvertiserPlacementRow[] {
+  return war?.placements ?? war?.recent_ads ?? [];
 }
 
-export function warChannelEntries(war: AdvertiserWarInput | null | undefined): WarChannelEntry[] {
+function topByFrequency(
+  values: (string | null | undefined)[],
+  limit = 6,
+): string[] {
+  const counts = new Map<string, number>();
+  for (const raw of values) {
+    if (!isUsableText(raw)) continue;
+    const label = raw.trim();
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([label]) => label)
+    .slice(0, limit);
+}
+
+function uniqueStrings(values: (string | null | undefined)[], limit = 6): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of values) {
+    if (!isUsableText(raw)) continue;
+    const label = raw.trim();
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(label);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+export function warChannelEntries(war: AdvertiserIntelWar | null | undefined): WarChannelEntry[] {
   const c = war?.channels;
-  if (Array.isArray(c) && c.length && typeof c[0] === "object") return c as WarChannelEntry[];
-  return [];
+  if (Array.isArray(c) && c.length) {
+    return c.map((entry) => ({
+      channel: entry.channel,
+      ad_count: entry.ad_count,
+      pct: entry.pct,
+    }));
+  }
+  return buildChannelsFromPlacements(placements(war)).map((entry) => ({
+    channel: entry.channel,
+    ad_count: entry.ad_count,
+    pct: entry.pct,
+  }));
 }
 
 export function channelByBadgeFromWar(
-  war: AdvertiserWarInput | null | undefined,
+  war: AdvertiserIntelWar | null | undefined,
 ): Record<string, { pct: number; ads: number }> {
   const out: Record<string, { pct: number; ads: number }> = {};
   for (const entry of warChannelEntries(war)) {
-    const badge = normaliseBadge(entry.channel ?? entry.name);
+    const badge = normaliseChannelBadge(entry.channel);
     if (!badge) continue;
-    const target = badge === "Display" ? "Display" : badge;
-    const bucket = DISPLAY_CHANNELS.includes(target as (typeof DISPLAY_CHANNELS)[number]) ? target : "Other";
+    const bucket = DISPLAY_CHANNELS.includes(badge as (typeof DISPLAY_CHANNELS)[number]) ? badge : "Other";
     const ads = Number(entry.ad_count ?? entry.count ?? 0);
     const pct = Number(entry.pct ?? 0);
     const existing = out[bucket];
@@ -104,12 +127,12 @@ export function channelByBadgeFromWar(
   return out;
 }
 
-function modelledFromSpendWeight(war: AdvertiserWarInput): Record<string, { pct: number; ads: number }> {
+function modelledFromSpendWeight(war: AdvertiserIntelWar): Record<string, { pct: number; ads: number }> {
   const by = war.spend_weight?.byChannel;
   if (!by) return {};
   const out: Record<string, { pct: number; ads: number }> = {};
   for (const [key, val] of Object.entries(by)) {
-    const badge = normaliseBadge(key) ?? (key === "Other" ? "Other" : null);
+    const badge = normaliseChannelBadge(key) ?? (key === "Other" ? "Other" : null);
     if (!badge) continue;
     const pct = typeof val === "number" ? val : Number(val?.percentage ?? 0);
     const ads = typeof val === "number" ? 0 : Number(val?.adCount ?? 0);
@@ -120,20 +143,19 @@ function modelledFromSpendWeight(war: AdvertiserWarInput): Record<string, { pct:
 
 function channelMixSourceMeta(
   dataSource: ChannelMixDataSource,
-  overallConfidence: ChannelConfidence,
 ): { sourceLabel: string; estimationTooltip: string } {
   if (dataSource === "channels") {
     return {
-      sourceLabel: "Observed ad counts",
+      sourceLabel: "Observed placements",
       estimationTooltip:
-        "Channel share is the percentage of indexed ads attributed to each platform from your latest warroom scan. Percentages sum from observed ad counts per channel.",
+        "Channel share is the percentage of indexed placements attributed to each platform from channel_platform on stored ad rows.",
     };
   }
   if (dataSource === "spend_weight") {
     return {
       sourceLabel: "Modelled spend weights",
       estimationTooltip:
-        "Direct ad-count splits were unavailable. Shares are estimated from spend-weight signals across channels and should be treated as directional.",
+        "Placement splits were unavailable. Shares are estimated from spend-weight signals and should be treated as directional.",
     };
   }
   return {
@@ -144,10 +166,10 @@ function channelMixSourceMeta(
 
 /** Estimated channel mix with per-row confidence. */
 export function buildAdvertiserChannelMix(
-  war: AdvertiserWarInput | null | undefined,
+  war: AdvertiserIntelWar | null | undefined,
 ): AdvertiserChannelMixResult {
   if (!war) {
-    const meta = channelMixSourceMeta("none", "No signal detected");
+    const meta = channelMixSourceMeta("none");
     return {
       rows: [],
       overallConfidence: "No signal detected",
@@ -185,18 +207,17 @@ export function buildAdvertiserChannelMix(
   });
 
   const activeCount = rows.filter((r) => r.pct > 0 || r.ads > 0).length;
-  const totalAds = Number(war.total_ads ?? 0);
+  const totalAds = placementCount(war);
   let overallConfidence = rowConfidence;
   if (rowConfidence !== "No signal detected" && (activeCount < 3 || totalAds < 5)) {
     overallConfidence = "Partial coverage";
   }
 
   const available = rows.some((r) => r.pct > 0 || r.ads > 0);
-  const meta = channelMixSourceMeta(dataSource, overallConfidence);
+  const meta = channelMixSourceMeta(dataSource);
   let estimationTooltip = meta.estimationTooltip;
   if (overallConfidence === "Partial coverage") {
-    estimationTooltip +=
-      " Coverage is limited — fewer than five indexed ads or fewer than three active channels.";
+    estimationTooltip += " Coverage is limited — fewer than five placements or fewer than three active channels.";
   }
 
   return {
@@ -210,7 +231,7 @@ export function buildAdvertiserChannelMix(
 }
 
 /** Directional spend band — no fake precision. */
-export function buildAdvertiserSpendBand(war: AdvertiserWarInput | null | undefined): {
+export function buildAdvertiserSpendBand(war: AdvertiserIntelWar | null | undefined): {
   band: SpendBand | null;
   label: string | null;
   disclaimer: string;
@@ -224,162 +245,205 @@ export function buildAdvertiserSpendBand(war: AdvertiserWarInput | null | undefi
   return { band: match.band, label: match.label, disclaimer };
 }
 
-function extractThemes(war: AdvertiserWarInput | null | undefined): string[] {
-  if (!war) return [];
-  const fromObjects = (war.themes ?? []).map((t) => t.theme).filter(Boolean);
-  if (fromObjects.length) return fromObjects;
-  const fromTop = (war.top_themes ?? []).map((t) => (typeof t === "string" ? t : t.theme)).filter(Boolean);
-  return fromTop;
-}
-
-function humanizeTheme(raw: string): string {
-  const key = raw.trim().toLowerCase();
-  if (["trust", "curiosity", "greed", "aspiration", "fear", "belonging"].includes(key)) {
-    return territoryNounPhrase(key);
-  }
-  if (key === "savings") return "value and savings";
-  return key.replace(/_/g, " ");
-}
-
-function collectOffers(war: AdvertiserWarInput | null | undefined): string[] {
-  const offers = new Set<string>();
-  for (const ad of war?.recent_ads ?? []) {
-    const tags = typeof ad.ai_tags === "string"
-      ? (() => { try { return JSON.parse(ad.ai_tags) as Record<string, unknown>; } catch { return {}; } })()
-      : (ad.ai_tags ?? {});
-    for (const key of ["finance_offer", "offer", "promotion"]) {
-      const v = tags[key];
-      if (typeof v === "string" && v.trim() && !v.includes("{{")) offers.add(v.trim());
+/** Products and services surfaced in indexed placements. */
+export function buildProductsPromoted(war: AdvertiserIntelWar | null | undefined): string[] {
+  const rows = placements(war);
+  const candidates: string[] = [];
+  for (const row of rows) {
+    for (const field of [row.normalized_product, row.product_type, row.product_category, row.page_title]) {
+      if (!isUsableText(field)) continue;
+      const key = field.trim().toLowerCase();
+      if (key === "other" || key === "unknown" || key === "unclassified") continue;
+      candidates.push(field.trim());
     }
   }
-  return [...offers].slice(0, 4);
+  return uniqueStrings(candidates, 6);
 }
 
-function collectCtas(war: AdvertiserWarInput | null | undefined): string[] {
-  const ctas = new Set<string>();
-  if (war?.top_cta?.trim()) ctas.add(war.top_cta.trim());
-  for (const ad of war?.recent_ads ?? []) {
-    const tags = typeof ad.ai_tags === "string"
-      ? (() => { try { return JSON.parse(ad.ai_tags) as Record<string, unknown>; } catch { return {}; } })()
-      : (ad.ai_tags ?? {});
-    const cta = tags.call_to_action;
-    if (typeof cta === "string" && cta.trim()) ctas.add(cta.trim());
+export type AudienceLabel = {
+  label: string;
+  inferred: boolean;
+};
+
+/** Audience and persona signals — explicit fields first, careful inference second. */
+export function buildAudiencesPersonas(war: AdvertiserIntelWar | null | undefined): AudienceLabel[] {
+  const rows = placements(war);
+  const counts = new Map<string, { label: string; inferred: boolean }>();
+
+  const add = (label: string, inferred: boolean) => {
+    const key = label.toLowerCase();
+    const existing = counts.get(key);
+    if (!existing || (!existing.inferred && inferred)) {
+      counts.set(key, { label, inferred });
+    }
+  };
+
+  for (const row of rows) {
+    if (isUsableText(row.product_category)) {
+      add(row.product_category.trim(), false);
+    }
+
+    const corpus = [
+      row.page_title,
+      row.page_description,
+      row.raw_copy,
+      row.headline,
+      row.description,
+    ]
+      .filter(isUsableText)
+      .join(" ")
+      .toLowerCase();
+
+    if (!corpus) continue;
+
+    if (/personal banking|everyday banking|bank accounts|credit cards/.test(corpus)) {
+      add("Likely audience: Personal banking customers", true);
+    }
+    if (/business solutions|business banking|institutional banking|company information/.test(corpus)) {
+      add("Likely audience: Business banking clients", true);
+    }
+    if (/home loans|mortgage|property finance/.test(corpus)) {
+      add("Likely audience: Home loan prospects", true);
+    }
+    if (/insurance|cover\b/.test(corpus)) {
+      add("Likely audience: Insurance buyers", true);
+    }
+    if (/savings|deposit|interest rate/.test(corpus)) {
+      add("Likely audience: Savers and depositors", true);
+    }
   }
-  return [...ctas].slice(0, 4);
+
+  return [...counts.values()].slice(0, 6);
 }
 
-function collectAudienceSignals(war: AdvertiserWarInput | null | undefined): string[] {
-  const signals = new Set<string>();
-  for (const ad of war?.recent_ads ?? []) {
-    const tags = typeof ad.ai_tags === "string"
-      ? (() => { try { return JSON.parse(ad.ai_tags) as Record<string, unknown>; } catch { return {}; } })()
-      : (ad.ai_tags ?? {});
-    const demo = tags.demographics;
-    if (Array.isArray(demo)) {
-      for (const d of demo) if (typeof d === "string" && d.trim()) signals.add(d.trim());
-    }
-    if (tags.australian_context === true) signals.add("Australian market context");
-    const platforms = tags.publisher_platforms;
-    if (Array.isArray(platforms)) {
-      for (const p of platforms) if (typeof p === "string") signals.add(`${p} placements`);
-    }
-  }
-  return [...signals].slice(0, 5);
+export function buildCtAs(war: AdvertiserIntelWar | null | undefined): string[] {
+  const rows = placements(war);
+  return uniqueStrings(
+    rows.flatMap((row) => [row.primary_cta, row.detected_cta]).concat(war?.top_cta ?? null),
+    4,
+  );
+}
+
+export type SayingSection = {
+  emotionalDrivers: string[];
+  buyerStages: string[];
+  offerTypes: string[];
+  offerThemes: string[];
+  hooks: string[];
+  copySnippets: string[];
+  ctas: string[];
+};
+
+/** Messaging surfaced from placement copy and strategist fields. */
+export function buildWhatTheyreSaying(war: AdvertiserIntelWar | null | undefined): SayingSection {
+  const rows = placements(war);
+  return {
+    emotionalDrivers: topByFrequency(rows.map((r) => r.emotional_driver), 4),
+    buyerStages: topByFrequency(rows.map((r) => r.buyer_stage), 4),
+    offerTypes: topByFrequency(rows.map((r) => r.offer_type), 4),
+    offerThemes: topByFrequency(rows.map((r) => r.offer_theme), 4),
+    hooks: uniqueStrings(rows.map((r) => r.hook_analysis), 3),
+    copySnippets: uniqueStrings(
+      rows.flatMap((r) => [r.raw_copy, r.headline, r.description]),
+      3,
+    ),
+    ctas: buildCtAs(war),
+  };
+}
+
+function dominantField(rows: AdvertiserPlacementRow[], key: keyof AdvertiserPlacementRow): string | null {
+  const ranked = topByFrequency(rows.map((r) => r[key] as string | null | undefined), 1);
+  return ranked[0] ?? null;
 }
 
 /** One-paragraph account-director read. */
 export function buildCurrentMarketingRead(
   brand: string,
-  war: AdvertiserWarInput | null | undefined,
+  war: AdvertiserIntelWar | null | undefined,
 ): string {
+  const rows = placements(war);
   const mix = buildAdvertiserChannelMix(war);
   const active = mix.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct);
-  const themes = extractThemes(war).map(humanizeTheme);
 
-  if (!active.length && !themes.length) {
-    return `${brand} has limited indexed activity so far. Run another scan as more placements are picked up.`;
+  const takeaway = uniqueStrings(rows.map((r) => r.strategist_takeaway), 1)[0];
+  if (takeaway) {
+    const emotional = dominantField(rows, "emotional_driver");
+    const stage = dominantField(rows, "buyer_stage");
+    const channelNote = active.length
+      ? ` Observed mix leans ${active.slice(0, 2).map((r) => `${r.channel} (${Math.round(r.pct)}%)`).join(" and ")}.`
+      : "";
+    const toneNote = emotional && stage
+      ? ` ${emotional}-led messaging at the ${stage} stage.`
+      : emotional
+        ? ` ${emotional}-led messaging across the portfolio.`
+        : stage
+          ? ` Activity sits at the ${stage} stage.`
+          : "";
+    return `${takeaway}${toneNote}${channelNote}`.trim();
   }
 
-  const channelPhrase = active.length
-    ? active.slice(0, 2).map((r) => `${r.channel} (${Math.round(r.pct)}%)`).join(" and ")
-    : "a narrow set of channels";
+  const hook = uniqueStrings(rows.map((r) => r.hook_analysis), 1)[0];
+  const emotional = dominantField(rows, "emotional_driver");
+  const stage = dominantField(rows, "buyer_stage");
 
-  const themePhrase = themes.length
-    ? themes.slice(0, 2).join(" and ")
-    : "general brand messaging";
+  if (hook || emotional || active.length) {
+    const channelPhrase = active.length
+      ? active.slice(0, 2).map((r) => `${r.channel} (${Math.round(r.pct)}%)`).join(" and ")
+      : "a narrow set of channels";
+    const messageLead = hook
+      ? hook
+      : emotional
+        ? `${brand} is running ${emotional.toLowerCase()}-led creative`
+        : `${brand} has active placements indexed`;
+    const stageNote = stage ? ` at the ${stage} stage` : "";
+    return `${messageLead}${stageNote}, concentrated on ${channelPhrase}.`;
+  }
 
-  const awarenessLed = active.some((r) => r.channel === "YouTube" || r.channel === "Display")
-    && !active.some((r) => r.channel === "Search" || r.channel === "Meta");
+  if (!hasPlacementIntel(war)) {
+    return `${brand} has no indexed placements yet. Run a scan to pick up live ads.`;
+  }
 
-  const strategyNote = awarenessLed
-    ? "Activity appears more awareness-led than direct acquisition."
-    : active.some((r) => r.channel === "Search" || r.channel === "Meta")
-      ? "The mix balances brand reach with demand-capture channels."
-      : "Channel strategy is still forming as more ads are indexed.";
-
-  return (
-    `${brand} is leaning heavily into ${channelPhrase} activity, with messaging focused on ${themePhrase}. ${strategyNote}`
-  );
+  return `${brand} has indexed placements but limited strategist copy on file. Channel mix and product fields below reflect stored rows.`;
 }
 
-export type SayingSection = {
-  themes: string[];
-  offers: string[];
-  ctas: string[];
-  audienceSignals: string[];
-};
-
-export function buildWhatTheyreSaying(war: AdvertiserWarInput | null | undefined): SayingSection {
-  return {
-    themes: extractThemes(war).map(humanizeTheme).slice(0, 8),
-    offers: collectOffers(war),
-    ctas: collectCtas(war),
-    audienceSignals: collectAudienceSignals(war),
-  };
-}
-
-/** Gaps an account director can act on. */
+/** Gaps an account director can act on — channel coverage only. */
 export function buildWhatTheyreMissing(
   brand: string,
-  war: AdvertiserWarInput | null | undefined,
+  war: AdvertiserIntelWar | null | undefined,
 ): string[] {
-  if (!war) return ["Not enough indexed activity to identify gaps yet."];
-
   const gaps: string[] = [];
   const mix = buildAdvertiserChannelMix(war);
   const byChannel = Object.fromEntries(mix.rows.map((r) => [r.channel, r]));
+  const rowCount = placementCount(war);
 
-  if ((byChannel.Search?.pct ?? 0) < 5 && (byChannel.Search?.ads ?? 0) < 5) {
-    gaps.push("Limited Search activity — little visible demand-capture pressure.");
-  }
-  if ((byChannel.Meta?.pct ?? 0) < 10 && (byChannel.Meta?.ads ?? 0) < 8) {
-    gaps.push("Little Meta activity relative to upper-funnel channels.");
-  }
-  if ((byChannel.TikTok?.pct ?? 0) <= 0) {
-    gaps.push("No meaningful TikTok presence in observed placements.");
+  if (!rowCount) {
+    return ["No channel coverage indexed yet — run a scan to map where they are active."];
   }
 
-  const themes = extractThemes(war);
-  if (themes.length <= 2) {
-    gaps.push("Concentrated messaging — few distinct themes across the portfolio.");
+  if ((byChannel.Search?.pct ?? 0) < 5 && (byChannel.Search?.ads ?? 0) < 2) {
+    gaps.push("Limited Search coverage — little visible demand-capture pressure.");
   }
-
-  const fatigueScore = Number(
-    war.creative_fatigue?.portfolioFatigueScore ?? war.creative_fatigue?.score ?? 0,
-  );
-  const fatigued = Number(war.creative_fatigue?.fatigued ?? war.creative_fatigue?.needsRefresh ?? 0);
-  if (fatigueScore >= 50 || fatigued >= 5) {
-    gaps.push("Stale creative rotation — several ads show fatigue or long run times.");
+  if ((byChannel.Meta?.pct ?? 0) < 10 && (byChannel.Meta?.ads ?? 0) < 2) {
+    gaps.push("Low Meta share relative to other indexed channels.");
+  }
+  if ((byChannel.YouTube?.pct ?? 0) <= 0 && (byChannel.YouTube?.ads ?? 0) <= 0) {
+    gaps.push("No YouTube placements in the indexed set.");
+  }
+  if ((byChannel.TikTok?.pct ?? 0) <= 0 && (byChannel.TikTok?.ads ?? 0) <= 0) {
+    gaps.push("No TikTok placements in the indexed set.");
+  }
+  if ((byChannel.Display?.pct ?? 0) < 5 && (byChannel.Display?.ads ?? 0) < 2) {
+    gaps.push("Thin Display coverage across observed placements.");
   }
 
   const topPct = Math.max(...mix.rows.map((r) => r.pct), 0);
-  if (topPct >= 60) {
+  if (topPct >= 65) {
     const dominant = mix.rows.find((r) => r.pct === topPct)?.channel;
-    if (dominant) gaps.push(`Heavy channel concentration on ${dominant} — limited diversification.`);
+    if (dominant) gaps.push(`Heavy concentration on ${dominant} (${Math.round(topPct)}% of indexed placements).`);
   }
 
   if (!gaps.length) {
-    gaps.push(`${brand} is active across multiple channels with varied messaging — gaps are in differentiation, not distribution.`);
+    gaps.push(`${brand} shows breadth across indexed channels — whitespace is in offer and message differentiation, not distribution.`);
   }
 
   return gaps.slice(0, 5);
@@ -388,29 +452,36 @@ export function buildWhatTheyreMissing(
 /** Three concrete advertiser-level recommendations. */
 export function buildAdvertiserRecommendedMoves(
   brand: string,
-  war: AdvertiserWarInput | null | undefined,
+  war: AdvertiserIntelWar | null | undefined,
 ): string[] {
   const mix = buildAdvertiserChannelMix(war);
   const byChannel = Object.fromEntries(mix.rows.map((r) => [r.channel, r]));
-  const themes = extractThemes(war);
-  const openTheme = themes.find((t) => !["trust", "savings"].includes(t.toLowerCase())) ?? "curiosity";
-  const territory = translateTerritory(openTheme);
-
+  const rows = placements(war);
+  const takeaway = uniqueStrings(rows.map((r) => r.strategist_takeaway), 1)[0];
+  const gaps = buildWhatTheyreMissing(brand, war);
   const moves: string[] = [];
 
-  if ((byChannel.Search?.pct ?? 0) < 10) {
-    moves.push(`Test Search capture while ${brand} leans on ${byChannel.Display?.pct ? "Display" : "upper-funnel"} activity — competitors may own demand moments they are not defending.`);
-  } else {
-    moves.push(`Test a smarter-choice campaign territory against ${brand}'s trust-led control creative.`);
+  if (takeaway) {
+    const trimmed = takeaway.split(/[.!?]/)[0]?.trim();
+    if (trimmed) moves.push(`Act on strategist read: ${trimmed}.`);
   }
 
-  if ((byChannel.Meta?.pct ?? 0) < 15) {
-    moves.push("Build one offer-led Meta execution around value, savings, or everyday banking benefits.");
-  } else {
-    moves.push("Build one offer-led execution around value, savings, or everyday banking benefits.");
+  const weakest = ["Search", "Meta", "YouTube", "TikTok", "Display"]
+    .map((channel) => ({ channel, row: byChannel[channel] }))
+    .filter(({ row }) => (row?.ads ?? 0) <= 0)
+  if (weakest.length) {
+    moves.push(`Test ${weakest[0].channel} while ${brand} under-indexes it — ${gaps[0] ?? "competitors may own that channel"}.`);
+  } else if (gaps[0]) {
+    moves.push(`Counter their gap: ${gaps[0].replace(/^Limited |^Low |^No /, "Own ")}`);
   }
 
-  moves.push("Review Meta and Search coverage for key competitors before deciding whether to defend or attack those channels.");
+  const emotional = dominantField(rows, "emotional_driver");
+  const topChannel = mix.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct)[0]?.channel ?? "Meta";
+  if (emotional) {
+    moves.push(`Build a challenger ${emotional.toLowerCase()}-led execution on ${topChannel} with a clearer CTA than their current portfolio.`);
+  } else {
+    moves.push(`Review ${topChannel} and Search coverage for key competitors before deciding whether to defend or attack those channels.`);
+  }
 
   return moves.slice(0, 3);
 }
@@ -418,37 +489,45 @@ export function buildAdvertiserRecommendedMoves(
 /** Bullets for tomorrow's client meeting. */
 export function buildMeetingTalkingPoints(
   brand: string,
-  war: AdvertiserWarInput | null | undefined,
+  war: AdvertiserIntelWar | null | undefined,
 ): string[] {
-  const read = buildCurrentMarketingRead(brand, war);
   const mix = buildAdvertiserChannelMix(war);
-  const spend = buildAdvertiserSpendBand(war);
   const saying = buildWhatTheyreSaying(war);
-  const gaps = buildWhatTheyreMissing(brand, war);
+  const products = buildProductsPromoted(war);
+  const rows = placements(war);
+  const takeaway = uniqueStrings(rows.map((r) => r.strategist_takeaway), 1)[0];
+  const points: string[] = [];
 
   const topChannels = mix.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct).slice(0, 2);
-  const channelNote = topChannels.length
-    ? `${brand} is putting most observed activity into ${topChannels.map((c) => c.channel).join(" and ")}.`
-    : `Channel mix for ${brand} is still thin — treat reads as directional.`;
-
-  const points = [
-    read.split(".")[0] + ".",
-    channelNote,
-  ];
-
-  if (saying.themes.length) {
-    points.push(`Messaging keeps returning to ${saying.themes.slice(0, 2).join(" and ")} — ${brand} is not yet owning a distinctive territory.`);
+  if (topChannels.length) {
+    points.push(
+      `${brand} indexed activity splits ${topChannels.map((c) => `${c.channel} (${Math.round(c.pct)}%)`).join(" and ")}.`,
+    );
   }
 
-  if (spend.label) {
-    points.push(`Directional spend sits in the ${spend.band} band (${spend.label.replace(/ \(.*\)/, "")}) — useful for scale context, not budget sign-off.`);
+  if (products.length) {
+    points.push(`Products in market: ${products.slice(0, 2).join(" · ")}.`);
   }
 
-  if (gaps[0]) {
-    points.push(gaps[0]);
+  if (saying.emotionalDrivers.length) {
+    points.push(`Emotional driver across creatives: ${saying.emotionalDrivers[0]}.`);
   }
 
-  points.push(`Recommended test: ${translateTerritory(extractThemes(war)[0] ?? "curiosity")} with a clear offer and channel-specific execution.`);
+  if (saying.ctas.length) {
+    points.push(`CTA pattern: ${saying.ctas.slice(0, 2).join(" · ")}.`);
+  } else if (saying.offerTypes.length) {
+    points.push(`Offer type in play: ${saying.offerTypes[0]}.`);
+  }
+
+  if (takeaway) {
+    points.push(takeaway.split(/[.!?]/)[0] + ".");
+  } else if (saying.hooks[0]) {
+    points.push(saying.hooks[0]);
+  }
+
+  if (!points.length && hasPlacementIntel(war)) {
+    points.push(`${brand} has ${placementCount(war)} indexed placements — use channel mix and product fields to open the conversation.`);
+  }
 
   return points.slice(0, 5);
 }
