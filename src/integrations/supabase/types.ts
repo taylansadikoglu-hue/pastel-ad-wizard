@@ -280,18 +280,25 @@ export type Database = {
           created_at: string
           cta: string | null
           domain: string
+          enriched_at: string | null
+          enrichment_status: string
           first_seen: string
           funnel_stage: string | null
+          h1: string | null
+          h2s: string[] | null
           id: number
           last_seen: string
+          meta_description: string | null
           offer: string | null
           page_title: string | null
           persona: string | null
           product: string | null
+          raw_snapshot: Json | null
           theme: string | null
           updated_at: string
           url: string
           url_hash: string
+          visible_offers: string[] | null
         }
         Insert: {
           ad_count?: number
@@ -299,18 +306,25 @@ export type Database = {
           created_at?: string
           cta?: string | null
           domain: string
+          enriched_at?: string | null
+          enrichment_status?: string
           first_seen?: string
           funnel_stage?: string | null
+          h1?: string | null
+          h2s?: string[] | null
           id?: number
           last_seen?: string
+          meta_description?: string | null
           offer?: string | null
           page_title?: string | null
           persona?: string | null
           product?: string | null
+          raw_snapshot?: Json | null
           theme?: string | null
           updated_at?: string
           url: string
           url_hash: string
+          visible_offers?: string[] | null
         }
         Update: {
           ad_count?: number
@@ -318,18 +332,25 @@ export type Database = {
           created_at?: string
           cta?: string | null
           domain?: string
+          enriched_at?: string | null
+          enrichment_status?: string
           first_seen?: string
           funnel_stage?: string | null
+          h1?: string | null
+          h2s?: string[] | null
           id?: number
           last_seen?: string
+          meta_description?: string | null
           offer?: string | null
           page_title?: string | null
           persona?: string | null
           product?: string | null
+          raw_snapshot?: Json | null
           theme?: string | null
           updated_at?: string
           url?: string
           url_hash?: string
+          visible_offers?: string[] | null
         }
         Relationships: []
       }
