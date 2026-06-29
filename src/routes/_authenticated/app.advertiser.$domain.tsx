@@ -225,7 +225,7 @@ function normaliseToBadge(ch: unknown): string | null {
   return null;
 }
 
-type WarChannelEntry = { channel?: string; name?: string; ad_count?: number; count?: number; last_seen?: string };
+type WarChannelEntry = { channel?: string; name?: string; ad_count?: number; count?: number; pct?: number; last_seen?: string };
 function warChannelList(war: { channels?: unknown } | null | undefined): WarChannelEntry[] {
   const c = war?.channels;
   if (Array.isArray(c) && c.length && typeof c[0] === "object") return c as WarChannelEntry[];
@@ -774,30 +774,24 @@ function AdvertiserPage() {
 
           {/* B2 — Channel mix */}
           {(() => {
-            const byChannel = (war.spend_weight?.byChannel ?? {}) as Record<string, { percentage?: number; adCount?: number; spend?: number } | number>;
-            // Fallback ad counts from war.channels (object array shape)
             const warList = warChannelList(war);
-            const badgeCounts: Record<string, number> = {};
+            const channelByBadge: Record<string, { pct: number; ads: number }> = {};
             for (const entry of warList) {
               const badge = normaliseToBadge(entry.channel ?? entry.name);
               if (!badge) continue;
-              badgeCounts[badge] = (badgeCounts[badge] ?? 0) + Number(entry.ad_count ?? entry.count ?? 0);
+              const ads = Number(entry.ad_count ?? entry.count ?? 0);
+              const pct = Number(entry.pct ?? 0);
+              const existing = channelByBadge[badge];
+              if (existing) {
+                existing.ads += ads;
+                if (entry.pct != null) existing.pct = pct;
+              } else {
+                channelByBadge[badge] = { pct, ads };
+              }
             }
             const rows = CHANNEL_MIX.map((c) => {
-              // FIX 1: byChannel keys are exact ("YouTube","Display","Search","Meta",
-              // "TikTok","LinkedIn","Programmatic") — match c.label directly.
-              const entry = byChannel[c.label];
-              let pct = 0;
-              let ads = 0;
-              if (entry != null) {
-                if (typeof entry === "number") pct = entry;
-                else {
-                  pct = Number(entry.percentage ?? 0);
-                  ads = Number(entry.adCount ?? 0);
-                }
-              }
-              if (!ads) ads = badgeCounts[c.label] ?? 0;
-              return { ...c, pct, ads };
+              const fromServer = channelByBadge[c.label];
+              return { ...c, pct: fromServer?.pct ?? 0, ads: fromServer?.ads ?? 0 };
             });
             const dominant = rows.find((r) => r.pct > 60);
 
