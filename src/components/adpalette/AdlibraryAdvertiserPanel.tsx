@@ -2,9 +2,10 @@ import type { AdlibraryAdvertiserIntel } from "@/lib/adlibraryCoverage";
 
 type Props = {
   intel: AdlibraryAdvertiserIntel | null;
+  unavailableReason?: string;
 };
 
-export function AdlibraryAdvertiserPanel({ intel }: Props) {
+export function AdlibraryAdvertiserPanel({ intel, unavailableReason }: Props) {
   if (!intel) return null;
 
   if (!intel.available) {
@@ -18,7 +19,9 @@ export function AdlibraryAdvertiserPanel({ intel }: Props) {
             Optional
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">Coverage data unavailable</p>
+        <p className="text-sm text-muted-foreground">
+          {unavailableReason ?? "Coverage data unavailable"}
+        </p>
       </section>
     );
   }

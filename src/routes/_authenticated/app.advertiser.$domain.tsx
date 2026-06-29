@@ -16,6 +16,11 @@ import {
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { SpendIndex, SpendLegend } from "@/components/adpalette/SpendIndex";
 import { displayBrand } from "@/utils/brandDisplay";
+import {
+  domainInWatchlist,
+  getAgencyContext,
+  type AgencyContext,
+} from "@/lib/agency-watchlist";
 import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
 import { normalizeClientDomain } from "@/lib/clientWorkspace";
 import { runMockScan } from "@/lib/mock-scan.functions";
@@ -25,6 +30,7 @@ import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { CampaignIntelligenceBlock } from "@/components/adpalette/CampaignIntelligenceBlock";
 import { CampaignStoryBlock } from "@/components/adpalette/CampaignStoryBlock";
 import { AdvertiserStrategistIntelBlock } from "@/components/adpalette/AdvertiserStrategistIntelBlock";
+import { QueryStatusCard } from "@/components/adpalette/QueryStatusCard";
 import {
   buildAdvertiserChannelMix,
   buildAdvertiserRecommendedMoves,
@@ -59,6 +65,59 @@ import {
 } from "@/lib/advertiserStrategistIntel";
 
 const API_BASE = "https://api.revenuad.com";
+
+const EMPTY_AGENCY_CTX: AgencyContext = { agencyId: null, entries: [], domains: new Set() };
+
+const EMPTY_WAR: AdvertiserIntelWar = { placements: [], recent_ads: [] };
+
+const EMPTY_STRATEGIST_INTEL: AdvertiserStrategistIntel = {
+  available: false,
+  domain: null,
+  strategistSummary: null,
+  marketDna: null,
+  recommendation: null,
+  positioningArchetype: null,
+  funnelFocus: null,
+  dnaSignature: null,
+  strategySummary: null,
+  topProduct: null,
+  topEmotion: null,
+  topCta: null,
+  topBuyerStage: null,
+  topOfferType: null,
+  placements: null,
+  narrativeGap: null,
+  narrativeGapRisk: null,
+};
+
+type SourceStatus = { ok: boolean; reason?: string };
+
+type LoadStatus = {
+  warroom: SourceStatus;
+  placements: SourceStatus;
+  strategist: SourceStatus;
+  adlibrary: SourceStatus;
+  agency: SourceStatus;
+};
+
+function defaultLoadStatus(): LoadStatus {
+  return {
+    warroom: { ok: true },
+    placements: { ok: true },
+    strategist: { ok: true },
+    adlibrary: { ok: true },
+    agency: { ok: true },
+  };
+}
+
+function safeBuild<T>(label: string, fn: () => T, fallback: T): T {
+  try {
+    return fn();
+  } catch (err) {
+    console.warn(`[advertiser page] ${label}`, err);
+    return fallback;
+  }
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -124,7 +183,9 @@ function fmtDate(iso?: string | null): string {
 }
 
 function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/);
+  const trimmed = name.trim();
+  if (!trimmed) return "??";
+  const parts = trimmed.split(/\s+/);
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + (parts[1][0] ?? "")).toUpperCase();
 }
@@ -190,12 +251,20 @@ function AdvertiserPage() {
   const [placementRowCount, setPlacementRowCount] = useState(0);
   const [strategistIntel, setStrategistIntel] = useState<AdvertiserStrategistIntel | null>(null);
   const [adlibraryIntel, setAdlibraryIntel] = useState<AdlibraryAdvertiserIntel | null>(null);
+  const [loadStatus, setLoadStatus] = useState<LoadStatus>(defaultLoadStatus);
   const { activeWorkspace } = useClientWorkspace();
 
   useEffect(() => {
     let alive = true;
-    getAgencyContext().then((ctx) => {
-      if (alive) setAgencyCtx(ctx);
+    void safeOptional("agencyContext", () => getAgencyContext(), EMPTY_AGENCY_CTX).then((ctx) => {
+      if (!alive) return;
+      setAgencyCtx(ctx);
+      if (!ctx.agencyId && ctx.entries.length === 0) {
+        setLoadStatus((prev) => ({
+          ...prev,
+          agency: { ok: false, reason: "Agency watchlist unavailable for this session." },
+        }));
+      }
     });
     return () => { alive = false; };
   }, []);
@@ -217,104 +286,183 @@ function AdvertiserPage() {
     (async () => {
       setLoading(true);
       setNewsLoading(true);
-      const safe = async <T,>(url: string): Promise<T | null> => {
-        try {
-          const r = await fetch(url);
-          if (!r.ok) return null;
-          return (await r.json()) as T;
-        } catch { return null; }
-      };
-      const root = rootSlug(domain);
-      const list = await safe<AdvertiserListItem[] | { advertisers?: AdvertiserListItem[] }>(`${API_BASE}/api/advertisers`);
-      const items: AdvertiserListItem[] = Array.isArray(list) ? list : (list?.advertisers ?? []);
-      const match = items.find((i) => {
-        const n = (i.name ?? i.brand ?? "").toLowerCase();
-        const d = (i.domain ?? "").toLowerCase().replace(/^www\./, "");
-        return d === domain.toLowerCase() || d.startsWith(root) || n === root || n.replace(/\s+/g, "") === root;
-      });
-      const resolved = match?.name ?? match?.brand ?? displayBrand(domain);
-      if (!alive) return;
-      setBrand(resolved);
+      setLoadStatus(defaultLoadStatus());
 
-      const b = encodeURIComponent(resolved);
-      let w = await safe<War & { news?: News["articles"] | News }>(
-        `${API_BASE}/api/advertisers/${b}/warroom`
-      );
-      if (!w) {
-        w = await safe<War & { news?: News["articles"] | News }>(
-          `${API_BASE}/api/advertisers/${encodeURIComponent(domain)}/warroom`
+      const status = defaultLoadStatus();
+      const resolvedBrand = displayBrand(domain);
+
+      try {
+        const safe = async <T,>(url: string): Promise<T | null> => {
+          try {
+            const r = await fetch(url);
+            if (!r.ok) return null;
+            return (await r.json()) as T;
+          } catch {
+            return null;
+          }
+        };
+
+        const root = rootSlug(domain);
+        const list = await safeOptional(
+          "advertiserList",
+          () => safe<AdvertiserListItem[] | { advertisers?: AdvertiserListItem[] }>(`${API_BASE}/api/advertisers`),
+          null,
         );
+        const items: AdvertiserListItem[] = Array.isArray(list) ? list : (list?.advertisers ?? []);
+        const match = items.find((i) => {
+          const n = (i.name ?? i.brand ?? "").toLowerCase();
+          const d = (i.domain ?? "").toLowerCase().replace(/^www\./, "");
+          return d === domain.toLowerCase() || d.startsWith(root) || n === root || n.replace(/\s+/g, "") === root;
+        });
+        const resolved = match?.name ?? match?.brand ?? resolvedBrand;
+        if (!alive) return;
+        setBrand(resolved);
+
+        const b = encodeURIComponent(resolved);
+        let w = await safeOptional(
+          "warroomByBrand",
+          () => safe<War & { news?: News["articles"] | News }>(`${API_BASE}/api/advertisers/${b}/warroom`),
+          null,
+        );
+        if (!w) {
+          w = await safeOptional(
+            "warroomByDomain",
+            () => safe<War & { news?: News["articles"] | News }>(`${API_BASE}/api/advertisers/${encodeURIComponent(domain)}/warroom`),
+            null,
+          );
+        }
+
+        status.warroom = {
+          ok: Boolean(w),
+          reason: w ? undefined : "Engine warroom API did not return data for this advertiser.",
+        };
+
+        const placementFetch = await safeOptional(
+          "placements",
+          () => fetchAdvertiserPlacements(supabase, domain, 100),
+          { rows: [], source: "none" as const, error: null },
+        );
+        status.placements = {
+          ok: placementFetch.rows.length > 0,
+          reason:
+            placementFetch.error
+            ?? (placementFetch.rows.length === 0
+              ? "No placement rows returned from Supabase for this domain."
+              : undefined),
+        };
+
+        const strategistFetch = await safeOptional(
+          "advertiserStrategistIntel",
+          () => fetchAdvertiserStrategistIntel(supabase, domain),
+          EMPTY_STRATEGIST_INTEL,
+        );
+        status.strategist = {
+          ok: strategistFetch.available,
+          reason: strategistFetch.available
+            ? undefined
+            : "Strategist intelligence tables unavailable or empty for this advertiser.",
+        };
+
+        const adlibraryFetch = await safeOptional(
+          "adlibraryAdvertiserIntel",
+          () => fetchAdlibraryAdvertiserIntel(supabase, domain, resolved),
+          EMPTY_ADVERTISER_INTEL,
+        );
+        status.adlibrary = {
+          ok: adlibraryFetch.available,
+          reason: adlibraryFetch.available
+            ? undefined
+            : "AdLibrary coverage data unavailable.",
+        };
+
+        const merged = mergeAdvertiserIntel(w, placementFetch.rows, resolved, domain) ?? {
+          ...EMPTY_WAR,
+          advertiser: resolved,
+          name: resolved,
+          domain,
+        };
+
+        if (!alive) return;
+
+        setPlacementRowCount(placementFetch.rows.length);
+        setStrategistIntel(strategistFetch);
+        setAdlibraryIntel(adlibraryFetch);
+        setWar(merged);
+        setLoadStatus(status);
+        setSpend(null);
+        setChannels(null);
+        const newsField = (w as { news?: unknown } | null)?.news;
+        const newsValue: News | null = Array.isArray(newsField)
+          ? ({ articles: newsField } as News)
+          : (newsField as News | undefined) ?? null;
+        setNews(newsValue);
+        if (w?.advertiser) setBrand(displayBrand(w.advertiser));
+      } catch (err) {
+        console.error("[advertiser page] load failed:", err);
+        if (!alive) return;
+        setWar({
+          ...EMPTY_WAR,
+          advertiser: resolvedBrand,
+          name: resolvedBrand,
+          domain,
+        });
+        setStrategistIntel(EMPTY_STRATEGIST_INTEL);
+        setAdlibraryIntel(EMPTY_ADVERTISER_INTEL);
+        setLoadStatus({
+          warroom: { ok: false, reason: "Advertiser intelligence bundle failed to load." },
+          placements: {
+            ok: false,
+            reason: err instanceof Error ? err.message : "Unexpected error while loading advertiser data.",
+          },
+          strategist: { ok: false, reason: "Strategist intelligence could not be loaded." },
+          adlibrary: { ok: false, reason: "AdLibrary coverage could not be loaded." },
+          agency: { ok: true },
+        });
+      } finally {
+        if (alive) {
+          setLoading(false);
+          setNewsLoading(false);
+        }
       }
-
-      const placementFetch = await fetchAdvertiserPlacements(supabase, domain, 100);
-      const strategistFetch = await safeOptional(
-        "advertiserStrategistIntel",
-        () => fetchAdvertiserStrategistIntel(supabase, domain),
-        { available: false, domain: null, strategistSummary: null, marketDna: null, recommendation: null, positioningArchetype: null, funnelFocus: null, dnaSignature: null, strategySummary: null, topProduct: null, topEmotion: null, topCta: null, topBuyerStage: null, topOfferType: null, placements: null, narrativeGap: null, narrativeGapRisk: null },
-      );
-      const adlibraryFetch = await safeOptional(
-        "adlibraryAdvertiserIntel",
-        () => fetchAdlibraryAdvertiserIntel(supabase, domain, resolved),
-        EMPTY_ADVERTISER_INTEL,
-      );
-      const merged = mergeAdvertiserIntel(w, placementFetch.rows, resolved, domain);
-
-      if (!alive) return;
-      setPlacementRowCount(placementFetch.rows.length);
-      setStrategistIntel(strategistFetch);
-      setAdlibraryIntel(adlibraryFetch);
-      setWar(merged as War | null);
-      setSpend(null);
-      setChannels(null);
-      const newsField = (w as { news?: unknown } | null)?.news;
-      const newsValue: News | null = Array.isArray(newsField)
-        ? ({ articles: newsField } as News)
-        : (newsField as News | undefined) ?? null;
-      setNews(newsValue);
-      if (w?.advertiser) setBrand(displayBrand(w.advertiser));
-      setLoading(false);
-      setNewsLoading(false);
     })();
     return () => { alive = false; };
   }, [domain]);
 
   const placementIntelUnavailable = placementRowCount === 0;
+  const intelWar = war ?? EMPTY_WAR;
 
-  const advertiserBrief = useMemo(() => {
-    if (!war) return null;
-    return {
-      marketingRead: buildCurrentMarketingRead(brand, war),
-      channelMix: buildAdvertiserChannelMix(war),
-      spend: buildAdvertiserSpendBand(war),
-      products: buildProductsPromoted(war),
-      audiences: buildAudiencesPersonas(war),
-      saying: buildWhatTheyreSaying(war),
-      missing: buildWhatTheyreMissing(brand, war),
-      moves: buildAdvertiserRecommendedMoves(brand, war, strategistIntel),
-      talkingPoints: buildMeetingTalkingPoints(brand, war, strategistIntel),
-    };
-  }, [war, brand, strategistIntel]);
+  const advertiserBrief = useMemo(() => safeBuild("advertiserBrief", () => ({
+    marketingRead: buildCurrentMarketingRead(brand, intelWar),
+    channelMix: buildAdvertiserChannelMix(intelWar),
+    spend: buildAdvertiserSpendBand(intelWar),
+    products: buildProductsPromoted(intelWar),
+    audiences: buildAudiencesPersonas(intelWar),
+    saying: buildWhatTheyreSaying(intelWar),
+    missing: buildWhatTheyreMissing(brand, intelWar),
+    moves: buildAdvertiserRecommendedMoves(brand, intelWar, strategistIntel),
+    talkingPoints: buildMeetingTalkingPoints(brand, intelWar, strategistIntel),
+  }), null), [intelWar, brand, strategistIntel]);
 
-  const campaignIntel = useMemo(() => {
-    if (!war) return null;
-    return buildCampaignIntelligence(brand, war);
-  }, [war, brand]);
+  const campaignIntel = useMemo(
+    () => safeBuild("campaignIntel", () => buildCampaignIntelligence(brand, intelWar), null),
+    [intelWar, brand],
+  );
 
-  const campaignStory = useMemo(() => {
-    if (!war) return null;
-    return buildCampaignStory(brand, war, strategistIntel);
-  }, [war, brand, strategistIntel]);
+  const campaignStory = useMemo(
+    () => safeBuild("campaignStory", () => buildCampaignStory(brand, intelWar, strategistIntel), null),
+    [intelWar, brand, strategistIntel],
+  );
 
-  const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
-  void (war?.total_sightings ?? 0);
-  const adsThisWeek = war?.ads_this_week ?? 0;
+  const totalAds = intelWar.total_ads ?? intelWar.recent_ads?.length ?? 0;
+  void (intelWar.total_sightings ?? 0);
+  const adsThisWeek = intelWar.ads_this_week ?? 0;
   const daysRunning = useMemo(() => {
-    if (!war?.first_seen) return 0;
-    const diff = Date.now() - new Date(war.first_seen).getTime();
+    if (!intelWar.first_seen) return 0;
+    const diff = Date.now() - new Date(intelWar.first_seen).getTime();
     return Math.max(1, Math.floor(diff / 86_400_000));
-  }, [war?.first_seen]);
+  }, [intelWar.first_seen]);
 
-  const firstAd = war?.placements?.[0] ?? war?.recent_ads?.[0];
+  const firstAd = intelWar.placements?.[0] ?? intelWar.recent_ads?.[0];
   const sentimentRaw = firstAd?.emotional_driver ?? "";
   const sentimentColor =
     /security|trust|positive/i.test(sentimentRaw) ? "#2D7D46"
@@ -323,7 +471,7 @@ function AdvertiserPage() {
 
   // Creative analysis from placement intel columns
   const creativeAnalysis = useMemo(() => {
-    const ads = war?.placements ?? war?.recent_ads ?? [];
+    const ads = intelWar.placements ?? intelWar.recent_ads ?? [];
     const emotions = new Map<string, number>();
     const stages = new Map<string, number>();
     const offerTypes = new Map<string, number>();
@@ -348,22 +496,22 @@ function AdvertiserPage() {
       offerType: topOfferType,
       hook,
     };
-  }, [war?.placements, war?.recent_ads]);
+  }, [intelWar.placements, intelWar.recent_ads]);
 
   // Channel filter for recent ads — uses ad.channel_platform per spec.
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const filteredAds = useMemo(() => {
-    const ads = war?.placements ?? war?.recent_ads ?? [];
+    const ads = intelWar.placements ?? intelWar.recent_ads ?? [];
     if (channelFilter === "all") return ads;
     const aliases = CHANNEL_TAB_MAP[channelFilter] ?? [];
     return ads.filter((ad) => {
       const platform = String(ad.channel_platform ?? ad.channel ?? "").toLowerCase();
       return aliases.some((v) => platform.includes(v.toLowerCase()));
     });
-  }, [war?.placements, war?.recent_ads, channelFilter]);
+  }, [intelWar.placements, intelWar.recent_ads, channelFilter]);
 
-  const category = war?.category ?? war?.industry ?? "—";
-  const updatedAgo = formatTimeAgo(war?.last_seen ?? null);
+  const category = intelWar.category ?? intelWar.industry ?? "—";
+  const updatedAgo = formatTimeAgo(intelWar.last_seen ?? null);
 
   const handleExport = async () => {
     setExporting(true);
@@ -428,47 +576,6 @@ function AdvertiserPage() {
     );
   }
 
-  if (!war || !hasPlacementIntel(war)) {
-    return (
-      <WorkspaceShell title={brand} subtitle={`Ad library · ${brand}`}>
-        <Link
-          to="/app/advertisers"
-          style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#6B6B62", marginBottom: 16, textDecoration: "none" }}
-        >
-          <ArrowLeft size={14} /> Back to Ad Library
-        </Link>
-        <div style={emptyCard}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "#1C1C1A", marginBottom: 6 }}>No ads indexed yet</div>
-          <p style={{ marginBottom: 16 }}>
-            We haven&apos;t picked up live ads for {brand} yet. Run a scan to index their placements and unlock channel mix, messaging, and recommendations.
-          </p>
-          <button
-            onClick={handleRunScan}
-            disabled={scanning}
-            style={{
-              display: "block",
-              margin: "20px auto 0",
-              background: "#C9963A",
-              color: "#FFFFFF",
-              border: "none",
-              borderRadius: 7,
-              padding: "10px 24px",
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: scanning ? "not-allowed" : "pointer",
-              opacity: scanning ? 0.7 : 1,
-            }}
-          >
-            {scanning ? "Running scan…" : "Run Scan"}
-          </button>
-          {scanError && (
-            <div style={{ color: "#C0392B", fontSize: 12, marginTop: 12 }}>{scanError}</div>
-          )}
-        </div>
-      </WorkspaceShell>
-    );
-  }
-
   return (
     <WorkspaceShell title={brand} subtitle={`Ad library · ${brand}`}>
       <style>{`@keyframes radPulse { 0%,100%{opacity:0.3} 50%{opacity:1} }`}</style>
@@ -479,7 +586,31 @@ function AdvertiserPage() {
         <ArrowLeft size={14} /> Back to Ad Library
       </Link>
 
-      {totalAds < 5 && (
+      {!loadStatus.warroom.ok && loadStatus.warroom.reason ? (
+        <QueryStatusCard title="Engine warroom" reason={loadStatus.warroom.reason} />
+      ) : null}
+
+      {!loadStatus.placements.ok && loadStatus.placements.reason ? (
+        <QueryStatusCard
+          title="Placement intelligence"
+          reason={loadStatus.placements.reason}
+          action={{ label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }}
+        />
+      ) : null}
+
+      {scanError ? (
+        <QueryStatusCard title="Scan failed" reason={scanError} />
+      ) : null}
+
+      {!hasPlacementIntel(intelWar) && loadStatus.placements.ok ? (
+        <QueryStatusCard
+          title="No ads indexed yet"
+          reason={`We haven't picked up live ads for ${brand} yet. Run a scan to index placements and unlock channel mix, messaging, and recommendations.`}
+          action={{ label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }}
+        />
+      ) : null}
+
+      {totalAds < 5 && hasPlacementIntel(intelWar) && (
         <div
           style={{
             background: "#FDF6E8",
@@ -573,10 +704,14 @@ function AdvertiserPage() {
             brand={brand}
             loading={loading}
             intel={strategistIntel}
+            unavailableReason={loadStatus.strategist.ok ? undefined : loadStatus.strategist.reason}
           />
-          <AdlibraryAdvertiserPanel intel={adlibraryIntel} />
+          <AdlibraryAdvertiserPanel
+            intel={adlibraryIntel}
+            unavailableReason={loadStatus.adlibrary.ok ? undefined : loadStatus.adlibrary.reason}
+          />
 
-          {advertiserBrief && (
+          {advertiserBrief ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div
                 style={{
@@ -744,6 +879,12 @@ function AdvertiserPage() {
                 </ul>
               </InsightSection>
             </div>
+          ) : (
+            <QueryStatusCard
+              title="Supporting evidence"
+              reason="Advertiser brief could not be built from the current placement and warroom data."
+              optional
+            />
           )}
 
           <CampaignIntelligenceBlock
@@ -765,14 +906,14 @@ function AdvertiserPage() {
               trend={adsThisWeek > 0 ? `↑ ${adsThisWeek} this week` : null}
             />
             <MetricCard
-              value={fmtReach(Number(war.reach_frequency?.totalUniqueReach ?? 0))}
+              value={fmtReach(Number(intelWar.reach_frequency?.totalUniqueReach ?? 0))}
               label="Est. reach"
               trend="Unique Australians · est."
             />
             <MetricCard
               value={
-                war.reach_frequency?.avgFrequency != null && Number(war.reach_frequency.avgFrequency) > 0
-                  ? Number(war.reach_frequency.avgFrequency).toFixed(1) + "x"
+                intelWar.reach_frequency?.avgFrequency != null && Number(intelWar.reach_frequency.avgFrequency) > 0
+                  ? Number(intelWar.reach_frequency.avgFrequency).toFixed(1) + "x"
                   : "—"
               }
               label="Avg. frequency"
@@ -780,21 +921,21 @@ function AdvertiserPage() {
             />
             <div style={{ ...metricCardStyle, alignItems: "flex-start", padding: 18 }}>
               <SpendIndex
-                level={typeof war.spend_signal === "number" && war.spend_signal > 0 ? war.spend_signal : undefined}
+                level={typeof intelWar.spend_signal === "number" && intelWar.spend_signal > 0 ? intelWar.spend_signal : undefined}
                 spend={spend?.estimated_monthly_spend ?? 0}
               />
             </div>
             <MetricCard
               value={daysRunning.toLocaleString()}
               label="Days running"
-              trend={war.first_seen ? `Since ${fmtDate(war.first_seen)}` : null}
+              trend={intelWar.first_seen ? `Since ${fmtDate(intelWar.first_seen)}` : null}
             />
           </div>
           <SpendLegend />
 
           {/* B3 — Creative health (fatigue) */}
           {(() => {
-            const cf = war.creative_fatigue ?? {};
+            const cf = intelWar.creative_fatigue ?? {};
             const score = Math.max(0, Math.min(100, Number(cf.score ?? 0)));
             const tier = score <= 30 ? "fresh" : score <= 60 ? "maturing" : "fatigued";
             const tierColour = tier === "fresh" ? "#2D7D46" : tier === "maturing" ? "#C9963A" : "#C0392B";

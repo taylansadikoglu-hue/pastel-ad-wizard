@@ -4,6 +4,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { safeQuery } from "@/lib/safeQuery";
 
 function rootSlug(domain: string): string {
   return domain.toLowerCase().replace(/^www\./, "").split(".")[0] ?? domain;
@@ -63,31 +64,40 @@ export async function fetchAdvertiserStrategistIntel(
     narrativeGapRisk: null,
   };
 
+  try {
   const filter = domainOrFilter(domain);
 
   const [snapshotRes, dnaRes, recRes, profileRes, gapRes] = await Promise.all([
-    supabase.from("advertiser_strategy_snapshot").select("*").or(filter).limit(1).maybeSingle(),
-    supabase.from("advertiser_market_dna_summary").select("*").or(filter).limit(1).maybeSingle(),
-    supabase.from("advertiser_recommendations").select("*").or(filter).limit(1).maybeSingle(),
-    supabase.from("advertiser_strategy_profile").select("*").or(filter).limit(1).maybeSingle(),
-    supabase.from("ra_narrative_gap").select("*").or(`brand.ilike.%${rootSlug(domain)}%,brand.ilike.%${normaliseDomain(domain)}%`).limit(1).maybeSingle(),
+    safeQuery("advertiser_strategy_snapshot", () =>
+      supabase.from("advertiser_strategy_snapshot").select("*").or(filter).limit(1).maybeSingle(),
+    ),
+    safeQuery("advertiser_market_dna_summary", () =>
+      supabase.from("advertiser_market_dna_summary").select("*").or(filter).limit(1).maybeSingle(),
+    ),
+    safeQuery("advertiser_recommendations", () =>
+      supabase.from("advertiser_recommendations").select("*").or(filter).limit(1).maybeSingle(),
+    ),
+    safeQuery("advertiser_strategy_profile", () =>
+      supabase.from("advertiser_strategy_profile").select("*").or(filter).limit(1).maybeSingle(),
+    ),
+    safeQuery("ra_narrative_gap", () =>
+      supabase
+        .from("ra_narrative_gap")
+        .select("*")
+        .or(`brand.ilike.%${rootSlug(domain)}%,brand.ilike.%${normaliseDomain(domain)}%`)
+        .limit(1)
+        .maybeSingle(),
+    ),
   ]);
 
-  for (const res of [snapshotRes, dnaRes, recRes, profileRes, gapRes]) {
-    if (res.error) {
-      console.warn("[advertiser strategist intel] fetch failed:", res.error.message, { domain });
-    }
-  }
+  const snapshot = snapshotRes.data && !Array.isArray(snapshotRes.data) ? snapshotRes.data : null;
+  const dna = dnaRes.data && !Array.isArray(dnaRes.data) ? dnaRes.data : null;
+  const rec = recRes.data && !Array.isArray(recRes.data) ? recRes.data : null;
+  const profile = profileRes.data && !Array.isArray(profileRes.data) ? profileRes.data : null;
+  const narrativeGap = gapRes.data && !Array.isArray(gapRes.data) ? gapRes.data : null;
 
-  const snapshot = snapshotRes.data;
-  const dna = dnaRes.data;
-  const rec = recRes.data;
-  const profile = profileRes.data;
-
-  const hasAny = Boolean(snapshot || dna || rec || profile || gapRes.data);
+  const hasAny = Boolean(snapshot || dna || rec || profile || narrativeGap);
   if (!hasAny) return empty;
-
-  const narrativeGap = gapRes.data;
 
   return {
     available: true,
@@ -108,4 +118,8 @@ export async function fetchAdvertiserStrategistIntel(
     narrativeGap: narrativeGap?.narrative_gap_summary?.trim() || null,
     narrativeGapRisk: narrativeGap?.gap_risk?.trim() || null,
   };
+  } catch (err) {
+    console.warn("[advertiser strategist intel] fetch failed:", err, { domain });
+    return empty;
+  }
 }

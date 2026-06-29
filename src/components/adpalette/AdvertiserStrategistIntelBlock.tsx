@@ -4,6 +4,7 @@ type Props = {
   brand: string;
   loading: boolean;
   intel: AdvertiserStrategistIntel | null;
+  unavailableReason?: string;
 };
 
 const card: React.CSSProperties = {
@@ -32,7 +33,7 @@ const chip: React.CSSProperties = {
   padding: "6px 10px",
 };
 
-export function AdvertiserStrategistIntelBlock({ brand, loading, intel }: Props) {
+export function AdvertiserStrategistIntelBlock({ brand, loading, intel, unavailableReason }: Props) {
   if (loading) {
     return (
       <div style={{ ...card, borderLeft: "4px solid #1C1C1A" }}>
@@ -42,7 +43,17 @@ export function AdvertiserStrategistIntelBlock({ brand, loading, intel }: Props)
     );
   }
 
-  if (!intel?.available) return null;
+  if (!intel?.available) {
+    if (!unavailableReason) return null;
+    return (
+      <div style={{ ...card, borderLeft: "4px solid #9E9D94" }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#1C1C1A", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
+          Strategist intelligence
+        </div>
+        <p style={{ fontSize: 14, color: "#9E9D94", margin: 0, lineHeight: 1.55 }}>{unavailableReason}</p>
+      </div>
+    );
+  }
 
   const chips = [
     intel.positioningArchetype && { k: "Archetype", v: intel.positioningArchetype },
