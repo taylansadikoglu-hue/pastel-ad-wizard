@@ -22,7 +22,7 @@ import {
   radTemperatureLine,
 } from "@/lib/radReportVoice";
 import { displayBrand } from "@/utils/brandDisplay";
-import type { DataModuleId, PanelFocus } from "./strategist/data-module-types";
+import type { DataModuleId } from "@/components/adpalette/strategist/data-module-types";
 
 const LINEN_CARD: React.CSSProperties = {
   background: "#FFFFFF",

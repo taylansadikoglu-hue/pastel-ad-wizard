@@ -20,6 +20,7 @@ import { buildMarketChannelMix } from "@/lib/channelMix";
 import { fetchAdlibraryCoverage, EMPTY_COVERAGE, type AdlibraryCoverage } from "@/lib/adlibraryCoverage";
 import { safeOptional } from "@/lib/safeQuery";
 import { useDemoAccount } from "@/contexts/DemoAccountContext";
+import { withTimeout } from "@/lib/withTimeout";
 import { fetchMarketStrategistIntel, type MarketStrategistIntel } from "@/lib/marketStrategistIntel";
 import {
   buildProductThemes,
@@ -27,7 +28,6 @@ import {
 } from "@/lib/marketCampaignThemes";
 import { radChannelInsight } from "@/lib/radReportVoice";
 import {
-  buildOpenAngleCopy,
   buildRecommendedMoves,
   isThemeAllowed,
   translateTerritory,
@@ -85,9 +85,11 @@ function categoryMatches(workspaceCategory: string, rowCategory: string | null |
   return row.includes(wsRoot) || ws.includes(row.split(/\s+/)[0] ?? row);
 }
 
+const EMPTY_AGENCY: AgencyContext = { agencyId: null, entries: [], domains: new Set() };
+
 export function StrategistDashboard() {
   const { activeWorkspace, loading: workspaceLoading } = useClientWorkspace();
-  const { canExport } = useDemoAccount();
+  const { canExport, loading: demoLoading } = useDemoAccount();
   const [brief, setBrief] = useState<Brief | null>(null);
   const [threats, setThreats] = useState<Threat[]>([]);
   const [challengers, setChallengers] = useState<Challenger[]>([]);
@@ -112,7 +114,7 @@ export function StrategistDashboard() {
   }, [intelBundle, agencyCtx]);
 
   useEffect(() => {
-    if (workspaceLoading) return;
+    if (workspaceLoading || demoLoading) return;
     if (!activeWorkspace) {
       setLoading(false);
       return;
@@ -121,52 +123,99 @@ export function StrategistDashboard() {
     let alive = true;
     (async () => {
       setLoading(true);
+      const workspace = activeWorkspace;
       try {
-        const ctx = await getAgencyContext();
-        const bundle = await loadStrategistIntelligence(ctx, activeWorkspace);
-        const deepIntel = await safeOptional(
-          "marketStrategistIntel",
-          () => fetchMarketStrategistIntel(supabase, activeWorkspace),
-          { available: false, executivePack: null, competitiveGap: null, dashboardHero: null, territories: [], risks: [], meetingPrep: [], dailyChanges: [], positioningMap: [], evidencePack: [], strategicActions: [] },
-        );
-        const coverage = await safeOptional("adlibraryCoverage", () => fetchAdlibraryCoverage(supabase), EMPTY_COVERAGE);
+        await withTimeout(
+          (async () => {
+            const ctx = await withTimeout(
+              getAgencyContext(),
+              8_000,
+              EMPTY_AGENCY,
+              "getAgencyContext",
+            );
+            const bundle = await loadStrategistIntelligence(ctx, workspace);
+            const deepIntel = await safeOptional(
+              "marketStrategistIntel",
+              () =>
+                withTimeout(
+                  fetchMarketStrategistIntel(supabase, workspace),
+                  8_000,
+                  {
+                    available: false,
+                    executivePack: null,
+                    competitiveGap: null,
+                    dashboardHero: null,
+                    territories: [],
+                    risks: [],
+                    meetingPrep: [],
+                    dailyChanges: [],
+                    positioningMap: [],
+                    evidencePack: [],
+                    strategicActions: [],
+                  },
+                  "fetchMarketStrategistIntel",
+                ),
+              {
+                available: false,
+                executivePack: null,
+                competitiveGap: null,
+                dashboardHero: null,
+                territories: [],
+                risks: [],
+                meetingPrep: [],
+                dailyChanges: [],
+                positioningMap: [],
+                evidencePack: [],
+                strategicActions: [],
+              },
+            );
+            const coverage = await safeOptional(
+              "adlibraryCoverage",
+              () => withTimeout(fetchAdlibraryCoverage(supabase), 6_000, EMPTY_COVERAGE, "adlibraryCoverage"),
+              EMPTY_COVERAGE,
+            );
 
-        if (!alive) return;
+            if (!alive) return;
 
-        setAgencyCtx(ctx);
-        setIntelBundle(bundle);
-        setMarketIntel(deepIntel);
-        setAdlibraryCoverage(coverage);
+            setAgencyCtx(ctx);
+            setIntelBundle(bundle);
+            setMarketIntel(deepIntel);
+            setAdlibraryCoverage(coverage);
 
-        const normalizedBrief = normalizeRadBrief(bundle.brief.data as Record<string, unknown> | null, null) as Brief | null;
-        setBrief(
-          normalizedBrief ?? {
-            client_name: activeWorkspace.client_name,
-            category: activeWorkspace.category,
-            headline: `${activeWorkspace.category} market intel`,
-            recommended_action: null,
-            strongest_threat: null,
-            whitespace_emotion: null,
-          },
-        );
-        setThreats((bundle.threats.data ?? []) as Threat[]);
-        setChallengers((bundle.challengers.data ?? []) as Challenger[]);
-        setWhitespace((bundle.whitespace.data ?? []) as Whitespace[]);
-        setMomentum((bundle.momentum.data ?? []) as Momentum[]);
-        setExec((bundle.executive.data ?? null) as Exec | null);
-        setConfidence(
-          normalizeRadConfidence(
-            bundle.pulse.data as Record<string, unknown> | null,
-            bundle.confidence.data as Record<string, unknown> | null,
-          ) as { ads_analysed: number | null; brands_tracked: number | null } | null,
+            const normalizedBrief = normalizeRadBrief(bundle.brief.data as Record<string, unknown> | null, null) as Brief | null;
+            setBrief(
+              normalizedBrief ?? {
+                client_name: workspace.client_name,
+                category: workspace.category,
+                headline: `${workspace.category} market intel`,
+                recommended_action: null,
+                strongest_threat: null,
+                whitespace_emotion: null,
+              },
+            );
+            setThreats((bundle.threats.data ?? []) as Threat[]);
+            setChallengers((bundle.challengers.data ?? []) as Challenger[]);
+            setWhitespace((bundle.whitespace.data ?? []) as Whitespace[]);
+            setMomentum((bundle.momentum.data ?? []) as Momentum[]);
+            setExec((bundle.executive.data ?? null) as Exec | null);
+            setConfidence(
+              normalizeRadConfidence(
+                bundle.pulse.data as Record<string, unknown> | null,
+                bundle.confidence.data as Record<string, unknown> | null,
+              ) as { ads_analysed: number | null; brands_tracked: number | null } | null,
+            );
+          })(),
+          18_000,
+          undefined,
+          "market-intel-load",
         );
       } catch (err) {
         console.error("[Market Intel] required load failed:", err);
-        if (active) {
+        if (alive) {
           setBrief({
-            client_name: activeWorkspace.client_name,
-            category: activeWorkspace.category,
-            headline: `${activeWorkspace.category} market intel`,
+            client_name: workspace.client_name,
+            category: workspace.category,
+            headline: `${workspace.category} market intel`,
             recommended_action: null,
             strongest_threat: null,
             whitespace_emotion: null,
@@ -175,13 +224,28 @@ export function StrategistDashboard() {
           setAdlibraryCoverage(EMPTY_COVERAGE);
         }
       } finally {
-        if (active) setLoading(false);
+        if (alive) {
+          setBrief((prev) =>
+            prev ??
+            (workspace
+              ? {
+                  client_name: workspace.client_name,
+                  category: workspace.category,
+                  headline: `${workspace.category} market intel`,
+                  recommended_action: null,
+                  strongest_threat: null,
+                  whitespace_emotion: null,
+                }
+              : null),
+          );
+          setLoading(false);
+        }
       }
     })();
     return () => {
       alive = false;
     };
-  }, [activeWorkspace, workspaceLoading]);
+  }, [activeWorkspace, workspaceLoading, demoLoading]);
 
   const category = activeWorkspace?.category ?? brief?.category ?? "Banking";
   const clientName = activeWorkspace?.client_name ?? brief?.client_name ?? "Your client";
@@ -276,7 +340,7 @@ export function StrategistDashboard() {
     intelBundle,
   };
 
-  if (workspaceLoading || loading) {
+  if (workspaceLoading || demoLoading || loading) {
     return (
       <WorkspaceShell title="Market Intel" subtitle="Loading your R-AD report…">
         <div className="card-flat p-12 text-center text-sm text-muted-foreground">Pulling signal for your watchlist…</div>

@@ -41,6 +41,23 @@ const CATEGORY_OPTIONS = [
 
 export { CATEGORY_OPTIONS };
 
+/** Offline fallback when demo user cannot read client_workspaces via RLS. */
+export const COMM_BANK_FALLBACK_WORKSPACE: ClientWorkspace = {
+  id: 1,
+  agency_id: null,
+  client_name: "CommBank",
+  client_domain: "commbank.com.au",
+  category: "Banking",
+  competitor_domains: ["nab.com.au", "anz.com.au", "westpac.com.au", "ing.com.au"],
+  audience: null,
+  tone: null,
+  objective: null,
+  excluded_channels: [],
+  status: "active",
+  created_at: "",
+  updated_at: "",
+};
+
 export function normalizeClientDomain(domain: string): string {
   return domain
     .trim()
