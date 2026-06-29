@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "mock-scan": "node scripts/mock-scan-success.js"
+    "mock-scan": "node scripts/mock-scan-success.js",
+    "meta-daily-ingest": "node scripts/lib/meta-daily-ingestion.js",
+    "daily-scheduler": "tsx scripts/daily-scheduler.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -90,6 +92,7 @@
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
     "prettier": "^3.7.3",
+    "tsx": "^4.22.4",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"

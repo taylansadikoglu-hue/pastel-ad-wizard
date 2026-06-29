@@ -11,7 +11,7 @@ export {
   tagsFromRow,
   tagsToRowPatch,
 } from "./openai-tag";
-export { tagAndStoreDestination } from "./tag-destination";
+export { tagAndStoreDestination, isDestinationUrlTagged } from "./tag-destination";
 export { upsertAdvertiserDestination } from "./upsert";
 export {
   destinationHost,

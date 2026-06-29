@@ -100,6 +100,16 @@ async function findCachedTagsByUrl(
   return { tags, row: data };
 }
 
+export async function isDestinationUrlTagged(
+  supabase: SupabaseClient,
+  url: string,
+): Promise<boolean> {
+  const normalized = normalizeDestinationUrl(url);
+  if (!normalized) return false;
+  const cached = await findCachedTagsByUrl(supabase, destinationUrlHash(normalized));
+  return Boolean(cached);
+}
+
 async function findAdvertiserRow(
   supabase: SupabaseClient,
   advertiser: string,
