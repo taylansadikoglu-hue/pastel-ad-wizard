@@ -42,7 +42,7 @@ export type HardDataContext = {
 
 function scopedBrands(ctx: HardDataContext): string[] {
   if (!ctx.workspace) return [];
-  return [ctx.workspace.client_name, ...ctx.workspace.competitor_domains.map((d) => d.replace(/^www\./, ""))];
+  return [ctx.workspace.client_name, ...ctx.workspace.competitor_domains];
 }
 
 function bundleTs(ctx: HardDataContext, key: keyof StrategistIntelBundle): string | null {
@@ -51,17 +51,11 @@ function bundleTs(ctx: HardDataContext, key: keyof StrategistIntelBundle): strin
   return res.metadata?.timestamp ?? null;
 }
 
-function bundleSource(ctx: HardDataContext, key: keyof StrategistIntelBundle): string | null {
-  const res = ctx.intelBundle?.[key];
-  if (!res || !("metadata" in res)) return null;
-  return res.metadata?.source ?? null;
-}
-
 function dateRangeLabel(ctx: HardDataContext): string {
   const brief = ctx.intelBundle?.brief.data as Record<string, unknown> | null;
   const days = brief?.days ?? (ctx.intelBundle as { query?: { days?: number } } | null)?.query?.days;
   if (typeof days === "number" && days > 0) return `Last ${days} days`;
-  return "Last 30 days (engine default)";
+  return "Last 30 days";
 }
 
 function classifyBundleConfidence(rowCount: number, adsAnalysed: number | null): string {
@@ -76,76 +70,84 @@ function classifyRaConfidence(rowCount: number): string {
   return "Low";
 }
 
+function totalCreatives(ctx: HardDataContext): number {
+  return ctx.threats.reduce((s, t) => s + (Number(t.creative_volume) || 0), 0);
+}
+
 export function buildCompetitorsEvidence(ctx: HardDataContext, rowLabel?: string): EvidenceContext {
   const rows = [...ctx.threats].sort(
     (a, b) => (Number(b.creative_volume) || Number(b.demand) || 0) - (Number(a.creative_volume) || Number(a.demand) || 0),
   );
   const leader = rowLabel ?? ctx.exec?.strongest_brand ?? rows[0]?.competitor_domain ?? "Category leader";
-  const missing: string[] = [];
-  if (!rows.length) missing.push("modules.competitors array empty in GET /api/strategist/bundle response");
-  if (!ctx.exec?.strongest_brand) missing.push("modules.executive.strongest_brand not set in strategist bundle");
+  const leaderRow = rows.find((r) => r.competitor_domain && leader.toLowerCase().includes(String(r.competitor_domain).split(".")[0]));
+  const leaderCreatives = Number(leaderRow?.creative_volume) || 0;
 
   return {
-    claim: `${leader} is leading observed category activity by creative volume and demand signals.`,
-    sourceTable: "engine strategist bundle · modules.competitors",
-    sourceApi: bundleSource(ctx, "threats") ?? "GET /api/strategist/bundle",
-    rowCount: rows.length,
-    lastUpdated: bundleTs(ctx, "threats") ?? bundleTs(ctx, "executive"),
-    dateRange: dateRangeLabel(ctx),
-    brands: rows.map((r) => r.competitor_domain).filter(Boolean) as string[],
+    claim: `${leader} is leading observed category activity by creative volume and demand.`,
     confidence: classifyBundleConfidence(rows.length, ctx.confidence?.ads_analysed ?? null),
-    whySupports:
-      "Leader rank uses the highest combined creative_volume and demand among competitor rows returned for the active workspace category.",
-    calculation:
-      "Sort competitors by max(creative_volume, demand) descending. The top row is surfaced as market leader; executive.strongest_brand provides the headline label when present.",
-    missing: missing.length ? missing : undefined,
+    dateRange: dateRangeLabel(ctx),
+    basedOn: [
+      leaderCreatives > 0 ? `${leaderCreatives} active creatives observed for ${leader}` : `${totalCreatives(ctx)} creatives tracked in category`,
+      `${ctx.confidence?.brands_tracked ?? rows.length} brands in watchlist`,
+      dateRangeLabel(ctx),
+    ],
+    whySupports: "Leader rank uses the highest combined creative activity and demand among tracked competitors.",
+    methodology:
+      "We rank competitors by observed creative volume and demand signals, then surface the loudest brand in your watchlist.",
+    creativeCount: leaderCreatives || totalCreatives(ctx),
+    brandCount: ctx.confidence?.brands_tracked ?? rows.length,
+    rowCount: rows.length,
+    lastUpdated: bundleTs(ctx, "threats"),
+    brands: rows.map((r) => r.competitor_domain).filter(Boolean) as string[],
   };
 }
 
 export function buildThreatsEvidence(ctx: HardDataContext, rowLabel?: string): EvidenceContext {
   const rows = ctx.marketIntel?.risks ?? [];
-  const focus = rowLabel ?? rows[0]?.competitorDomain ?? "Top threat";
-  const missing: string[] = [];
-  if (!ctx.marketIntel?.available) missing.push("ra_strategic_risks view unavailable or returned no rows");
-  if (!rows.length) missing.push("No threat narratives in ra_strategic_risks for workspace-scoped brands");
+  const bundleThreat = ctx.threats.find((t) =>
+    rowLabel ? t.competitor_domain?.toLowerCase().includes(rowLabel.toLowerCase().split(".")[0] ?? "") : false,
+  );
+  const focus = rowLabel ?? rows[0]?.competitorDomain ?? ctx.brief?.strongest_threat ?? "Top threat";
+  const creatives = Number(bundleThreat?.creative_volume) || rows[0]?.threatScore || 0;
+  const narrative = rows.find((r) => r.competitorDomain.toLowerCase().includes(focus.toLowerCase().split(".")[0] ?? ""))?.narrative;
 
   return {
-    claim: `${focus} is flagged on the threat radar with a scored risk narrative.`,
-    sourceTable: "ra_strategic_risks",
-    sourceApi: "Supabase read (ra_strategic_risks)",
+    claim: `${focus} is the biggest threat in your watchlist right now.`,
+    confidence: classifyRaConfidence(rows.length || (bundleThreat ? 1 : 0)),
+    dateRange: dateRangeLabel(ctx),
+    basedOn: [
+      creatives ? `${creatives} active creatives observed` : "Observed creative pressure in category",
+      narrative ? `Repeated ${narrative.slice(0, 80)}${narrative.length > 80 ? "…" : ""}` : "Rising competitive pressure in tracked messaging",
+      dateRangeLabel(ctx),
+    ],
+    whySupports: "Threat calls combine creative volume, risk scoring, and repeated messaging patterns for the brand.",
+    methodology:
+      "We flag threats when a competitor shows high creative volume, elevated risk score, and sustained message pressure against your client.",
+    creativeCount: Number(bundleThreat?.creative_volume) || undefined,
+    brandCount: scopedBrands(ctx).length,
     rowCount: rows.length,
     lastUpdated: bundleTs(ctx, "threats"),
-    dateRange: dateRangeLabel(ctx),
     brands: rows.map((r) => r.competitorDomain),
-    confidence: classifyRaConfidence(rows.length),
-    whySupports:
-      "Each row combines threat_score, risk_level, and GPT narrative stored against competitor_domain for the category.",
-    calculation:
-      "Rows ordered by threat_score descending (limit 8), then filtered to client workspace + competitor_domains.",
-    missing: missing.length ? missing : undefined,
   };
 }
 
 export function buildTerritoriesEvidence(ctx: HardDataContext, rowLabel?: string): EvidenceContext {
   const rows = ctx.marketIntel?.territories ?? [];
   const focus = rowLabel ?? rows[0]?.emotion ?? "Territory";
-  const missing: string[] = [];
-  if (!rows.length) missing.push("ra_strategic_territories view returned 0 rows for this category");
 
   return {
-    claim: `Emotional territory “${focus}” shows how crowded or open this message space is.`,
-    sourceTable: "ra_strategic_territories",
-    sourceApi: "Supabase read (ra_strategic_territories)",
-    rowCount: rows.length,
-    lastUpdated: bundleTs(ctx, "brief"),
-    dateRange: dateRangeLabel(ctx),
-    brands: scopedBrands(ctx),
+    claim: `“${focus}” is a crowded or open message space in this category.`,
     confidence: classifyRaConfidence(rows.length),
-    whySupports:
-      "Territory status (open vs crowded) is derived from brands_using and avg_share per emotion in the strategist intelligence layer.",
-    calculation:
-      "avg_share and brands_using aggregated per emotion; territory_status labels whether the angle is open or competitive.",
-    missing: missing.length ? missing : undefined,
+    dateRange: dateRangeLabel(ctx),
+    basedOn: [
+      `${rows.length} emotional territories mapped`,
+      rows[0] ? `${rows[0].brandsUsing} brands using top territory` : "Category messaging scan",
+      dateRangeLabel(ctx),
+    ],
+    whySupports: "Territory status reflects how many rivals use each emotional angle and average share held.",
+    methodology: "We map which emotions competitors repeat and label territories as open or crowded.",
+    rowCount: rows.length,
+    brands: scopedBrands(ctx),
   };
 }
 
@@ -153,151 +155,113 @@ export function buildChannelMixEvidence(ctx: HardDataContext): EvidenceContext {
   const mix = ctx.channelMix;
   const rows = mix?.rows ?? [];
   const active = rows.filter((r) => r.pct > 0 || r.ads > 0);
-  const missing: string[] = [];
-  if (!mix) missing.push("Channel mix not computed — strategist bundle brief.channels missing");
-  if (mix?.source === "baseline") missing.push("No channel attribution in bundle; showing category baseline split");
+  const top = active[0];
 
   return {
-    claim: "Channel share shows where category ad activity is appearing across platforms.",
-    sourceTable: mix?.source === "warroom" ? "strategist bundle brief.channels" : mix?.sourceLabel ?? "channel mix",
-    sourceApi: bundleSource(ctx, "brief") ?? "GET /api/strategist/bundle · brief.channels",
-    rowCount: active.length,
-    lastUpdated: bundleTs(ctx, "brief"),
-    dateRange: dateRangeLabel(ctx),
-    brands: scopedBrands(ctx),
+    claim: "Channel activity shows where competitors are investing media weight.",
     confidence: mix?.overallConfidence ?? "Low",
-    whySupports: mix?.estimationTooltip ?? "Channel percentages explain the bar chart in the main Market Intel view.",
-    calculation:
-      mix?.source === "placements"
-        ? "Percentage = channel ad count ÷ total indexed placements with channel_platform."
-        : mix?.source === "warroom"
-          ? "Percentage taken directly from engine bundle channel split fields."
-          : mix?.source === "estimated"
-            ? "Inferred from ad_type / row signals when channel_platform is missing."
-            : "Even baseline split until channel-tagged placements are available.",
-    missing: missing.length ? missing : undefined,
+    dateRange: dateRangeLabel(ctx),
+    basedOn: [
+      top ? `${top.channel} leads at ${top.pct.toFixed(0)}% of observed activity` : "Channel mix from indexed creatives",
+      `${active.reduce((s, r) => s + r.ads, 0)} channel-tagged placements`,
+      dateRangeLabel(ctx),
+    ],
+    whySupports: mix?.estimationTooltip ?? "Channel share explains where category ads are appearing.",
+    methodology: "We attribute indexed creatives to channels and calculate share of observed activity per platform.",
+    rowCount: active.length,
+    brands: scopedBrands(ctx),
   };
 }
 
 export function buildPitchEvidence(ctx: HardDataContext): EvidenceContext {
   const moves = ctx.recommendedMoves;
-  const pitchRows = ctx.pitch;
-  const missing: string[] = [];
-  if (!moves.length && !pitchRows.length) {
-    missing.push("modules.pitch empty in strategist bundle");
-    missing.push("ra_executive_pack.recommended_action not available");
-  }
 
   return {
-    claim: moves[0] ?? pitchRows[0]?.action ?? pitchRows[0]?.recommendation ?? "Recommended client action for this category.",
-    sourceTable: "modules.pitch · ra_executive_pack · ra_strategic_actions",
-    sourceApi: bundleSource(ctx, "pitch") ?? "GET /api/strategist/bundle",
-    rowCount: moves.length + pitchRows.length,
-    lastUpdated: bundleTs(ctx, "pitch") ?? bundleTs(ctx, "brief"),
+    claim: moves[0] ?? "Recommended client action for this category.",
+    confidence: classifyBundleConfidence(moves.length, ctx.confidence?.ads_analysed ?? null),
     dateRange: dateRangeLabel(ctx),
+    basedOn: [
+      moves.length ? `${moves.length} strategic moves ranked` : "Executive read for category",
+      `${ctx.confidence?.ads_analysed ?? "—"} ads analysed`,
+      dateRangeLabel(ctx),
+    ],
+    whySupports: "Moves combine executive recommendations, whitespace opportunities, and observed competitive gaps.",
+    methodology: "We de-duplicate strategist recommendations and rank by category urgency for your workspace.",
+    rowCount: moves.length,
     brands: scopedBrands(ctx),
-    confidence: classifyBundleConfidence(pitchRows.length, ctx.confidence?.ads_analysed ?? null),
-    whySupports:
-      "Recommended moves combine pitch brief actions, executive recommended_action, and strategist GPT actions for the workspace.",
-    calculation:
-      "De-duplicated list: executivePack.recommendedAction → strategicActions → pitch module rows → client-name heuristic moves.",
-    missing: missing.length ? missing : undefined,
   };
 }
 
 export function buildStrategicActionsEvidence(ctx: HardDataContext): EvidenceContext {
   const rows = ctx.marketIntel?.strategicActions ?? [];
-  const missing: string[] = [];
-  if (!rows.length) missing.push("ra_strategic_actions returned 0 rows");
 
   return {
     claim: rows[0]?.action ?? "Priority strategic action for this category.",
-    sourceTable: "ra_strategic_actions",
-    sourceApi: "Supabase read (ra_strategic_actions)",
-    rowCount: rows.length,
-    lastUpdated: bundleTs(ctx, "brief"),
-    dateRange: dateRangeLabel(ctx),
-    brands: scopedBrands(ctx),
     confidence: classifyRaConfidence(rows.length),
-    whySupports: "Each action is a GPT-prioritised move stored with priority order for the category strategist layer.",
-    calculation: "Rows ordered by priority ascending from ra_strategic_actions.",
-    missing: missing.length ? missing : undefined,
+    dateRange: dateRangeLabel(ctx),
+    basedOn: [`${rows.length} priority actions`, dateRangeLabel(ctx)],
+    whySupports: "Each action is a prioritised move based on category intelligence for your client.",
+    methodology: "Actions are ordered by strategist priority for the active workspace category.",
+    rowCount: rows.length,
+    brands: scopedBrands(ctx),
   };
 }
 
 export function buildPositioningEvidence(ctx: HardDataContext, rowLabel?: string): EvidenceContext {
   const rows = ctx.marketIntel?.positioningMap ?? [];
   const focus = rowLabel ?? rows[0]?.brand ?? "Brand";
-  const missing: string[] = [];
-  if (!rows.length) missing.push("ra_market_intelligence view returned 0 positioning rows");
 
   return {
-    claim: `${focus} positioning on share of voice vs creative intensity in the category map.`,
-    sourceTable: "ra_market_intelligence",
-    sourceApi: "Supabase read (ra_market_intelligence)",
-    rowCount: rows.length,
-    lastUpdated: bundleTs(ctx, "brief"),
-    dateRange: dateRangeLabel(ctx),
-    brands: rows.map((r) => r.brand),
+    claim: `${focus} positioning on share of voice vs creative intensity.`,
     confidence: classifyRaConfidence(rows.length),
-    whySupports:
-      "SOV % and placement counts show relative voice; x/y axes encode creative intensity vs reach for each brand.",
-    calculation:
-      "share_of_voice and placements per brand from ra_market_intelligence, limited to 12 rows for the drawer.",
-    missing: missing.length ? missing : undefined,
+    dateRange: dateRangeLabel(ctx),
+    basedOn: [
+      `${rows.length} brands on positioning map`,
+      dateRangeLabel(ctx),
+    ],
+    whySupports: "Share of voice and placement counts show relative voice; intensity axes show creative pressure.",
+    methodology: "We plot share of voice and placement volume to show who owns the category conversation.",
+    rowCount: rows.length,
+    brands: rows.map((r) => r.brand),
   };
 }
 
 export function buildAdlibraryEvidence(ctx: HardDataContext): EvidenceContext {
   const cov = ctx.adlibraryCoverage;
-  const missing: string[] = [];
-  if (!cov?.available) {
-    missing.push("adlibrary_pipeline_runs table missing or unreachable");
-    missing.push("adlibrary_advertiser_candidates table missing or unreachable");
-    missing.push("adlibrary_enrichments table missing or unreachable");
-  }
-  if (cov && !cov.hasData) {
-    missing.push("No AdLibrary rows indexed yet — run adlibrary ingest pipeline");
-  }
-
-  const rowCount = cov
-    ? cov.advertisersTracked + cov.adsIndexed + cov.enrichedAds
-    : 0;
+  const rowCount = cov ? cov.advertisersTracked + cov.adsIndexed : 0;
 
   return {
-    claim: "AdLibrary coverage shows how many advertisers and creatives are indexed from the optional AdLibrary pipeline.",
-    sourceTable: "adlibrary_advertiser_candidates · ad_placements · adlibrary_enrichments · adlibrary_pipeline_runs",
-    sourceApi: "Supabase read (optional AdLibrary tables)",
-    rowCount,
-    lastUpdated: cov?.lastRunAt ?? null,
-    dateRange: cov?.lastRunAt ? `Pipeline run ending ${cov.lastRunAt}` : "No pipeline run recorded",
-    brands: scopedBrands(ctx),
+    claim: "Observed creative activity indexed for your watchlist.",
     confidence: cov?.hasData ? "Medium" : "Low",
-    whySupports:
-      "Counts reflect advertiser candidates tracked, adlibrary-tagged placements, and enrichment rows — not engine warroom data.",
-    calculation:
-      "advertisersTracked = count(adlibrary_advertiser_candidates); adsIndexed = count(ad_placements where source_platform=adlibrary); enrichedAds = count(adlibrary_enrichments).",
-    missing: missing.length ? missing : undefined,
+    dateRange: cov?.lastRunAt ? `Indexed through ${cov.lastRunAt.slice(0, 10)}` : dateRangeLabel(ctx),
+    basedOn: [
+      `${cov?.adsIndexed ?? 0} creatives indexed`,
+      `${cov?.advertisersTracked ?? 0} advertisers tracked`,
+    ],
+    whySupports: "Coverage counts show how much creative proof is available for evidence drawers.",
+    methodology: "We index public ad library creatives and enrich them with GPT tags for proof cards.",
+    creativeCount: cov?.adsIndexed,
+    rowCount,
+    brands: scopedBrands(ctx),
   };
 }
 
 export function buildExecutiveEvidence(ctx: HardDataContext): EvidenceContext {
   const exec = ctx.marketIntel?.executivePack;
-  const missing: string[] = [];
-  if (!exec) missing.push("ra_executive_pack returned no row");
 
   return {
     claim: ctx.brief?.headline ?? exec?.headline ?? "Category executive summary for the active workspace.",
-    sourceTable: "ra_executive_pack · modules.executive",
-    sourceApi: `${bundleSource(ctx, "brief") ?? "GET /api/strategist/bundle"} · Supabase ra_executive_pack`,
-    rowCount: exec ? 1 : 0,
-    lastUpdated: bundleTs(ctx, "brief") ?? bundleTs(ctx, "executive"),
-    dateRange: dateRangeLabel(ctx),
-    brands: scopedBrands(ctx),
     confidence: exec ? "Medium" : "Low",
-    whySupports: "Headline and observation fields are GPT narratives grounded in the same bundle metrics shown below.",
-    calculation: "Brief headline normalised from strategist bundle; executive pack enriches with CEO summary and recommended action.",
-    missing: missing.length ? missing : undefined,
+    dateRange: dateRangeLabel(ctx),
+    basedOn: [
+      `${ctx.confidence?.ads_analysed ?? "—"} ads analysed`,
+      `${ctx.confidence?.brands_tracked ?? "—"} brands tracked`,
+      dateRangeLabel(ctx),
+    ],
+    whySupports: "Executive read is grounded in the same bundle metrics and creative index shown in Market Intel.",
+    methodology: "We synthesise category headlines from observed creative activity and strategist reads.",
+    rowCount: exec ? 1 : 0,
+    brands: scopedBrands(ctx),
   };
 }
 
@@ -305,22 +269,59 @@ export function buildEvidencePackEvidence(ctx: HardDataContext, rowLabel?: strin
   const rows = ctx.marketIntel?.evidencePack ?? [];
   const exec = ctx.marketIntel?.executivePack;
   const focus = rowLabel ?? rows[0]?.competitorDomain ?? "Evidence row";
-  const missing: string[] = [];
-  if (!rows.length) missing.push("ra_barbs_evidence_pack returned 0 rows");
 
   return {
     claim: exec?.headline ?? `Quantified threat evidence for ${focus}.`,
-    sourceTable: "ra_barbs_evidence_pack · ra_executive_pack",
-    sourceApi: "Supabase read",
-    rowCount: rows.length + (exec ? 1 : 0),
-    lastUpdated: bundleTs(ctx, "brief"),
-    dateRange: dateRangeLabel(ctx),
-    brands: rows.map((r) => r.competitorDomain),
     confidence: classifyRaConfidence(rows.length),
-    whySupports:
-      "Evidence pack rows tie threat_score to creative volume and demand with analyst context strings.",
-    calculation:
-      "Ordered by threat_score descending; workspace filter applied on competitor_domain.",
-    missing: missing.length ? missing : undefined,
+    dateRange: dateRangeLabel(ctx),
+    basedOn: [
+      `${rows.length} scored threat rows`,
+      dateRangeLabel(ctx),
+    ],
+    whySupports: "Evidence rows tie threat scores to creative volume and demand with analyst context.",
+    methodology: "Threat evidence is ranked by score and filtered to your workspace watchlist.",
+    rowCount: rows.length,
+    brands: rows.map((r) => r.competitorDomain),
   };
+}
+
+export function resolveFocusDomain(
+  ctx: HardDataContext,
+  moduleId: string,
+  rowLabel?: string,
+  rowIndex?: number,
+): string | null {
+  if (rowLabel?.includes(".")) return rowLabel;
+  if (rowLabel) {
+    const match = ctx.workspace?.competitor_domains.find((d) =>
+      d.toLowerCase().includes(rowLabel.toLowerCase().split(" ")[0] ?? ""),
+    );
+    if (match) return match;
+  }
+
+  if (moduleId === "threats" || moduleId === "competitors") {
+    const rows = moduleId === "threats" ? ctx.marketIntel?.risks ?? [] : ctx.threats;
+    if (rowIndex != null && moduleId === "competitors") {
+      const sorted = [...ctx.threats].sort(
+        (a, b) => (Number(b.creative_volume) || 0) - (Number(a.creative_volume) || 0),
+      );
+      return sorted[rowIndex]?.competitor_domain ?? null;
+    }
+    if (rowIndex != null && moduleId === "threats") {
+      return ctx.marketIntel?.risks[rowIndex]?.competitorDomain ?? null;
+    }
+    return (
+      rowLabel ??
+      ctx.brief?.strongest_threat ??
+      ctx.threats[0]?.competitor_domain ??
+      ctx.workspace?.competitor_domains[0] ??
+      null
+    );
+  }
+
+  if (moduleId === "changes" && rowIndex != null) {
+    return ctx.marketIntel?.dailyChanges[rowIndex]?.brandDomain ?? null;
+  }
+
+  return ctx.workspace?.client_domain ?? ctx.workspace?.competitor_domains[0] ?? null;
 }
