@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertWriteAllowedForSession } from "@/lib/demo-account.server";
 
 export const getIntegrations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -36,6 +37,7 @@ export const saveIntegrations = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => SaveSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await assertWriteAllowedForSession(supabase, context.claims as Record<string, unknown>);
     const patch: Record<string, string | null> = {};
     for (const k of Object.keys(data) as (keyof typeof data)[]) {
       const v = data[k];
@@ -58,6 +60,7 @@ export const saveProfile = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ProfileSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await assertWriteAllowedForSession(supabase, context.claims as Record<string, unknown>);
     const { error } = await supabase
       .from("profiles")
       .upsert({ id: userId, ...data }, { onConflict: "id" });

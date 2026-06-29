@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { resolveDemoUser } from "@/lib/demo-account";
 
 export const ACTIVE_CLIENT_WORKSPACE_KEY = "revenuad_active_client_workspace_id";
 
@@ -114,6 +115,11 @@ export async function fetchClientWorkspaces(): Promise<ClientWorkspace[]> {
 export async function createClientWorkspace(
   input: CreateClientWorkspaceInput,
 ): Promise<{ workspace: ClientWorkspace | null; error: string | null }> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (resolveDemoUser(auth.user)) {
+    return { workspace: null, error: "Demo accounts cannot create workspaces." };
+  }
+
   const payload = {
     client_name: input.client_name.trim(),
     client_domain: normalizeClientDomain(input.client_domain),

@@ -4,6 +4,7 @@ import { Search, Users, ArrowRight, Plus, Check } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { Input } from "@/components/ui/input";
 import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
+import { useDemoAccount } from "@/contexts/DemoAccountContext";
 import {
   CATEGORY_OPTIONS,
   normalizeClientDomain,
@@ -19,6 +20,7 @@ function ClientsPage() {
     setActiveWorkspaceId,
     createWorkspace,
   } = useClientWorkspace();
+  const { isDemo, canCreateWorkspace } = useDemoAccount();
 
   const [q, setQ] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -31,10 +33,10 @@ function ClientsPage() {
   });
 
   useEffect(() => {
-    if (!loading && workspaces.length === 0) {
+    if (!loading && workspaces.length === 0 && canCreateWorkspace) {
       setShowForm(true);
     }
-  }, [loading, workspaces.length]);
+  }, [loading, workspaces.length, canCreateWorkspace]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -83,25 +85,27 @@ function ClientsPage() {
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-          <button
-            type="button"
-            onClick={() => setShowForm((v) => !v)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              background: showForm ? "#FDF6E8" : "#FFFFFF",
-              border: "1px solid #EBE9E4",
-              borderRadius: 7,
-              padding: "8px 14px",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-              color: "#1C1C1A",
-            }}
-          >
-            <Plus size={14} /> {showForm ? "Hide form" : "Create client"}
-          </button>
+          {canCreateWorkspace && (
+            <button
+              type="button"
+              onClick={() => setShowForm((v) => !v)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                background: showForm ? "#FDF6E8" : "#FFFFFF",
+                border: "1px solid #EBE9E4",
+                borderRadius: 7,
+                padding: "8px 14px",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                color: "#1C1C1A",
+              }}
+            >
+              <Plus size={14} /> {showForm ? "Hide form" : "Create client"}
+            </button>
+          )}
           {activeWorkspace && (
             <span style={{ fontSize: 12, color: "#6B6B62" }}>
               Active: <strong>{activeWorkspace.client_name}</strong> · {activeWorkspace.category}
@@ -109,7 +113,7 @@ function ClientsPage() {
           )}
         </div>
 
-        {showForm && (
+        {showForm && canCreateWorkspace && (
           <form
             onSubmit={handleCreate}
             style={{

@@ -60,6 +60,9 @@ import {
   type AdlibraryAdvertiserIntel,
 } from "@/lib/adlibraryCoverage";
 import { safeOptional } from "@/lib/safeQuery";
+import { useDemoAccount } from "@/contexts/DemoAccountContext";
+import { DemoAdvertiserRestricted } from "@/components/adpalette/DemoRestricted";
+import { isDemoAdvertiserAllowed } from "@/lib/demo-account";
 import {
   fetchAdvertiserStrategistIntel,
   type AdvertiserStrategistIntel,
@@ -235,6 +238,7 @@ const CHANNEL_TAB_MAP: Record<string, string[]> = {
 
 function AdvertiserPage() {
   const { domain } = Route.useParams();
+  const { isDemo, canExport, canScan } = useDemoAccount();
 
   const [brand, setBrand] = useState<string>(() => displayBrand(domain));
   const [war, setWar] = useState<War | null>(null);
@@ -572,6 +576,14 @@ function AdvertiserPage() {
     );
   }
 
+  if (isDemo && !isDemoAdvertiserAllowed(domain)) {
+    return (
+      <WorkspaceShell title="Advertiser intelligence" subtitle="Demo environment">
+        <DemoAdvertiserRestricted />
+      </WorkspaceShell>
+    );
+  }
+
   if (outOfScope) {
     return (
       <WorkspaceShell title={brand} subtitle={`Ad library · ${brand}`}>
@@ -607,7 +619,11 @@ function AdvertiserPage() {
         <QueryStatusCard
           title="Placement intelligence"
           reason={loadStatus.placements.reason}
-          action={{ label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }}
+          action={
+            canScan
+              ? { label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }
+              : undefined
+          }
         />
       ) : null}
 
@@ -619,7 +635,11 @@ function AdvertiserPage() {
         <QueryStatusCard
           title="No ads indexed yet"
           reason={`We haven't picked up live ads for ${brand} yet. Run a scan to index placements and unlock channel mix, messaging, and recommendations.`}
-          action={{ label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }}
+          action={
+            canScan
+              ? { label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }
+              : undefined
+          }
         />
       ) : null}
 
@@ -677,32 +697,34 @@ function AdvertiserPage() {
                 {updatedAgo && ` · Updated ${updatedAgo}`}
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                style={{
-                  background: "#1C1C1A",
-                  color: "#FFFFFF",
-                  border: "none",
-                  borderRadius: 7,
-                  padding: "10px 20px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  cursor: exporting ? "not-allowed" : "pointer",
-                  opacity: exporting ? 0.7 : 1,
-                }}
-              >
-                {exporting ? <Loader2 size={16} className="animate-spin" /> : <Presentation size={16} />}
-                {exporting ? "Building deck…" : "Export slides"}
-              </button>
-              {exportError && (
-                <div style={{ color: "#C0392B", fontSize: 12 }}>{exportError}</div>
-              )}
-            </div>
+            {canExport && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  style={{
+                    background: "#1C1C1A",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: 7,
+                    padding: "10px 20px",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    cursor: exporting ? "not-allowed" : "pointer",
+                    opacity: exporting ? 0.7 : 1,
+                  }}
+                >
+                  {exporting ? <Loader2 size={16} className="animate-spin" /> : <Presentation size={16} />}
+                  {exporting ? "Building deck…" : "Export slides"}
+                </button>
+                {exportError && (
+                  <div style={{ color: "#C0392B", fontSize: 12 }}>{exportError}</div>
+                )}
+              </div>
+            )}
           </div>
 
 

@@ -34,6 +34,7 @@ import { fetchMarketStrategistIntel, type MarketStrategistIntel } from "@/lib/ma
 import { buildMarketChannelMix } from "@/lib/channelMix";
 import { fetchAdlibraryCoverage, EMPTY_COVERAGE, type AdlibraryCoverage } from "@/lib/adlibraryCoverage";
 import { safeOptional } from "@/lib/safeQuery";
+import { useDemoAccount } from "@/contexts/DemoAccountContext";
 
 const DC = {
   card: "card-dense",
@@ -178,6 +179,7 @@ function brandLabel(domain: string | null | undefined): string {
 
 export function StrategistDashboard() {
   const { activeWorkspace, loading: workspaceLoading } = useClientWorkspace();
+  const { canExport } = useDemoAccount();
   const [brief, setBrief] = useState<Brief | null>(null);
   const [threats, setThreats] = useState<Threat[]>([]);
   const [challengers, setChallengers] = useState<Challenger[]>([]);
@@ -381,8 +383,8 @@ export function StrategistDashboard() {
       variant="dark-dense"
       title="Market Intel"
       subtitle={`${activeWorkspace.client_name} · ${activeWorkspace.category} — what your client faces, what competitors are doing, and what to say in tomorrow's meeting`}
-      onExportPitch={handleExportPitch}
-      exportPitchDisabled={!intelBundle}
+      onExportPitch={canExport ? handleExportPitch : undefined}
+      exportPitchDisabled={!canExport || !intelBundle}
     >
       <div className="space-y-8">
         {activeWorkspace && activeWorkspace.competitor_domains.length > 0 && (

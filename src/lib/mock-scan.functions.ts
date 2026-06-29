@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertWriteAllowedForSession } from "@/lib/demo-account.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { seedMockScanSuccess } from "@/lib/mock-scan";
 
@@ -19,6 +20,7 @@ export const runMockScan = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => MockScanSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await assertWriteAllowedForSession(supabase, context.claims as Record<string, unknown>);
 
     const { data: profile } = await supabase
       .from("profiles")
