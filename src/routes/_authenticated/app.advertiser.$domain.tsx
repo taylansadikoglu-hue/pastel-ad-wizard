@@ -26,6 +26,7 @@ import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { CampaignIntelligenceBlock } from "@/components/adpalette/CampaignIntelligenceBlock";
+import { CampaignStoryBlock } from "@/components/adpalette/CampaignStoryBlock";
 import {
   buildAdvertiserChannelMix,
   buildAdvertiserRecommendedMoves,
@@ -46,6 +47,7 @@ import {
   type AdvertiserPlacementRow,
 } from "@/lib/advertiserPlacements";
 import { buildCampaignIntelligence } from "@/lib/campaignIntelligence";
+import { buildCampaignStory } from "@/lib/campaignStory";
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -266,6 +268,11 @@ function AdvertiserPage() {
   const campaignIntel = useMemo(() => {
     if (!war) return null;
     return buildCampaignIntelligence(brand, war);
+  }, [war, brand]);
+
+  const campaignStory = useMemo(() => {
+    if (!war) return null;
+    return buildCampaignStory(brand, war);
   }, [war, brand]);
 
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
@@ -525,26 +532,30 @@ function AdvertiserPage() {
           </div>
 
 
-          {/* Account-director summary */}
-          {placementIntelUnavailable && (
-            <div
-              style={{
-                background: "#FFF0EE",
-                border: "1px solid #E8C4C0",
-                borderLeft: "3px solid #C0392B",
-                borderRadius: 8,
-                padding: "12px 16px",
-                fontSize: 13,
-                color: "#6B6B62",
-                lineHeight: 1.5,
-              }}
-            >
-              {PLACEMENT_INTEL_UNAVAILABLE}
-            </div>
-          )}
+          <CampaignStoryBlock
+            brand={brand}
+            loading={loading}
+            placementIntelUnavailable={placementIntelUnavailable}
+            story={campaignStory}
+          />
 
           {advertiserBrief && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div
+                style={{
+                  paddingTop: 8,
+                  borderTop: "1px solid #EBE9E4",
+                  marginTop: 4,
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  Supporting evidence
+                </div>
+                <p style={{ fontSize: 13, color: "#6B6B62", margin: "6px 0 0", lineHeight: 1.5 }}>
+                  Channel mix, spend estimates, products, and campaign detail for deeper prep.
+                </p>
+              </div>
+
               <InsightSection title="Current marketing read" accent>
                 <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.65, margin: 0 }}>
                   {advertiserBrief.marketingRead}

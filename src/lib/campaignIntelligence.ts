@@ -66,7 +66,7 @@ function campaignSummary(row: AdvertiserPlacementRow): string | null {
   return null;
 }
 
-type CampaignGroup = {
+export type CampaignGroup = {
   key: string;
   rows: AdvertiserPlacementRow[];
   firstSeen: string | null;
@@ -77,7 +77,7 @@ type CampaignGroup = {
   daysRunning: number | null;
 };
 
-function buildCampaignGroups(placements: AdvertiserPlacementRow[]): CampaignGroup[] {
+export function buildCampaignGroups(placements: AdvertiserPlacementRow[]): CampaignGroup[] {
   const map = new Map<string, AdvertiserPlacementRow[]>();
   for (const row of placements) {
     const key = campaignKey(row);
