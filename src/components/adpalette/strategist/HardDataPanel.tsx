@@ -46,7 +46,7 @@ export function HardDataPanel({ focus, onClose, data }: HardDataPanelProps) {
                     {focus.rowLabel ? ` · ${focus.rowLabel}` : ""}
                   </SheetTitle>
                   <SheetDescription className="dense-meta text-neutral-500 normal-case">
-                    Supporting data behind this read
+                    Source: R-AD Signal · rows, metrics, and calculation notes below
                   </SheetDescription>
                 </div>
                 <button

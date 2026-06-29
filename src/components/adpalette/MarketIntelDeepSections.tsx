@@ -46,7 +46,11 @@ function SectionHeader({ index, title, subtitle, onEvidence }: SectionHeaderProp
 
 type Props = {
   intel: MarketStrategistIntel | null;
-  onEvidence: (moduleId: "territories" | "threats" | "meeting" | "changes" | "positioning" | "evidence", rowIndex?: number, rowLabel?: string) => void;
+  onEvidence: (
+    moduleId: "territories" | "threats" | "meeting" | "changes" | "positioning" | "evidence" | "strategicActions",
+    rowIndex?: number,
+    rowLabel?: string,
+  ) => void;
 };
 
 export function MarketIntelDeepSections({ intel, onEvidence }: Props) {
@@ -232,17 +236,27 @@ export function MarketIntelDeepSections({ intel, onEvidence }: Props) {
 
       {intel.strategicActions.length > 0 && (
         <section>
-          <SectionHeader index="14" title="Strategic actions" subtitle="Priority moves from intelligence engine" />
+          <SectionHeader
+            index="14"
+            title="Strategic actions"
+            subtitle="Priority moves from intelligence engine"
+            onEvidence={() => onEvidence("strategicActions")}
+          />
           <div className={cn(DC.card, "space-y-2")}>
-            {intel.strategicActions.map((a) => (
-              <div key={a.action} className="flex gap-3 text-sm text-neutral-100">
+            {intel.strategicActions.map((a, i) => (
+              <button
+                key={a.action}
+                type="button"
+                onClick={() => onEvidence("strategicActions", i, a.action)}
+                className="flex w-full gap-3 text-left text-sm text-neutral-100 hover:opacity-90"
+              >
                 {a.priority != null && (
                   <span className="shrink-0 w-6 h-6 rounded-full bg-amber-950 border border-amber-800/60 text-amber-400 text-xs font-semibold flex items-center justify-center">
                     {a.priority}
                   </span>
                 )}
                 <span>{a.action}</span>
-              </div>
+              </button>
             ))}
           </div>
         </section>

@@ -193,17 +193,6 @@ export function StrategistDashboard() {
   const [adlibraryCoverage, setAdlibraryCoverage] = useState<AdlibraryCoverage | null>(null);
   const [panelFocus, setPanelFocus] = useState<PanelFocus | null>(null);
 
-  const hardDataPayload = {
-    threats,
-    challengers,
-    whitespace,
-    momentum,
-    exec,
-    pitch,
-    agencyId: agencyCtx?.agencyId ?? null,
-    marketIntel,
-  };
-
   const openPanel = (moduleId: DataModuleId, rowIndex?: number, rowLabel?: string) => {
     setPanelFocus({ moduleId, rowIndex, rowLabel });
   };
@@ -362,6 +351,31 @@ export function StrategistDashboard() {
         })
       : null;
 
+  const hardDataPayload = {
+    threats,
+    challengers,
+    whitespace,
+    momentum,
+    exec,
+    pitch,
+    agencyId: agencyCtx?.agencyId ?? null,
+    marketIntel,
+    channelMix: channelMixResult,
+    adlibraryCoverage,
+    confidence,
+    brief,
+    workspace: activeWorkspace
+      ? {
+          client_name: activeWorkspace.client_name,
+          client_domain: activeWorkspace.client_domain,
+          competitor_domains: activeWorkspace.competitor_domains,
+          category: activeWorkspace.category,
+        }
+      : null,
+    recommendedMoves,
+    intelBundle,
+  };
+
   return (
     <WorkspaceShell
       variant="dark-dense"
@@ -505,6 +519,7 @@ export function StrategistDashboard() {
             index="03b"
             title="Where activity is showing up"
             subtitle="Channel share across observed category activity"
+            onEvidence={() => openPanel("channelMix")}
           />
           <div className={cn(DC.card)}>
             <ChannelMixBars
@@ -624,7 +639,10 @@ export function StrategistDashboard() {
           </section>
         )}
 
-        <AdlibraryCoverageCard coverage={adlibraryCoverage} />
+        <AdlibraryCoverageCard
+          coverage={adlibraryCoverage}
+          onEvidence={() => openPanel("adlibrary")}
+        />
 
         <MarketIntelDeepSections
           intel={marketIntel}
