@@ -261,18 +261,38 @@ export function renderHardDataBody(
     case "adlibrary": {
       const evidence = buildAdlibraryEvidence(ctx);
       const cov = data.adlibraryCoverage;
+      const pipelineReady = Boolean(cov?.available && !cov?.hasData);
       return (
-        <EvidenceDrawerFrame ctx={evidence} extras={extras}>
-          <EvidenceSampleTable
-            label="Coverage metrics"
-            columns={["Metric", "Count"]}
-            rows={[
-              ["Advertisers tracked", cov?.advertisersTracked ?? 0],
-              ["Creatives indexed", cov?.adsIndexed ?? 0],
-              ["Enriched creatives", cov?.enrichedAds ?? 0],
-            ]}
-            emptyMessage="Observed creative activity is still being indexed."
-          />
+        <EvidenceDrawerFrame
+          ctx={evidence}
+          extras={{
+            ...extras,
+            creativePipelineReady: pipelineReady,
+          }}
+        >
+          {cov?.hasData ? (
+            <EvidenceSampleTable
+              label="Coverage metrics"
+              columns={["Metric", "Count"]}
+              rows={[
+                ["Advertisers tracked", cov?.advertisersTracked ?? 0],
+                ["Creatives indexed", cov?.adsIndexed ?? 0],
+                ["Enriched creatives", cov?.enrichedAds ?? 0],
+              ]}
+              emptyMessage="Observed creative activity is still being indexed."
+            />
+          ) : (
+            <EvidenceSampleTable
+              label="Pipeline status"
+              columns={["Stage", "Status"]}
+              rows={[
+                ["Index pipeline", cov?.available ? "Configured" : "Pending setup"],
+                ["Creatives indexed", cov?.adsIndexed ?? 0],
+                ["Credits", cov?.creditsRemaining != null ? cov.creditsRemaining : "Awaiting top-up"],
+              ]}
+              emptyMessage="Pipeline is ready — creatives will appear after the next index run."
+            />
+          )}
         </EvidenceDrawerFrame>
       );
     }

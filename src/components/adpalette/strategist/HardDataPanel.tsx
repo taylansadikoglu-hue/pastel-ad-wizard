@@ -50,13 +50,24 @@ export function HardDataPanel({ focus, onClose, data }: HardDataPanelProps) {
           ctx.workspace.client_domain,
           ...ctx.workspace.competitor_domains,
         ],
+        clientDomain: ctx.workspace.client_domain,
+        clientName: ctx.workspace.client_name,
+        competitorDomains: ctx.workspace.competitor_domains,
+        threatMetrics: ctx.threats
+          .filter((t) => t.competitor_domain)
+          .map((t) => ({
+            domain: t.competitor_domain!,
+            creativeVolume: t.creative_volume,
+            threatScore: t.threat_score,
+            demand: t.demand,
+          })),
       },
     })
       .then((bundle) => {
         if (alive) setSupport(bundle);
       })
       .catch(() => {
-        if (alive) setSupport({ creatives: [], marketSignal: null });
+        if (alive) setSupport({ creatives: [], marketSignal: null, crossBrand: [] });
       })
       .finally(() => {
         if (alive) setSupportLoading(false);
@@ -71,7 +82,13 @@ export function HardDataPanel({ focus, onClose, data }: HardDataPanelProps) {
     ? {
         creatives: support?.creatives ?? [],
         marketSignal: support?.marketSignal ?? null,
+        crossBrand: support?.crossBrand ?? [],
+        channelMix: data.channelMix,
         creativesLoading: supportLoading,
+        crossBrandLoading: supportLoading,
+        creativePipelineReady: Boolean(
+          data.adlibraryCoverage?.available && !data.adlibraryCoverage?.hasData,
+        ),
       }
     : undefined;
 

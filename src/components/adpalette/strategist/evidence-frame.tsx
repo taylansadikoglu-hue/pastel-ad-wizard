@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CreativeProofCard } from "@/lib/evidence/creative-proof";
 import type { MarketSignalView } from "@/lib/evidence/market-signal";
+import type { CrossBrandRow } from "@/lib/evidence/cross-brand";
+import type { ChannelMixResult } from "@/lib/channelMix";
+import { CrossBrandComparison } from "@/components/adpalette/strategist/cross-brand-comparison";
 import { displayBrand } from "@/utils/brandDisplay";
 
 export type EvidenceContext = {
@@ -55,12 +58,25 @@ function SectionTitle({ children }: { children: ReactNode }) {
 export function CreativeProofGrid({
   cards,
   emptyMessage = "Creative proof is still being collected for this claim.",
+  pipelineReady = false,
 }: {
   cards: CreativeProofCard[];
   emptyMessage?: string;
+  /** True when the ad index pipeline is configured but awaiting credits / first sync */
+  pipelineReady?: boolean;
 }) {
   if (!cards.length) {
-    return <p className="text-xs text-neutral-500 m-0 leading-relaxed">{emptyMessage}</p>;
+    return (
+      <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-3 space-y-1.5">
+        <p className="text-xs text-neutral-400 m-0 leading-relaxed">{emptyMessage}</p>
+        {pipelineReady ? (
+          <p className="text-[11px] text-neutral-500 m-0 leading-relaxed">
+            Observed creative activity pipeline is configured and ready — proof cards will populate
+            automatically after the next index run.
+          </p>
+        ) : null}
+      </div>
+    );
   }
 
   return (
@@ -116,9 +132,38 @@ export function CreativeProofGrid({
               {card.buyerStage && <Tag label={card.buyerStage} />}
               {card.productType && <Tag label={card.productType} />}
             </div>
-            <div className="text-[10px] text-neutral-500 pt-1 border-t border-neutral-800/80">
-              {card.runningDays != null && <span>{card.runningDays}d running · </span>}
-              <span>Seen {fmtDate(card.firstSeen)} – {fmtDate(card.lastSeen)}</span>
+            <div className="text-[10px] text-neutral-500 pt-1 border-t border-neutral-800/80 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              {card.runningDays != null && <span>{card.runningDays}d running</span>}
+              {card.timesSeen != null && card.timesSeen > 1 ? (
+                <span>· Seen {card.timesSeen}×</span>
+              ) : null}
+              <span>
+                · {fmtDate(card.firstSeen)} – {fmtDate(card.lastSeen)}
+              </span>
+              {(card.archiveUrl || card.landingUrl) && (
+                <span className="ml-auto flex items-center gap-2">
+                  {card.archiveUrl ? (
+                    <a
+                      href={card.archiveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 text-sky-400 hover:underline"
+                    >
+                      Archive <ExternalLink size={10} />
+                    </a>
+                  ) : null}
+                  {card.landingUrl ? (
+                    <a
+                      href={card.landingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 text-sky-400 hover:underline"
+                    >
+                      Landing <ExternalLink size={10} />
+                    </a>
+                  ) : null}
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-neutral-400 m-0 italic leading-relaxed">{card.whySupports}</p>
           </div>
@@ -168,10 +213,48 @@ function CollapsibleDetails({ title, children }: { title: string; children: Reac
   );
 }
 
+export function ChannelActivityBlock({ mix }: { mix: ChannelMixResult }) {
+  const active = mix.rows.filter((r) => r.pct > 0 || r.ads > 0).slice(0, 5);
+  if (!active.length) {
+    return (
+      <p className="text-xs text-neutral-500 m-0">
+        Channel activity will appear as creatives are indexed for your watchlist.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {active.map((row) => (
+        <div key={row.channel} className="space-y-1">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-neutral-300 font-medium">{row.channel}</span>
+            <span className="text-neutral-500 tabular-nums">
+              {row.pct.toFixed(0)}% · {row.ads} ads
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-amber-500/70"
+              style={{ width: `${Math.min(100, Math.max(row.pct, 4))}%` }}
+            />
+          </div>
+        </div>
+      ))}
+      <p className="text-[10px] text-neutral-500 m-0">{mix.sourceLabel}</p>
+    </div>
+  );
+}
+
 export type EvidenceDrawerExtras = {
   creatives?: CreativeProofCard[];
   marketSignal?: MarketSignalView | null;
+  crossBrand?: CrossBrandRow[];
+  channelMix?: ChannelMixResult | null;
   creativesLoading?: boolean;
+  crossBrandLoading?: boolean;
+  /** Ad index pipeline configured but not yet populated */
+  creativePipelineReady?: boolean;
 };
 
 export function EvidenceDrawerFrame({
@@ -215,9 +298,28 @@ export function EvidenceDrawerFrame({
         {extras?.creativesLoading ? (
           <p className="text-xs text-neutral-500 m-0">Loading observed creatives…</p>
         ) : (
-          <CreativeProofGrid cards={extras?.creatives ?? []} />
+          <CreativeProofGrid
+            cards={extras?.creatives ?? []}
+            pipelineReady={extras?.creativePipelineReady}
+            emptyMessage="No indexed creatives for this brand yet — strongest proof appears here first."
+          />
         )}
       </section>
+
+      <section className="space-y-2">
+        <SectionTitle>Cross-brand comparison</SectionTitle>
+        <CrossBrandComparison
+          rows={extras?.crossBrand ?? []}
+          loading={extras?.crossBrandLoading}
+        />
+      </section>
+
+      {extras?.channelMix?.available ? (
+        <section className="space-y-2">
+          <SectionTitle>Channel activity</SectionTitle>
+          <ChannelActivityBlock mix={extras.channelMix} />
+        </section>
+      ) : null}
 
       {extras?.marketSignal && (
         <section className="space-y-2">

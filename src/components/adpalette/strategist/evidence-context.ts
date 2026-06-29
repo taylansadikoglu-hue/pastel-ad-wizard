@@ -229,17 +229,29 @@ export function buildPositioningEvidence(ctx: HardDataContext, rowLabel?: string
 export function buildAdlibraryEvidence(ctx: HardDataContext): EvidenceContext {
   const cov = ctx.adlibraryCoverage;
   const rowCount = cov ? cov.advertisersTracked + cov.adsIndexed : 0;
+  const pipelineReady = Boolean(cov?.available && !cov?.hasData);
 
   return {
-    claim: "Observed creative activity indexed for your watchlist.",
-    confidence: cov?.hasData ? "Medium" : "Low",
+    claim: pipelineReady
+      ? "Observed creative activity pipeline is ready — proof will populate after the next index run."
+      : "Observed creative activity indexed for your watchlist.",
+    confidence: cov?.hasData ? "Medium" : pipelineReady ? "Medium" : "Low",
     dateRange: cov?.lastRunAt ? `Indexed through ${cov.lastRunAt.slice(0, 10)}` : dateRangeLabel(ctx),
-    basedOn: [
-      `${cov?.adsIndexed ?? 0} creatives indexed`,
-      `${cov?.advertisersTracked ?? 0} advertisers tracked`,
-    ],
-    whySupports: "Coverage counts show how much creative proof is available for evidence drawers.",
-    methodology: "We index public ad library creatives and enrich them with GPT tags for proof cards.",
+    basedOn: pipelineReady
+      ? [
+          "Index pipeline configured for your category",
+          "Awaiting credits to pull and enrich creatives",
+          dateRangeLabel(ctx),
+        ]
+      : [
+          `${cov?.adsIndexed ?? 0} creatives indexed`,
+          `${cov?.advertisersTracked ?? 0} advertisers tracked`,
+        ],
+    whySupports: pipelineReady
+      ? "The pipeline is wired and will surface proof cards automatically once indexing runs."
+      : "Coverage counts show how much creative proof is available for evidence drawers.",
+    methodology:
+      "We index public ad library creatives and enrich them with messaging tags for proof cards in evidence drawers.",
     creativeCount: cov?.adsIndexed,
     rowCount,
     brands: scopedBrands(ctx),

@@ -4,7 +4,11 @@ import {
   PLACEMENT_INTEL_SELECT,
   normalisePlacementRow,
 } from "@/lib/advertiserPlacements";
-import { placementToCreativeProof, type CreativeProofCard } from "@/lib/evidence/creative-proof";
+import {
+  placementToCreativeProof,
+  rankCreativeProof,
+  type CreativeProofCard,
+} from "@/lib/evidence/creative-proof";
 
 function rootSlug(domain: string): string {
   return domain.toLowerCase().replace(/^www\./, "").split(".")[0] ?? domain;
@@ -33,7 +37,7 @@ export async function fetchCreativeProofForDomains(
     }
   }
 
-  if (cards.length) return cards;
+  if (cards.length) return rankCreativeProof(cards);
 
   // Broad category fallback — recent indexed creatives for any watchlist root
   const patterns = unique.map((d) => `%${rootSlug(d)}%`);
@@ -45,5 +49,7 @@ export async function fetchCreativeProofForDomains(
     .order("last_seen", { ascending: false, nullsFirst: false })
     .limit(limitPerDomain * unique.length);
 
-  return (data ?? []).map((row) => placementToCreativeProof(normalisePlacementRow(row as Record<string, unknown>)));
+  return rankCreativeProof(
+    (data ?? []).map((row) => placementToCreativeProof(normalisePlacementRow(row as Record<string, unknown>))),
+  );
 }

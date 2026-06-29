@@ -15,11 +15,16 @@ export type CreativeProofCard = {
   firstSeen: string | null;
   lastSeen: string | null;
   runningDays: number | null;
+  timesSeen: number | null;
+  archiveUrl: string | null;
+  landingUrl: string | null;
   emotionalDriver: string | null;
   offerType: string | null;
   buyerStage: string | null;
   productType: string | null;
   whySupports: string;
+  /** Internal sort key — higher = stronger proof */
+  proofScore: number;
 };
 
 export type MarketSignalView = {
@@ -49,6 +54,15 @@ function inferFormat(row: AdvertiserPlacementRow): CreativeProofCard["format"] {
   if (url.includes(".mp4") || url.includes("video")) return "video";
   if (url) return "image";
   return "unknown";
+}
+
+export function proofScoreForRow(row: AdvertiserPlacementRow): number {
+  const days = runningDays(row) ?? 0;
+  const seen = Number(row.times_seen) || 0;
+  const hasMedia = Boolean(row.media_url ?? row.creative_url);
+  const hasCopy = Boolean(pickHeadline(row) ?? pickBody(row));
+  const hasTags = Boolean(row.emotional_driver || row.offer_type || row.buyer_stage);
+  return days * 3 + seen * 2 + (hasMedia ? 8 : 0) + (hasCopy ? 4 : 0) + (hasTags ? 3 : 0);
 }
 
 function runningDays(row: AdvertiserPlacementRow): number | null {
@@ -89,12 +103,20 @@ export function placementToCreativeProof(
     firstSeen: row.first_seen ?? null,
     lastSeen: row.last_seen ?? null,
     runningDays: runningDays(row),
+    timesSeen: row.times_seen ?? null,
+    archiveUrl: row.source_archive_url ?? null,
+    landingUrl: row.landing_url ?? null,
     emotionalDriver: row.emotional_driver ?? null,
     offerType: row.offer_type ?? null,
     buyerStage: row.buyer_stage ?? null,
     productType: row.product_type ?? row.normalized_product ?? row.product_category ?? null,
     whySupports,
+    proofScore: proofScoreForRow(row),
   };
+}
+
+export function rankCreativeProof(cards: CreativeProofCard[]): CreativeProofCard[] {
+  return [...cards].sort((a, b) => b.proofScore - a.proofScore);
 }
 
 export function domainMatchesBrand(domain: string, brandOrDomain: string): boolean {
@@ -111,11 +133,12 @@ export function filterCreativeProof(
   brandOrDomain: string | null | undefined,
   limit = 6,
 ): CreativeProofCard[] {
-  if (!brandOrDomain?.trim()) return cards.slice(0, limit);
-  const filtered = cards.filter(
+  const ranked = rankCreativeProof(cards);
+  if (!brandOrDomain?.trim()) return ranked.slice(0, limit);
+  const filtered = ranked.filter(
     (c) =>
       (c.domain && domainMatchesBrand(c.domain, brandOrDomain)) ||
       domainMatchesBrand(c.advertiser, brandOrDomain),
   );
-  return (filtered.length ? filtered : cards).slice(0, limit);
+  return (filtered.length ? filtered : ranked).slice(0, limit);
 }
