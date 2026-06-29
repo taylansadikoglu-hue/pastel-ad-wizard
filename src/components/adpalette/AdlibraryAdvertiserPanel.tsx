@@ -5,7 +5,25 @@ type Props = {
 };
 
 export function AdlibraryAdvertiserPanel({ intel }: Props) {
-  if (!intel?.hasAdlibraryAds) return null;
+  if (!intel) return null;
+
+  if (!intel.available) {
+    return (
+      <section className="rounded-xl border border-border/60 bg-card/30 p-4">
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-300">
+            AdLibrary
+          </span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Optional
+          </span>
+        </div>
+        <p className="text-sm text-muted-foreground">Coverage data unavailable</p>
+      </section>
+    );
+  }
+
+  if (!intel.hasAdlibraryAds) return null;
 
   const topWinner = intel.winningConcepts[0];
 

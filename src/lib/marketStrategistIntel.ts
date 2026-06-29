@@ -5,6 +5,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { safeQuery } from "@/lib/safeQuery";
 
 export type TerritoryRow = {
   emotion: string;
@@ -103,44 +104,49 @@ export async function fetchMarketStrategistIntel(
   supabase: SupabaseClient<Database>,
   workspace?: { client_domain: string; competitor_domains: string[] } | null,
 ): Promise<MarketStrategistIntel> {
-  const [
-    execRes,
-    gapRes,
-    heroRes,
-    territoryRes,
-    riskRes,
-    meetingRes,
-    changeRes,
-    mapRes,
-    evidenceRes,
-    actionsRes,
-  ] = await Promise.all([
-    supabase.from("ra_executive_pack").select("*").limit(1).maybeSingle(),
-    supabase.from("ra_competitive_gap").select("*").limit(1).maybeSingle(),
-    supabase.from("ra_dashboard_hero").select("*").limit(1).maybeSingle(),
-    supabase.from("ra_strategic_territories").select("*").order("avg_share", { ascending: false }),
-    supabase.from("ra_strategic_risks").select("*").order("threat_score", { ascending: false }).limit(8),
-    supabase.from("ra_meeting_prep").select("*"),
-    supabase.from("ra_daily_change_feed").select("*").order("latest_interest", { ascending: false }).limit(8),
-    supabase.from("ra_market_intelligence").select("*").limit(12),
-    supabase.from("ra_barbs_evidence_pack").select("*").order("threat_score", { ascending: false }).limit(8),
-    supabase.from("ra_strategic_actions").select("*").order("priority", { ascending: true }),
-  ]);
+  try {
+    const [
+      execRes,
+      gapRes,
+      heroRes,
+      territoryRes,
+      riskRes,
+      meetingRes,
+      changeRes,
+      mapRes,
+      evidenceRes,
+      actionsRes,
+    ] = await Promise.all([
+      safeQuery("ra_executive_pack", () => supabase.from("ra_executive_pack").select("*").limit(1).maybeSingle()),
+      safeQuery("ra_competitive_gap", () => supabase.from("ra_competitive_gap").select("*").limit(1).maybeSingle()),
+      safeQuery("ra_dashboard_hero", () => supabase.from("ra_dashboard_hero").select("*").limit(1).maybeSingle()),
+      safeQuery("ra_strategic_territories", () =>
+        supabase.from("ra_strategic_territories").select("*").order("avg_share", { ascending: false }),
+      ),
+      safeQuery("ra_strategic_risks", () =>
+        supabase.from("ra_strategic_risks").select("*").order("threat_score", { ascending: false }).limit(8),
+      ),
+      safeQuery("ra_meeting_prep", () => supabase.from("ra_meeting_prep").select("*")),
+      safeQuery("ra_daily_change_feed", () =>
+        supabase.from("ra_daily_change_feed").select("*").order("latest_interest", { ascending: false }).limit(8),
+      ),
+      safeQuery("ra_market_intelligence", () => supabase.from("ra_market_intelligence").select("*").limit(12)),
+      safeQuery("ra_barbs_evidence_pack", () =>
+        supabase.from("ra_barbs_evidence_pack").select("*").order("threat_score", { ascending: false }).limit(8),
+      ),
+      safeQuery("ra_strategic_actions", () =>
+        supabase.from("ra_strategic_actions").select("*").order("priority", { ascending: true }),
+      ),
+    ]);
 
-  for (const res of [execRes, gapRes, heroRes, territoryRes, riskRes, meetingRes, changeRes, mapRes, evidenceRes, actionsRes]) {
-    if (res.error) {
-      console.warn("[market strategist intel] fetch failed:", res.error.message);
-    }
-  }
-
-  const territories = (territoryRes.data ?? []).map((r) => ({
+    const territories = (Array.isArray(territoryRes.data) ? territoryRes.data : []).map((r) => ({
     emotion: r.emotion ?? "—",
     brandsUsing: Number(r.brands_using ?? 0),
     avgShare: Number(r.avg_share ?? 0),
     status: r.territory_status ?? "—",
   }));
 
-  const risksRaw = (riskRes.data ?? []).map((r) => ({
+  const risksRaw = (Array.isArray(riskRes.data) ? riskRes.data : []).map((r) => ({
     competitorDomain: r.competitor_domain ?? "—",
     threatScore: Number(r.threat_score ?? 0),
     riskLevel: r.risk_level ?? "—",
@@ -166,13 +172,13 @@ export async function fetchMarketStrategistIntel(
     Boolean(execRes.data || gapRes.data || heroRes.data)
     || territories.length > 0
     || risks.length > 0
-    || (meetingRes.data?.length ?? 0) > 0;
+    || (Array.isArray(meetingRes.data) && meetingRes.data.length > 0);
 
   if (!hasAny) return empty;
 
-  const exec = execRes.data;
-  const gap = gapRes.data;
-  const hero = heroRes.data;
+  const exec = execRes.data && !Array.isArray(execRes.data) ? execRes.data : null;
+  const gap = gapRes.data && !Array.isArray(gapRes.data) ? gapRes.data : null;
+  const hero = heroRes.data && !Array.isArray(heroRes.data) ? heroRes.data : null;
 
   return {
     available: true,
@@ -205,18 +211,18 @@ export async function fetchMarketStrategistIntel(
       : null,
     territories,
     risks,
-    meetingPrep: (meetingRes.data ?? []).map((r) => ({
+    meetingPrep: (Array.isArray(meetingRes.data) ? meetingRes.data : []).map((r) => ({
       section: r.section ?? "Insight",
       content: r.content?.trim() ?? "",
     })).filter((r) => r.content),
-    dailyChanges: (changeRes.data ?? []).map((r) => ({
+    dailyChanges: (Array.isArray(changeRes.data) ? changeRes.data : []).map((r) => ({
       brandDomain: r.brand_domain ?? "—",
       momentum: r.momentum,
       pressure: r.pressure,
       marketChange: r.market_change,
       latestInterest: r.latest_interest != null ? Number(r.latest_interest) : null,
     })).filter((r) => inScope(r.brandDomain)),
-    positioningMap: (mapRes.data ?? []).map((r) => ({
+    positioningMap: (Array.isArray(mapRes.data) ? mapRes.data : []).map((r) => ({
       brand: r.brand ?? "—",
       category: r.category,
       shareOfVoice: r.share_of_voice != null ? Number(r.share_of_voice) : null,
@@ -225,7 +231,7 @@ export async function fetchMarketStrategistIntel(
       y: r.y_axis != null ? Number(r.y_axis) : null,
       topEmotion: r.top_emotion,
     })),
-    evidencePack: (evidenceRes.data ?? []).map((r) => ({
+    evidencePack: (Array.isArray(evidenceRes.data) ? evidenceRes.data : []).map((r) => ({
       competitorDomain: r.competitor_domain ?? "—",
       threatScore: r.threat_score != null ? Number(r.threat_score) : null,
       creativeVolume: r.creative_volume != null ? Number(r.creative_volume) : null,
@@ -234,9 +240,13 @@ export async function fetchMarketStrategistIntel(
       confidence: r.confidence,
       marketRank: r.market_rank,
     })).filter((r) => inScope(r.competitorDomain)),
-    strategicActions: (actionsRes.data ?? []).map((r) => ({
+    strategicActions: (Array.isArray(actionsRes.data) ? actionsRes.data : []).map((r) => ({
       priority: r.priority != null ? Number(r.priority) : null,
       action: r.action?.trim() ?? "",
     })).filter((r) => r.action),
   };
+  } catch (err) {
+    console.warn("[market strategist intel] optional fetch failed:", err);
+    return empty;
+  }
 }

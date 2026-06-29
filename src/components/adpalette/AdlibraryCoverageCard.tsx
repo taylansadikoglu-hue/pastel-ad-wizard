@@ -5,7 +5,23 @@ type Props = {
 };
 
 export function AdlibraryCoverageCard({ coverage }: Props) {
-  if (!coverage?.hasData) return null;
+  if (!coverage) return null;
+
+  if (!coverage.available) {
+    return (
+      <section className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold tracking-wide text-neutral-300">AdLibrary coverage</h3>
+          <span className="rounded-full bg-neutral-800 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-neutral-500">
+            Optional
+          </span>
+        </div>
+        <p className="text-sm text-neutral-500">Coverage data unavailable</p>
+      </section>
+    );
+  }
+
+  if (!coverage.hasData) return null;
 
   return (
     <section className="rounded-xl border border-border/60 bg-card/40 p-4">

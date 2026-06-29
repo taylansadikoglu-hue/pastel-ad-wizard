@@ -48,9 +48,11 @@ import { buildCampaignIntelligence } from "@/lib/campaignIntelligence";
 import { buildCampaignStory } from "@/lib/campaignStory";
 import { AdlibraryAdvertiserPanel } from "@/components/adpalette/AdlibraryAdvertiserPanel";
 import {
+  EMPTY_ADVERTISER_INTEL,
   fetchAdlibraryAdvertiserIntel,
   type AdlibraryAdvertiserIntel,
 } from "@/lib/adlibraryCoverage";
+import { safeOptional } from "@/lib/safeQuery";
 import {
   fetchAdvertiserStrategistIntel,
   type AdvertiserStrategistIntel,
@@ -245,8 +247,16 @@ function AdvertiserPage() {
       }
 
       const placementFetch = await fetchAdvertiserPlacements(supabase, domain, 100);
-      const strategistFetch = await fetchAdvertiserStrategistIntel(supabase, domain);
-      const adlibraryFetch = await fetchAdlibraryAdvertiserIntel(supabase, domain, resolved);
+      const strategistFetch = await safeOptional(
+        "advertiserStrategistIntel",
+        () => fetchAdvertiserStrategistIntel(supabase, domain),
+        { available: false, domain: null, strategistSummary: null, marketDna: null, recommendation: null, positioningArchetype: null, funnelFocus: null, dnaSignature: null, strategySummary: null, topProduct: null, topEmotion: null, topCta: null, topBuyerStage: null, topOfferType: null, placements: null, narrativeGap: null, narrativeGapRisk: null },
+      );
+      const adlibraryFetch = await safeOptional(
+        "adlibraryAdvertiserIntel",
+        () => fetchAdlibraryAdvertiserIntel(supabase, domain, resolved),
+        EMPTY_ADVERTISER_INTEL,
+      );
       const merged = mergeAdvertiserIntel(w, placementFetch.rows, resolved, domain);
 
       if (!alive) return;

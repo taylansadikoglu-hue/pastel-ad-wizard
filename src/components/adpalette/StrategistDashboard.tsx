@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { AdlibraryCoverageCard } from "@/components/adpalette/AdlibraryCoverageCard";
 import { ClientWorkspaceEmptyState } from "@/components/adpalette/ClientWorkspaceEmptyState";
+import { MarketIntelDeepSections } from "@/components/adpalette/MarketIntelDeepSections";
 import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
 import { WorkspaceShell } from "./WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,8 @@ import {
   translateTerritory,
 } from "@/lib/radInsightTranslator";
 import { fetchMarketStrategistIntel, type MarketStrategistIntel } from "@/lib/marketStrategistIntel";
-import { fetchAdlibraryCoverage, type AdlibraryCoverage } from "@/lib/adlibraryCoverage";
+import { fetchAdlibraryCoverage, EMPTY_COVERAGE, type AdlibraryCoverage } from "@/lib/adlibraryCoverage";
+import { safeOptional } from "@/lib/safeQuery";
 
 const DC = {
   card: "card-dense",
@@ -221,30 +223,68 @@ export function StrategistDashboard() {
     let active = true;
     (async () => {
       setLoading(true);
-      const ctx = await getAgencyContext();
-      const bundle = await loadStrategistIntelligence(ctx, activeWorkspace);
-      const deepIntel = await fetchMarketStrategistIntel(supabase, activeWorkspace);
-      const coverage = await fetchAdlibraryCoverage(supabase);
-      if (!active) return;
+      try {
+        const ctx = await getAgencyContext();
+        const bundle = await loadStrategistIntelligence(ctx, activeWorkspace);
+        const deepIntel = await safeOptional(
+          "marketStrategistIntel",
+          () => fetchMarketStrategistIntel(supabase, activeWorkspace),
+          { available: false, executivePack: null, competitiveGap: null, dashboardHero: null, territories: [], risks: [], meetingPrep: [], dailyChanges: [], positioningMap: [], evidencePack: [], strategicActions: [] },
+        );
+        const coverage = await safeOptional(
+          "adlibraryCoverage",
+          () => fetchAdlibraryCoverage(supabase),
+          EMPTY_COVERAGE,
+        );
 
-      setAgencyCtx(ctx);
-      setIntelBundle(bundle);
-      setMarketIntel(deepIntel);
-      setAdlibraryCoverage(coverage);
-      setBrief(normalizeRadBrief(bundle.brief.data as Record<string, unknown> | null, null) as Brief | null);
-      setThreats((bundle.threats.data ?? []) as Threat[]);
-      setChallengers((bundle.challengers.data ?? []) as Challenger[]);
-      setWhitespace((bundle.whitespace.data ?? []) as Whitespace[]);
-      setMomentum((bundle.momentum.data ?? []) as Momentum[]);
-      setExec((bundle.executive.data ?? null) as Exec | null);
-      setPitch((bundle.pitch.data ?? []) as Pitch[]);
-      setConfidence(
-        normalizeRadConfidence(
-          bundle.pulse.data as Record<string, unknown> | null,
-          bundle.confidence.data as Record<string, unknown> | null,
-        ) as Confidence | null,
-      );
-      setLoading(false);
+        if (!active) return;
+
+        setAgencyCtx(ctx);
+        setIntelBundle(bundle);
+        setMarketIntel(deepIntel);
+        setAdlibraryCoverage(coverage);
+
+        const normalizedBrief = normalizeRadBrief(
+          bundle.brief.data as Record<string, unknown> | null,
+          null,
+        ) as Brief | null;
+
+        setBrief(
+          normalizedBrief ??
+            ({
+              client_name: activeWorkspace.client_name,
+              category: activeWorkspace.category,
+              headline: `${activeWorkspace.category} market intel`,
+              summary: `Scoped to ${activeWorkspace.client_name} and ${activeWorkspace.competitor_domains.length} competitors.`,
+            } as Brief),
+        );
+        setThreats((bundle.threats.data ?? []) as Threat[]);
+        setChallengers((bundle.challengers.data ?? []) as Challenger[]);
+        setWhitespace((bundle.whitespace.data ?? []) as Whitespace[]);
+        setMomentum((bundle.momentum.data ?? []) as Momentum[]);
+        setExec((bundle.executive.data ?? null) as Exec | null);
+        setPitch((bundle.pitch.data ?? []) as Pitch[]);
+        setConfidence(
+          normalizeRadConfidence(
+            bundle.pulse.data as Record<string, unknown> | null,
+            bundle.confidence.data as Record<string, unknown> | null,
+          ) as Confidence | null,
+        );
+      } catch (err) {
+        console.error("[Market Intel] required load failed:", err);
+        if (active) {
+          setBrief({
+            client_name: activeWorkspace.client_name,
+            category: activeWorkspace.category,
+            headline: `${activeWorkspace.category} market intel`,
+            summary: "Strategist bundle unavailable — workspace context is still active.",
+          } as Brief);
+          setMarketIntel(null);
+          setAdlibraryCoverage(EMPTY_COVERAGE);
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
     return () => {
       active = false;
@@ -301,6 +341,7 @@ export function StrategistDashboard() {
   );
 
   const hasAnyData =
+    Boolean(activeWorkspace) ||
     brief ||
     leaders.length > 0 ||
     louderRank.length > 0 ||
