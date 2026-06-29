@@ -702,6 +702,54 @@ export type Database = {
         }
         Relationships: []
       }
+      client_workspaces: {
+        Row: {
+          id: number
+          agency_id: string | null
+          client_name: string
+          client_domain: string
+          category: string
+          competitor_domains: string[]
+          audience: string | null
+          tone: string | null
+          objective: string | null
+          excluded_channels: string[]
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          agency_id?: string | null
+          client_name: string
+          client_domain: string
+          category: string
+          competitor_domains?: string[]
+          audience?: string | null
+          tone?: string | null
+          objective?: string | null
+          excluded_channels?: string[]
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          agency_id?: string | null
+          client_name?: string
+          client_domain?: string
+          category?: string
+          competitor_domains?: string[]
+          audience?: string | null
+          tone?: string | null
+          objective?: string | null
+          excluded_channels?: string[]
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       agency_watchlist: {
         Row: {
           agency_id: string

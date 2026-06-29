@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { AdlibraryCoverageCard } from "@/components/adpalette/AdlibraryCoverageCard";
+import { ClientWorkspaceEmptyState } from "@/components/adpalette/ClientWorkspaceEmptyState";
+import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
 import { WorkspaceShell } from "./WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -12,6 +14,7 @@ import {
 import { getAgencyContext, type AgencyContext } from "@/lib/agency-watchlist";
 import { generatePitchDeck } from "@/lib/export-pptx";
 import { cn } from "@/lib/utils";
+import { displayBrand } from "@/utils/brandDisplay";
 import { MODULE_META, type DataModuleId, type PanelFocus } from "./strategist/data-module-types";
 import { HardDataPanel } from "./strategist/HardDataPanel";
 import {
@@ -172,6 +175,7 @@ function brandLabel(domain: string | null | undefined): string {
 }
 
 export function StrategistDashboard() {
+  const { activeWorkspace, loading: workspaceLoading } = useClientWorkspace();
   const [brief, setBrief] = useState<Brief | null>(null);
   const [threats, setThreats] = useState<Threat[]>([]);
   const [challengers, setChallengers] = useState<Challenger[]>([]);
@@ -208,11 +212,18 @@ export function StrategistDashboard() {
   }, [intelBundle, agencyCtx]);
 
   useEffect(() => {
+    if (workspaceLoading) return;
+    if (!activeWorkspace) {
+      setLoading(false);
+      return;
+    }
+
     let active = true;
     (async () => {
+      setLoading(true);
       const ctx = await getAgencyContext();
-      const bundle = await loadStrategistIntelligence(ctx);
-      const deepIntel = await fetchMarketStrategistIntel(supabase);
+      const bundle = await loadStrategistIntelligence(ctx, activeWorkspace);
+      const deepIntel = await fetchMarketStrategistIntel(supabase, activeWorkspace);
       const coverage = await fetchAdlibraryCoverage(supabase);
       if (!active) return;
 
@@ -238,14 +249,22 @@ export function StrategistDashboard() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeWorkspace, workspaceLoading]);
 
-  if (loading) {
+  if (workspaceLoading || loading) {
     return (
       <WorkspaceShell variant="dark-dense" title="Market Intel">
         <div className={cn(DC.empty, "text-center")}>
           <span className="text-neutral-400 text-sm">Loading market intel for your watchlist…</span>
         </div>
+      </WorkspaceShell>
+    );
+  }
+
+  if (!activeWorkspace) {
+    return (
+      <WorkspaceShell variant="dark-dense" title="Market Intel">
+        <ClientWorkspaceEmptyState />
       </WorkspaceShell>
     );
   }
@@ -306,11 +325,26 @@ export function StrategistDashboard() {
     <WorkspaceShell
       variant="dark-dense"
       title="Market Intel"
-      subtitle="What your client faces, what competitors are doing, and what to say in tomorrow's meeting"
+      subtitle={`${activeWorkspace.client_name} · ${activeWorkspace.category} — what your client faces, what competitors are doing, and what to say in tomorrow's meeting`}
       onExportPitch={handleExportPitch}
       exportPitchDisabled={!intelBundle}
     >
       <div className="space-y-8">
+        {activeWorkspace && activeWorkspace.competitor_domains.length > 0 && (
+          <section className="flex flex-wrap items-center gap-2">
+            <span className="dense-meta text-neutral-400 text-xs uppercase tracking-wide">Competitors</span>
+            {activeWorkspace.competitor_domains.map((d) => (
+              <a
+                key={d}
+                href={`/app/advertiser/${d}`}
+                className="dense-chip text-xs px-2 py-1 rounded-md border border-neutral-700 text-neutral-200 hover:border-amber-600"
+              >
+                {displayBrand(d)}
+              </a>
+            ))}
+          </section>
+        )}
+
         {/* 01 — What's happening */}
         {(brief?.headline || happeningText || whatThisMeans) && (
           <section>

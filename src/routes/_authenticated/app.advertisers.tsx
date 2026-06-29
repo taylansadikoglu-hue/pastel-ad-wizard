@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { SpendIndex } from "@/components/adpalette/SpendIndex";
+import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
+import { normalizeClientDomain } from "@/lib/clientWorkspace";
 import { displayBrand } from "@/utils/brandDisplay";
 
 const API_BASE = "https://api.revenuad.com";
@@ -106,10 +108,17 @@ function brandDomain(a: Advertiser): string {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function AdvertisersPage() {
+  const { activeWorkspace } = useClientWorkspace();
   const [list, setList] = useState<Advertiser[]>([]);
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState("All");
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (activeWorkspace?.category) {
+      setActiveCat(activeWorkspace.category);
+    }
+  }, [activeWorkspace?.category]);
 
   useEffect(() => {
     let alive = true;
@@ -130,17 +139,36 @@ function AdvertisersPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    const scopeDomains = activeWorkspace
+      ? new Set([
+          normalizeClientDomain(activeWorkspace.client_domain),
+          ...activeWorkspace.competitor_domains.map(normalizeClientDomain),
+        ])
+      : null;
+
     return list.filter((a) => {
       if (!matchesCategory(a, activeCat)) return false;
+      if (scopeDomains) {
+        const d = normalizeClientDomain(brandDomain(a));
+        const inScope = [...scopeDomains].some((s) => d === s || d.includes(s.split(".")[0] ?? ""));
+        if (!inScope) return false;
+      }
       if (!q) return true;
       const name = (a.name ?? a.brand ?? "").toLowerCase();
       const d = brandDomain(a).toLowerCase();
       return name.includes(q) || d.includes(q);
     });
-  }, [list, query, activeCat]);
+  }, [list, query, activeCat, activeWorkspace]);
 
   return (
-    <WorkspaceShell title="Ad Library" subtitle="Tracked competitor creatives and channel mix">
+    <WorkspaceShell
+      title="Ad Library"
+      subtitle={
+        activeWorkspace
+          ? `${activeWorkspace.client_name} competitors — ${activeWorkspace.competitor_domains.join(", ")}`
+          : "Tracked competitor creatives and channel mix"
+      }
+    >
       <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 1200 }}>
         {/* Search bar */}
         <div style={{ position: "relative" }}>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ActiveClientWorkspaceBadge } from "@/components/adpalette/ActiveClientWorkspaceBadge";
 
 /** Linen TopBar — 52px, logo + search + avatar. */
 export function TopBar() {
@@ -45,8 +46,10 @@ export function TopBar() {
 
       <div className="flex-1" />
 
+      <ActiveClientWorkspaceBadge />
+
       <div
-        className="hidden md:flex items-center gap-2"
+        className="hidden md:flex items-center gap-2 ml-3"
         style={{
           background: "var(--canvas)",
           border: "1px solid var(--hairline)",

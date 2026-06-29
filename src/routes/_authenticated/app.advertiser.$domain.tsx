@@ -16,11 +16,8 @@ import {
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { SpendIndex, SpendLegend } from "@/components/adpalette/SpendIndex";
 import { displayBrand } from "@/utils/brandDisplay";
-import {
-  getAgencyContext,
-  domainInWatchlist,
-  type AgencyContext,
-} from "@/lib/agency-watchlist";
+import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
+import { normalizeClientDomain } from "@/lib/clientWorkspace";
 import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
@@ -191,6 +188,7 @@ function AdvertiserPage() {
   const [placementRowCount, setPlacementRowCount] = useState(0);
   const [strategistIntel, setStrategistIntel] = useState<AdvertiserStrategistIntel | null>(null);
   const [adlibraryIntel, setAdlibraryIntel] = useState<AdlibraryAdvertiserIntel | null>(null);
+  const { activeWorkspace } = useClientWorkspace();
 
   useEffect(() => {
     let alive = true;
@@ -201,10 +199,16 @@ function AdvertiserPage() {
   }, []);
 
   useEffect(() => {
-    if (!agencyCtx) return;
-    const scoped = domainInWatchlist(domain, agencyCtx.domains);
-    setOutOfScope(agencyCtx.domains.size > 0 && !scoped);
-  }, [agencyCtx, domain]);
+    if (!agencyCtx && !activeWorkspace) return;
+    const normalized = normalizeClientDomain(domain);
+    const inWorkspace =
+      activeWorkspace &&
+      (normalized === activeWorkspace.client_domain ||
+        activeWorkspace.competitor_domains.some((d) => normalized === normalizeClientDomain(d)));
+    const scoped = inWorkspace || (agencyCtx ? domainInWatchlist(domain, agencyCtx.domains) : false);
+    const hasScope = activeWorkspace ? Boolean(inWorkspace) : (agencyCtx?.domains.size ?? 0) > 0;
+    setOutOfScope(hasScope && !scoped);
+  }, [agencyCtx, activeWorkspace, domain]);
 
   useEffect(() => {
     let alive = true;

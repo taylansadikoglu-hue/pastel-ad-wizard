@@ -2,6 +2,7 @@ import {
   getAgencyContext,
   type AgencyContext,
 } from "@/lib/agency-watchlist";
+import type { ClientWorkspace } from "@/lib/clientWorkspace";
 import { ENGINE_URL } from "@/lib/engine";
 
 /** Standard envelope for every intelligence response. */
@@ -269,6 +270,7 @@ function emptyStrategistBundle(agencyId: string, source: string): StrategistInte
 
 export async function loadStrategistIntelligence(
   ctx?: AgencyContext,
+  workspace?: ClientWorkspace | null,
 ): Promise<StrategistIntelBundle> {
   const agencyContext = ctx ?? (await getAgencyContext().catch(() => ({
     agencyId: null,
@@ -276,8 +278,10 @@ export async function loadStrategistIntelligence(
     domains: new Set<string>(),
   })));
   const agencyId = resolveAgencyId(agencyContext.agencyId);
-  const category = resolveCategorySlug(undefined, agencyContext);
-  const brand = resolveBrand(agencyContext);
+  const category = workspace?.category
+    ? categoryToSlug(workspace.category)
+    : resolveCategorySlug(undefined, agencyContext);
+  const brand = workspace?.client_name?.trim() || resolveBrand(agencyContext);
   const url = strategistBundleUrl(category, brand);
 
   const response = await fetchFromUrl<RadStrategistBundleApi>(url, agencyId);
