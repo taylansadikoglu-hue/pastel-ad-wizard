@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ActiveClientWorkspaceBadge } from "@/components/adpalette/ActiveClientWorkspaceBadge";
+import { useDemoAccount } from "@/contexts/DemoAccountContext";
 
 /** Linen TopBar — 52px, logo + search + avatar. */
 export function TopBar() {
   const [initials, setInitials] = useState("YOU");
+  const { isDemo } = useDemoAccount();
 
   useEffect(() => {
     let active = true;
@@ -45,6 +47,25 @@ export function TopBar() {
       </a>
 
       <div className="flex-1" />
+
+      {isDemo && (
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+            color: "#C9963A",
+            background: "#FDF6E8",
+            border: "1px solid #E8D5A0",
+            borderRadius: 999,
+            padding: "3px 10px",
+            marginRight: 8,
+          }}
+        >
+          Demo · read only
+        </span>
+      )}
 
       <ActiveClientWorkspaceBadge />
 

@@ -27,16 +27,51 @@ type SectionHeaderProps = {
   onEvidence?: () => void;
 };
 
-function SectionHeader({ index, title, subtitle, onEvidence }: SectionHeaderProps) {
+function SectionHeader({ index, title, subtitle, onEvidence, linen }: SectionHeaderProps & { linen?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-3 mb-3">
       <div>
-        <div className={cn(DC.label, "tracking-widest")}>{index}</div>
-        <h2 className="text-base font-semibold tracking-tight text-neutral-100">{title}</h2>
-        {subtitle && <p className={cn(DC.meta, "mt-1 normal-case max-w-2xl")}>{subtitle}</p>}
+        <div
+          className={linen ? undefined : cn(DC.label, "tracking-widest")}
+          style={linen ? { fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9E9D94" } : undefined}
+        >
+          {index}
+        </div>
+        <h2
+          className={linen ? undefined : "text-base font-semibold tracking-tight text-neutral-100"}
+          style={linen ? { fontSize: 15, fontWeight: 600, color: "#1C1C1A", marginTop: 4 } : undefined}
+        >
+          {title}
+        </h2>
+        {subtitle && (
+          <p
+            className={linen ? undefined : cn(DC.meta, "mt-1 normal-case max-w-2xl")}
+            style={linen ? { marginTop: 4, fontSize: 12, color: "#6B6B62", maxWidth: 640 } : undefined}
+          >
+            {subtitle}
+          </p>
+        )}
       </div>
       {onEvidence && (
-        <button type="button" onClick={onEvidence} className={cn(DC.chip, "shrink-0 text-neutral-400 hover:text-amber-400/90 border-neutral-700")}>
+        <button
+          type="button"
+          onClick={onEvidence}
+          className={linen ? undefined : cn(DC.chip, "shrink-0 text-neutral-400 hover:text-amber-400/90 border-neutral-700")}
+          style={
+            linen
+              ? {
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#C9963A",
+                  background: "#FDF6E8",
+                  border: "1px solid #E8D5A0",
+                  borderRadius: 999,
+                  padding: "4px 10px",
+                  cursor: "pointer",
+                }
+              : undefined
+          }
+        >
           Evidence
         </button>
       )}
@@ -46,11 +81,17 @@ function SectionHeader({ index, title, subtitle, onEvidence }: SectionHeaderProp
 
 type Props = {
   intel: MarketStrategistIntel | null;
-  onEvidence: (moduleId: "territories" | "threats" | "meeting" | "changes" | "positioning" | "evidence", rowIndex?: number, rowLabel?: string) => void;
+  variant?: "dark" | "linen";
+  onEvidence: (
+    moduleId: "territories" | "threats" | "meeting" | "changes" | "positioning" | "evidence" | "strategicActions",
+    rowIndex?: number,
+    rowLabel?: string,
+  ) => void;
 };
 
-export function MarketIntelDeepSections({ intel, onEvidence }: Props) {
+export function MarketIntelDeepSections({ intel, onEvidence, variant = "dark" }: Props) {
   if (!intel?.available) return null;
+  const isLinen = variant === "linen";
 
   const exec = intel.executivePack;
   const gap = intel.competitiveGap;
@@ -232,17 +273,27 @@ export function MarketIntelDeepSections({ intel, onEvidence }: Props) {
 
       {intel.strategicActions.length > 0 && (
         <section>
-          <SectionHeader index="14" title="Strategic actions" subtitle="Priority moves from intelligence engine" />
+          <SectionHeader
+            index="14"
+            title="Strategic actions"
+            subtitle="Priority moves from intelligence engine"
+            onEvidence={() => onEvidence("strategicActions")}
+          />
           <div className={cn(DC.card, "space-y-2")}>
-            {intel.strategicActions.map((a) => (
-              <div key={a.action} className="flex gap-3 text-sm text-neutral-100">
+            {intel.strategicActions.map((a, i) => (
+              <button
+                key={a.action}
+                type="button"
+                onClick={() => onEvidence("strategicActions", i, a.action)}
+                className="flex w-full gap-3 text-left text-sm text-neutral-100 hover:opacity-90"
+              >
                 {a.priority != null && (
                   <span className="shrink-0 w-6 h-6 rounded-full bg-amber-950 border border-amber-800/60 text-amber-400 text-xs font-semibold flex items-center justify-center">
                     {a.priority}
                   </span>
                 )}
                 <span>{a.action}</span>
-              </div>
+              </button>
             ))}
           </div>
         </section>

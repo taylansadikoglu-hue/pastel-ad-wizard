@@ -4,6 +4,7 @@ import { Loader2, LogOut, Presentation } from "lucide-react";
 import { ThemeProvider } from "./theme";
 import { SidebarNav } from "./Dashboard";
 import { TopBar } from "./TopBar";
+import { DemoEnvironmentBanner } from "./DemoEnvironmentBanner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,7 @@ export function WorkspaceShell({
         style={isDense ? undefined : { background: "var(--canvas)" }}
       >
         <TopBar />
+        <DemoEnvironmentBanner variant={isDense ? "dark-dense" : "default"} />
         <div className="flex flex-1 min-h-0">
           <aside
             className="shrink-0 flex flex-col"

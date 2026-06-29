@@ -10,7 +10,10 @@ export type DataModuleId =
   | "meeting"
   | "changes"
   | "positioning"
-  | "evidence";
+  | "evidence"
+  | "channelMix"
+  | "adlibrary"
+  | "strategicActions";
 
 export type PanelFocus = {
   moduleId: DataModuleId;
@@ -94,5 +97,23 @@ export const MODULE_META: Record<
     title: "Executive evidence pack",
     subtitle: "Quantified threat and demand signals",
     source: "ra_barbs_evidence_pack",
+  },
+  channelMix: {
+    index: "03b",
+    title: "Channel mix",
+    subtitle: "Where category activity is showing up",
+    source: "strategist bundle · brief.channels",
+  },
+  adlibrary: {
+    index: "—",
+    title: "AdLibrary coverage",
+    subtitle: "Optional AdLibrary pipeline indexing",
+    source: "adlibrary_* tables",
+  },
+  strategicActions: {
+    index: "14",
+    title: "Strategic actions",
+    subtitle: "Priority moves from intelligence engine",
+    source: "ra_strategic_actions",
   },
 };

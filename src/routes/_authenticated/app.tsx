@@ -6,7 +6,9 @@ import { ThemeProvider } from "@/components/adpalette/theme";
 import { OnboardingWizard } from "@/components/adpalette/Onboarding";
 import { StrategistDashboard } from "@/components/adpalette/StrategistDashboard";
 import { Paywall } from "@/components/adpalette/Paywall";
+import { DemoRouteGuard } from "@/components/adpalette/DemoRouteGuard";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveDemoUser, seedDemoLocalStorage } from "@/lib/demo-account";
 
 export const Route = createFileRoute("/_authenticated/app")({
   head: () => ({
@@ -104,6 +106,9 @@ function AppPage() {
       const userEmail = u.user.email ?? "";
       setEmail(userEmail);
       const isAdmin = userEmail.toLowerCase() === ADMIN_EMAIL;
+      const isDemo = resolveDemoUser(u.user);
+
+      if (isDemo) seedDemoLocalStorage();
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -111,7 +116,7 @@ function AppPage() {
         .eq("id", u.user.id)
         .maybeSingle();
 
-      if (profile?.stripe_status !== "active" && !demoUnlocked) {
+      if (profile?.stripe_status !== "active" && !demoUnlocked && !isDemo) {
         setStage("paywall");
         return;
       }
@@ -125,7 +130,7 @@ function AppPage() {
         }
       }
 
-      setStage(profile?.agency_domain || isAdmin || demoUnlocked ? "app" : "onboard");
+      setStage(profile?.agency_domain || isAdmin || demoUnlocked || isDemo ? "app" : "onboard");
     } catch {
       if (demoUnlocked && isLocalPreview) {
         setEmail("demo@local");
@@ -163,7 +168,11 @@ function AppPage() {
         <AdminPicker email={email} onPick={() => setStage("app")} onSignOut={logout} />
       )}
       {stage === "onboard" && <OnboardingWizard onComplete={() => setStage("app")} />}
-      {stage === "app" && (isChildWorkspaceRoute ? <Outlet /> : <StrategistDashboard />)}
+      {stage === "app" && (
+        <DemoRouteGuard>
+          {isChildWorkspaceRoute ? <Outlet /> : <StrategistDashboard />}
+        </DemoRouteGuard>
+      )}
     </ThemeProvider>
   );
 }

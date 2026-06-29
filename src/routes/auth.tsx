@@ -5,6 +5,7 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 import { ThemeProvider } from "@/components/adpalette/theme";
+import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/demo-account";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -68,6 +69,22 @@ function AuthPage() {
     }
   };
 
+  const signInDemo = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: DEMO_EMAIL,
+        password: DEMO_PASSWORD,
+      });
+      if (error) throw error;
+      toast.success("Signed in to the CommBank demo");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Demo sign-in failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-canvas text-ink grid place-items-center px-6 py-10">
@@ -88,6 +105,16 @@ function AuthPage() {
 
           <button onClick={google} disabled={loading} className="btn-flat w-full justify-center">
             Continue with Google
+          </button>
+
+          <button
+            type="button"
+            onClick={signInDemo}
+            disabled={loading}
+            className="btn-flat w-full justify-center"
+            style={{ background: "#FDF6E8", borderColor: "#E8D5A0" }}
+          >
+            Explore CommBank demo
           </button>
 
           <div className="flex items-center gap-2 mono text-[11px] text-muted-foreground">

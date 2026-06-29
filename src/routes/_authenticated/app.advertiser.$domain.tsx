@@ -49,6 +49,7 @@ import {
   PLACEMENT_INTEL_UNAVAILABLE,
   type AdvertiserIntelWar,
   type AdvertiserPlacementRow,
+  type PlacementChannelEntry,
 } from "@/lib/advertiserPlacements";
 import { buildCampaignIntelligence } from "@/lib/campaignIntelligence";
 import { buildCampaignStory } from "@/lib/campaignStory";
@@ -59,6 +60,9 @@ import {
   type AdlibraryAdvertiserIntel,
 } from "@/lib/adlibraryCoverage";
 import { safeOptional } from "@/lib/safeQuery";
+import { useDemoAccount } from "@/contexts/DemoAccountContext";
+import { DemoAdvertiserRestricted } from "@/components/adpalette/DemoRestricted";
+import { isDemoAdvertiserAllowed } from "@/lib/demo-account";
 import {
   fetchAdvertiserStrategistIntel,
   type AdvertiserStrategistIntel,
@@ -234,6 +238,7 @@ const CHANNEL_TAB_MAP: Record<string, string[]> = {
 
 function AdvertiserPage() {
   const { domain } = Route.useParams();
+  const { isDemo, canExport, canScan } = useDemoAccount();
 
   const [brand, setBrand] = useState<string>(() => displayBrand(domain));
   const [war, setWar] = useState<War | null>(null);
@@ -249,6 +254,8 @@ function AdvertiserPage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [outOfScope, setOutOfScope] = useState(false);
   const [placementRowCount, setPlacementRowCount] = useState(0);
+  const [placementRows, setPlacementRows] = useState<AdvertiserPlacementRow[]>([]);
+  const [warroomChannels, setWarroomChannels] = useState<PlacementChannelEntry[] | undefined>(undefined);
   const [strategistIntel, setStrategistIntel] = useState<AdvertiserStrategistIntel | null>(null);
   const [adlibraryIntel, setAdlibraryIntel] = useState<AdlibraryAdvertiserIntel | null>(null);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>(defaultLoadStatus);
@@ -385,6 +392,12 @@ function AdvertiserPage() {
         if (!alive) return;
 
         setPlacementRowCount(placementFetch.rows.length);
+        setPlacementRows(placementFetch.rows);
+        setWarroomChannels(
+          Array.isArray(w?.channels) && w.channels.length
+            ? (w.channels as PlacementChannelEntry[])
+            : undefined,
+        );
         setStrategistIntel(strategistFetch);
         setAdlibraryIntel(adlibraryFetch);
         setWar(merged);
@@ -433,7 +446,11 @@ function AdvertiserPage() {
 
   const advertiserBrief = useMemo(() => safeBuild("advertiserBrief", () => ({
     marketingRead: buildCurrentMarketingRead(brand, intelWar),
-    channelMix: buildAdvertiserChannelMix(intelWar),
+    channelMix: buildAdvertiserChannelMix(intelWar, {
+      placementRows,
+      adlibraryRows: adlibraryIntel?.channelRows,
+      warroomChannels,
+    }),
     spend: buildAdvertiserSpendBand(intelWar),
     products: buildProductsPromoted(intelWar),
     audiences: buildAudiencesPersonas(intelWar),
@@ -441,7 +458,7 @@ function AdvertiserPage() {
     missing: buildWhatTheyreMissing(brand, intelWar),
     moves: buildAdvertiserRecommendedMoves(brand, intelWar, strategistIntel),
     talkingPoints: buildMeetingTalkingPoints(brand, intelWar, strategistIntel),
-  }), null), [intelWar, brand, strategistIntel]);
+  }), null), [intelWar, brand, strategistIntel, placementRows, adlibraryIntel, warroomChannels]);
 
   const campaignIntel = useMemo(
     () => safeBuild("campaignIntel", () => buildCampaignIntelligence(brand, intelWar), null),
@@ -559,6 +576,14 @@ function AdvertiserPage() {
     );
   }
 
+  if (isDemo && !isDemoAdvertiserAllowed(domain)) {
+    return (
+      <WorkspaceShell title="Advertiser intelligence" subtitle="Demo environment">
+        <DemoAdvertiserRestricted />
+      </WorkspaceShell>
+    );
+  }
+
   if (outOfScope) {
     return (
       <WorkspaceShell title={brand} subtitle={`Ad library · ${brand}`}>
@@ -594,7 +619,11 @@ function AdvertiserPage() {
         <QueryStatusCard
           title="Placement intelligence"
           reason={loadStatus.placements.reason}
-          action={{ label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }}
+          action={
+            canScan
+              ? { label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }
+              : undefined
+          }
         />
       ) : null}
 
@@ -606,7 +635,11 @@ function AdvertiserPage() {
         <QueryStatusCard
           title="No ads indexed yet"
           reason={`We haven't picked up live ads for ${brand} yet. Run a scan to index placements and unlock channel mix, messaging, and recommendations.`}
-          action={{ label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }}
+          action={
+            canScan
+              ? { label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }
+              : undefined
+          }
         />
       ) : null}
 
@@ -664,32 +697,34 @@ function AdvertiserPage() {
                 {updatedAgo && ` · Updated ${updatedAgo}`}
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                style={{
-                  background: "#1C1C1A",
-                  color: "#FFFFFF",
-                  border: "none",
-                  borderRadius: 7,
-                  padding: "10px 20px",
-                  fontSize: 14,
-                  fontWeight: 500,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  cursor: exporting ? "not-allowed" : "pointer",
-                  opacity: exporting ? 0.7 : 1,
-                }}
-              >
-                {exporting ? <Loader2 size={16} className="animate-spin" /> : <Presentation size={16} />}
-                {exporting ? "Building deck…" : "Export slides"}
-              </button>
-              {exportError && (
-                <div style={{ color: "#C0392B", fontSize: 12 }}>{exportError}</div>
-              )}
-            </div>
+            {canExport && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                <button
+                  onClick={handleExport}
+                  disabled={exporting}
+                  style={{
+                    background: "#1C1C1A",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: 7,
+                    padding: "10px 20px",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    cursor: exporting ? "not-allowed" : "pointer",
+                    opacity: exporting ? 0.7 : 1,
+                  }}
+                >
+                  {exporting ? <Loader2 size={16} className="animate-spin" /> : <Presentation size={16} />}
+                  {exporting ? "Building deck…" : "Export slides"}
+                </button>
+                {exportError && (
+                  <div style={{ color: "#C0392B", fontSize: 12 }}>{exportError}</div>
+                )}
+              </div>
+            )}
           </div>
 
 
@@ -740,9 +775,7 @@ function AdvertiserPage() {
                   overallConfidence={advertiserBrief.channelMix.overallConfidence}
                   sourceLabel={advertiserBrief.channelMix.sourceLabel}
                   estimationTooltip={advertiserBrief.channelMix.estimationTooltip}
-                  available={advertiserBrief.channelMix.available}
                   variant="light"
-                  emptyMessage="Channel mix unavailable for this advertiser."
                 />
               </InsightSection>
 

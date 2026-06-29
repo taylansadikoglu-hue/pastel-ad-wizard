@@ -5,6 +5,8 @@ import { useTheme } from "./theme";
 import { supabase } from "@/integrations/supabase/client";
 import { getAgencyContext, domainInWatchlist } from "@/lib/agency-watchlist";
 import { runMockScan } from "@/lib/mock-scan.functions";
+import { useDemoAccount } from "@/contexts/DemoAccountContext";
+import { DEMO_WORKSPACE_DOMAIN } from "@/lib/demo-account";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Layers, Target, Settings, LogOut, MessageSquare, X, Search,
@@ -1135,16 +1137,27 @@ const NAV_ITEMS = [
   { icon: Grid3x3, label: "Categories", href: "/app/categories" },
 ];
 
+const DEMO_NAV_ITEMS = [
+  { icon: BarChart3, label: "Market Intel", href: "/app/pcr" },
+  { icon: Target, label: "CommBank War Room", href: `/app/advertiser/${DEMO_WORKSPACE_DOMAIN}` },
+  { icon: Grid3x3, label: "Categories", href: "/app/categories" },
+];
+
 export function SidebarNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isDemo } = useDemoAccount();
+  const items = isDemo ? DEMO_NAV_ITEMS : NAV_ITEMS;
   return (
     <nav style={{ padding: "4px 8px" }} className="space-y-0.5 flex-1">
-      <div className="nav-section-label" style={{ marginBottom: 8, marginTop: 4 }}>Workspace</div>
-      {NAV_ITEMS.map((item) => {
+      <div className="nav-section-label" style={{ marginBottom: 8, marginTop: 4 }}>
+        {isDemo ? "Demo showcase" : "Workspace"}
+      </div>
+      {items.map((item) => {
         const active =
           pathname === item.href ||
           (item.href === "/app/pcr" && (pathname === "/app" || pathname === "/app/")) ||
-          (item.href === "/app/advertisers" && pathname.startsWith("/app/advertiser"));
+          (!isDemo && item.href === "/app/advertisers" && pathname.startsWith("/app/advertiser")) ||
+          (isDemo && item.href.includes("/app/advertiser/") && pathname.startsWith("/app/advertiser/"));
         return (
           <Link
             key={item.label}

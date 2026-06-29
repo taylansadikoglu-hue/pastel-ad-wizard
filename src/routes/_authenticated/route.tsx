@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { ClientWorkspaceProvider } from "@/contexts/ClientWorkspaceContext";
+import { DemoAccountProvider } from "@/contexts/DemoAccountContext";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -10,8 +11,10 @@ export const Route = createFileRoute("/_authenticated")({
     return { user: data.user };
   },
   component: () => (
-    <ClientWorkspaceProvider>
-      <Outlet />
-    </ClientWorkspaceProvider>
+    <DemoAccountProvider>
+      <ClientWorkspaceProvider>
+        <Outlet />
+      </ClientWorkspaceProvider>
+    </DemoAccountProvider>
   ),
 });

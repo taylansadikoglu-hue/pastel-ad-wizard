@@ -15,6 +15,8 @@ import {
   type ClientWorkspace,
   type CreateClientWorkspaceInput,
 } from "@/lib/clientWorkspace";
+import { useDemoAccount } from "@/contexts/DemoAccountContext";
+import { isCommBankWorkspace, seedDemoLocalStorage } from "@/lib/demo-account";
 
 type ClientWorkspaceContextValue = {
   workspaces: ClientWorkspace[];
@@ -30,6 +32,7 @@ type ClientWorkspaceContextValue = {
 const ClientWorkspaceContext = createContext<ClientWorkspaceContextValue | null>(null);
 
 export function ClientWorkspaceProvider({ children }: { children: ReactNode }) {
+  const { isDemo } = useDemoAccount();
   const [workspaces, setWorkspaces] = useState<ClientWorkspace[]>([]);
   const [activeId, setActiveId] = useState<number | null>(() => readActiveWorkspaceId());
   const [loading, setLoading] = useState(true);
@@ -38,6 +41,18 @@ export function ClientWorkspaceProvider({ children }: { children: ReactNode }) {
     const rows = await fetchClientWorkspaces();
     setWorkspaces(rows);
 
+    if (isDemo) {
+      const commbank = rows.find(isCommBankWorkspace) ?? null;
+      if (commbank) {
+        seedDemoLocalStorage(commbank.id);
+        setActiveId(commbank.id);
+        return;
+      }
+      seedDemoLocalStorage();
+      setActiveId(null);
+      return;
+    }
+
     const storedId = readActiveWorkspaceId();
     if (storedId && rows.some((w) => w.id === storedId)) {
       setActiveId(storedId);
@@ -45,7 +60,7 @@ export function ClientWorkspaceProvider({ children }: { children: ReactNode }) {
       writeActiveWorkspaceId(null);
       setActiveId(null);
     }
-  }, []);
+  }, [isDemo]);
 
   useEffect(() => {
     let alive = true;
@@ -58,13 +73,23 @@ export function ClientWorkspaceProvider({ children }: { children: ReactNode }) {
     };
   }, [refreshWorkspaces]);
 
-  const setActiveWorkspaceId = useCallback((id: number | null) => {
-    writeActiveWorkspaceId(id);
-    setActiveId(id);
-  }, []);
+  const setActiveWorkspaceId = useCallback(
+    (id: number | null) => {
+      if (isDemo) {
+        const target = workspaces.find((w) => w.id === id) ?? null;
+        if (!target || !isCommBankWorkspace(target)) return;
+      }
+      writeActiveWorkspaceId(id);
+      setActiveId(id);
+    },
+    [isDemo, workspaces],
+  );
 
   const createWorkspace = useCallback(
     async (input: CreateClientWorkspaceInput) => {
+      if (isDemo) {
+        return { workspace: null, error: "Demo accounts cannot create workspaces." };
+      }
       const result = await createClientWorkspace(input);
       if (result.workspace) {
         await refreshWorkspaces();
@@ -72,24 +97,29 @@ export function ClientWorkspaceProvider({ children }: { children: ReactNode }) {
       }
       return result;
     },
-    [refreshWorkspaces, setActiveWorkspaceId],
+    [isDemo, refreshWorkspaces, setActiveWorkspaceId],
   );
 
-  const activeWorkspace = useMemo(
-    () => workspaces.find((w) => w.id === activeId) ?? null,
-    [workspaces, activeId],
+  const activeWorkspace = useMemo(() => {
+    const pool = isDemo ? workspaces.filter(isCommBankWorkspace) : workspaces;
+    return pool.find((w) => w.id === activeId) ?? null;
+  }, [workspaces, activeId, isDemo]);
+
+  const visibleWorkspaces = useMemo(
+    () => (isDemo ? workspaces.filter(isCommBankWorkspace) : workspaces),
+    [isDemo, workspaces],
   );
 
   const value = useMemo(
     () => ({
-      workspaces,
+      workspaces: visibleWorkspaces,
       activeWorkspace,
       loading,
       setActiveWorkspaceId,
       refreshWorkspaces,
       createWorkspace,
     }),
-    [workspaces, activeWorkspace, loading, setActiveWorkspaceId, refreshWorkspaces, createWorkspace],
+    [visibleWorkspaces, activeWorkspace, loading, setActiveWorkspaceId, refreshWorkspaces, createWorkspace],
   );
 
   return (

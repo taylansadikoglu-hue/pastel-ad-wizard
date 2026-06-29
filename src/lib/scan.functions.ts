@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertWriteAllowedForSession } from "@/lib/demo-account.server";
 
 const SYSTEM_PROMPT = `You are a Quantitative Data Analyst. You receive two distinct corpora about a competitor brand:
 
@@ -38,6 +39,7 @@ export const startScan = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await assertWriteAllowedForSession(supabase, context.claims as Record<string, unknown>);
     console.log("startScan handler received data:", data);
 
     // Preserve the FULL domain (e.g. "commbank.com.au"). The background worker
