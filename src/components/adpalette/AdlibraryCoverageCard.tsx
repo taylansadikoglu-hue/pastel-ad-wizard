@@ -3,22 +3,48 @@ import type { AdlibraryCoverage } from "@/lib/adlibraryCoverage";
 type Props = {
   coverage: AdlibraryCoverage | null;
   onEvidence?: () => void;
+  variant?: "dark" | "linen";
 };
 
-export function AdlibraryCoverageCard({ coverage, onEvidence }: Props) {
+export function AdlibraryCoverageCard({ coverage, onEvidence, variant = "dark" }: Props) {
   if (!coverage) return null;
+  const isLinen = variant === "linen";
 
   return (
-    <section className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4">
+    <section
+      className={isLinen ? undefined : "rounded-xl border border-neutral-800 bg-neutral-950/60 p-4"}
+      style={
+        isLinen
+          ? {
+              background: "#FFFFFF",
+              border: "1px solid #EBE9E4",
+              borderRadius: 12,
+              padding: 16,
+              marginTop: 16,
+            }
+          : undefined
+      }
+    >
       <div className="mb-2 flex items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold tracking-wide text-neutral-300">AdLibrary coverage</h3>
+          <h3
+            className={isLinen ? undefined : "text-sm font-semibold tracking-wide text-neutral-300"}
+            style={isLinen ? { fontSize: 14, fontWeight: 600, color: "#1C1C1A" } : undefined}
+          >
+            AdLibrary coverage
+          </h3>
           {!coverage.available ? (
-            <p className="mt-1 text-sm text-neutral-500">Coverage data unavailable</p>
+            <p className={isLinen ? undefined : "mt-1 text-sm text-neutral-500"} style={isLinen ? { marginTop: 4, fontSize: 13, color: "#6B6B62" } : undefined}>
+              Coverage data unavailable
+            </p>
           ) : coverage.hasData ? (
-            <p className="mt-1 text-xs text-emerald-400">Live pipeline data</p>
+            <p className={isLinen ? undefined : "mt-1 text-xs text-emerald-400"} style={isLinen ? { marginTop: 4, fontSize: 12, color: "#2D7D46" } : undefined}>
+              Live pipeline data
+            </p>
           ) : (
-            <p className="mt-1 text-sm text-neutral-500">No AdLibrary rows indexed yet</p>
+            <p className={isLinen ? undefined : "mt-1 text-sm text-neutral-500"} style={isLinen ? { marginTop: 4, fontSize: 13, color: "#6B6B62" } : undefined}>
+              No AdLibrary rows indexed yet
+            </p>
           )}
         </div>
         <div className="flex items-center gap-2">

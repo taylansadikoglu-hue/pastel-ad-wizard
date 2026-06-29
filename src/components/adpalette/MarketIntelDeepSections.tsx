@@ -27,16 +27,51 @@ type SectionHeaderProps = {
   onEvidence?: () => void;
 };
 
-function SectionHeader({ index, title, subtitle, onEvidence }: SectionHeaderProps) {
+function SectionHeader({ index, title, subtitle, onEvidence, linen }: SectionHeaderProps & { linen?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-3 mb-3">
       <div>
-        <div className={cn(DC.label, "tracking-widest")}>{index}</div>
-        <h2 className="text-base font-semibold tracking-tight text-neutral-100">{title}</h2>
-        {subtitle && <p className={cn(DC.meta, "mt-1 normal-case max-w-2xl")}>{subtitle}</p>}
+        <div
+          className={linen ? undefined : cn(DC.label, "tracking-widest")}
+          style={linen ? { fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9E9D94" } : undefined}
+        >
+          {index}
+        </div>
+        <h2
+          className={linen ? undefined : "text-base font-semibold tracking-tight text-neutral-100"}
+          style={linen ? { fontSize: 15, fontWeight: 600, color: "#1C1C1A", marginTop: 4 } : undefined}
+        >
+          {title}
+        </h2>
+        {subtitle && (
+          <p
+            className={linen ? undefined : cn(DC.meta, "mt-1 normal-case max-w-2xl")}
+            style={linen ? { marginTop: 4, fontSize: 12, color: "#6B6B62", maxWidth: 640 } : undefined}
+          >
+            {subtitle}
+          </p>
+        )}
       </div>
       {onEvidence && (
-        <button type="button" onClick={onEvidence} className={cn(DC.chip, "shrink-0 text-neutral-400 hover:text-amber-400/90 border-neutral-700")}>
+        <button
+          type="button"
+          onClick={onEvidence}
+          className={linen ? undefined : cn(DC.chip, "shrink-0 text-neutral-400 hover:text-amber-400/90 border-neutral-700")}
+          style={
+            linen
+              ? {
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#C9963A",
+                  background: "#FDF6E8",
+                  border: "1px solid #E8D5A0",
+                  borderRadius: 999,
+                  padding: "4px 10px",
+                  cursor: "pointer",
+                }
+              : undefined
+          }
+        >
           Evidence
         </button>
       )}
@@ -46,6 +81,7 @@ function SectionHeader({ index, title, subtitle, onEvidence }: SectionHeaderProp
 
 type Props = {
   intel: MarketStrategistIntel | null;
+  variant?: "dark" | "linen";
   onEvidence: (
     moduleId: "territories" | "threats" | "meeting" | "changes" | "positioning" | "evidence" | "strategicActions",
     rowIndex?: number,
@@ -53,8 +89,9 @@ type Props = {
   ) => void;
 };
 
-export function MarketIntelDeepSections({ intel, onEvidence }: Props) {
+export function MarketIntelDeepSections({ intel, onEvidence, variant = "dark" }: Props) {
   if (!intel?.available) return null;
+  const isLinen = variant === "linen";
 
   const exec = intel.executivePack;
   const gap = intel.competitiveGap;
