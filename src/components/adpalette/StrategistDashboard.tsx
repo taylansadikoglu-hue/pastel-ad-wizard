@@ -11,7 +11,19 @@ import { generatePitchDeck } from "@/lib/export-pptx";
 import { cn } from "@/lib/utils";
 import { MODULE_META, type PanelFocus } from "./strategist/data-module-types";
 import { HardDataPanel } from "./strategist/HardDataPanel";
-import { selectDominantTheme, selectSurfacedThemes, isThemeAllowed } from "@/lib/radInsightTranslator";
+import {
+  buildLouderRankList,
+  buildOpenAngleCopy,
+  buildRecommendedMoves,
+  buildWhatThisMeans,
+  isThemeAllowed,
+  parseMarketChannelMix,
+  parseSpendRange,
+  sanitizeInsightCopy,
+  selectDominantTheme,
+  selectSurfacedThemes,
+  translateTerritory,
+} from "@/lib/radInsightTranslator";
 
 const DC = {
   card: "card-dense",
@@ -230,24 +242,17 @@ export function StrategistDashboard() {
     .sort((a, b) => (Number(b.creative_volume) || Number(b.demand) || 0) - (Number(a.creative_volume) || Number(a.demand) || 0))
     .slice(0, 5);
 
-  const pressureBrands = [...threats]
-    .sort((a, b) => (Number(b.threat_score) || 0) - (Number(a.threat_score) || 0))
-    .slice(0, 5);
-
-  const gettingLouder = [...momentum]
-    .sort((a, b) => (Number(b.latest_interest) || 0) - (Number(a.latest_interest) || 0))
-    .slice(0, 6);
-
-  const risingChallengers = [...challengers]
-    .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
-    .slice(0, 4);
+  const louderRank = buildLouderRankList(threats, momentum, brief?.strongest_threat);
 
   const openAngles = [...whitespace]
     .filter((r) => !r.emotion || isThemeAllowed(r.emotion))
     .sort((a, b) => (Number(b.opportunity_score) || 0) - (Number(a.opportunity_score) || 0))
-    .slice(0, 5);
+    .slice(0, 4);
 
-  const actionablePitch = pitch.filter((r) => r.action && r.recommendation);
+  const recommendedMoves = buildRecommendedMoves(brief?.client_name);
+
+  const channelMix = parseMarketChannelMix(intelBundle?.brief.data as Record<string, unknown> | null);
+  const spendRange = parseSpendRange(intelBundle?.brief.data as Record<string, unknown> | null);
 
   const marketMessages = selectSurfacedThemes(
     challengers.map((c) => ({
@@ -263,16 +268,22 @@ export function StrategistDashboard() {
   const hasAnyData =
     brief ||
     leaders.length > 0 ||
-    gettingLouder.length > 0 ||
+    louderRank.length > 0 ||
     openAngles.length > 0 ||
-    actionablePitch.length > 0 ||
+    recommendedMoves.length > 0 ||
     exec;
 
-  const happeningText =
-    brief?.summary ??
-    (exec?.dominant_market
-      ? `${exec.dominant_market} is active right now. ${exec.strongest_brand ? `${exec.strongest_brand} is setting the pace.` : "Leadership is still consolidating."}`
-      : null);
+  const happeningText = brief?.summary ? sanitizeInsightCopy(brief.summary) : null;
+
+  const whatThisMeans =
+    brief?.client_name && (brief?.category || exec?.dominant_market)
+      ? buildWhatThisMeans({
+          clientName: brief.client_name,
+          category: brief.category ?? exec?.dominant_market ?? "This category",
+          dominantTheme: exec?.dominant_emotion ?? "trust",
+          openTheme: exec?.top_opportunity_emotion ?? brief.whitespace_emotion,
+        })
+      : null;
 
   return (
     <WorkspaceShell
@@ -284,7 +295,7 @@ export function StrategistDashboard() {
     >
       <div className="space-y-8">
         {/* 01 — What's happening */}
-        {(brief?.headline || happeningText) && (
+        {(brief?.headline || happeningText || whatThisMeans) && (
           <section>
             <SectionHeader
               index={MODULE_META.executive.index}
@@ -300,16 +311,17 @@ export function StrategistDashboard() {
               )}
               {brief?.headline && (
                 <h1 className="text-xl md:text-2xl font-semibold tracking-tight leading-snug text-neutral-50">
-                  {brief.headline}
+                  {sanitizeInsightCopy(brief.headline)}
                 </h1>
               )}
-              {happeningText && (
-                <p className="text-sm leading-relaxed text-neutral-300 max-w-3xl">{happeningText}</p>
+              {whatThisMeans && (
+                <div className="space-y-1">
+                  <div className={cn(DC.label, "text-amber-400/90")}>What this means</div>
+                  <p className="text-sm leading-relaxed text-neutral-200 max-w-3xl">{whatThisMeans}</p>
+                </div>
               )}
-              {brief?.strategic_opening && (
-                <p className="text-sm leading-relaxed text-neutral-400 border-l-2 border-amber-600/60 pl-3">
-                  {brief.strategic_opening}
-                </p>
+              {happeningText && (
+                <p className="text-sm leading-relaxed text-neutral-400 max-w-3xl">{happeningText}</p>
               )}
               {confidence && (confidence.ads_analysed != null || confidence.brands_tracked != null) && (
                 <div className={cn(DC.meta, "pt-2 border-t border-neutral-800 flex flex-wrap gap-x-4 gap-y-1")}>
@@ -369,7 +381,7 @@ export function StrategistDashboard() {
         )}
 
         {/* 03 — Who is getting louder */}
-        {(gettingLouder.length > 0 || risingChallengers.length > 0 || pressureBrands.length > 0) && (
+        {louderRank.length > 0 && (
           <section>
             <SectionHeader
               index={MODULE_META.momentum.index}
@@ -377,60 +389,73 @@ export function StrategistDashboard() {
               subtitle={MODULE_META.momentum.subtitle}
               onEvidence={() => openPanel("momentum")}
             />
-            <div className="space-y-3">
-              {pressureBrands.length > 0 && (
-                <div className={cn(DC.card)}>
-                  <div className={cn(DC.label, "mb-2 text-rose-400/90")}>Who&apos;s putting the most pressure</div>
-                  <ul className="space-y-2">
-                    {pressureBrands.map((r, i) => (
-                      <li key={r.competitor_domain ?? i} className="flex items-center justify-between gap-2 text-sm">
-                        <span className="font-medium text-neutral-100">{brandLabel(r.competitor_domain)}</span>
-                        <MomentumChip value={i === 0 && brief?.strongest_threat ? "Highest pressure" : r.demand != null ? "Active spend" : null} />
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <div className="grid gap-2 md:grid-cols-2">
-                {gettingLouder.map((r, i) => (
-                  <button
-                    key={r.brand_domain ?? r.keyword ?? i}
-                    type="button"
-                    onClick={() => openPanel("momentum", i, r.brand_domain ?? undefined)}
-                    className={cn(DC.card, "text-left py-2 px-3 hover:border-neutral-600 transition-colors")}
+            <div className={cn(DC.card)}>
+              <ul className="space-y-2">
+                {louderRank.map((row, i) => (
+                  <li
+                    key={row.brand}
+                    className="flex items-center justify-between gap-3 text-sm border-b border-neutral-800/80 last:border-0 pb-2 last:pb-0"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-neutral-100 truncate">
-                        {brandLabel(r.brand_domain)}
-                      </span>
-                      <MomentumChip value={r.momentum} />
-                    </div>
-                    {r.keyword && <div className={cn(DC.meta, "mt-1 truncate")}>Rising on: {r.keyword}</div>}
-                  </button>
+                    <span className="font-medium text-neutral-100">
+                      {brandLabel(row.brand)}
+                    </span>
+                    <MomentumChip value={row.label} />
+                  </li>
                 ))}
-                {risingChallengers.map((r, i) => (
-                  <button
-                    key={`ch-${r.brand_domain ?? r.keyword ?? i}`}
-                    type="button"
-                    onClick={() => openPanel("challengers", i, r.brand_domain ?? r.keyword ?? undefined)}
-                    className={cn(DC.card, "text-left py-2 px-3 hover:border-neutral-600 transition-colors border-amber-900/40")}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-neutral-100 truncate">
-                        {brandLabel(r.brand_domain) || r.keyword}
-                      </span>
-                      <MomentumChip value={r.momentum ?? "Emerging"} />
-                    </div>
-                    {brief?.emerging_challenger &&
-                      r.brand_domain?.toLowerCase().includes(brief.emerging_challenger.toLowerCase()) && (
-                        <div className={cn(DC.meta, "mt-1 text-amber-400/80")}>Watch this brand</div>
-                      )}
-                  </button>
-                ))}
-              </div>
+              </ul>
             </div>
           </section>
         )}
+
+        {/* Channel mix */}
+        <section>
+          <SectionHeader
+            index="03b"
+            title="Where activity is showing up"
+            subtitle="Channel share across observed category activity"
+          />
+          <div className={cn(DC.card, "space-y-3")}>
+            {channelMix.length > 0 ? (
+              <div className="space-y-2">
+                {channelMix.map((row) => (
+                  <div key={row.channel} className="flex items-center gap-3 text-sm">
+                    <span className="w-24 text-neutral-300">{row.channel}</span>
+                    <div className="flex-1 h-2 bg-neutral-800 rounded overflow-hidden">
+                      <div
+                        className="h-full bg-amber-500/80 rounded"
+                        style={{ width: `${Math.min(100, row.pct)}%` }}
+                      />
+                    </div>
+                    <span className="w-10 text-right text-neutral-400 tabular-nums">{Math.round(row.pct)}%</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-neutral-300">Channel mix unavailable for this market view.</p>
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  Channel-level signals are available on advertiser pages where source coverage is stronger.
+                </p>
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* Spend / activity estimate */}
+        <section>
+          <SectionHeader
+            index="03c"
+            title="Spend / activity estimate"
+            subtitle="Directional range from observed activity — not verified media spend"
+          />
+          <div className={cn(DC.card)}>
+            {spendRange ? (
+              <p className="text-sm font-medium text-neutral-100">{spendRange.label}</p>
+            ) : (
+              <p className="text-sm text-neutral-300">Spend estimate unavailable for this view.</p>
+            )}
+          </div>
+        </section>
 
         {/* 04 — What the market keeps saying */}
         {(marketMessages.length > 0 || dominantMessage) && (
@@ -445,14 +470,14 @@ export function StrategistDashboard() {
               {dominantMessage && (
                 <p className="text-sm text-neutral-200 leading-relaxed mb-3">
                   The market keeps coming back to{" "}
-                  <span className="font-semibold text-neutral-50 capitalize">{dominantMessage}</span>.
-                  {contestedGround(pitch) ? ` Most brands are fighting over the same angle.` : " Few brands own a distinct message yet."}
+                  <span className="font-semibold text-neutral-50">{dominantMessage}</span>.
+                  {contestedGround(pitch) ? " Most brands are fighting over the same angle." : " Few brands own a distinct message yet."}
                 </p>
               )}
               {marketMessages.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {marketMessages.map((msg) => (
-                    <span key={msg} className={cn(DC.chip, "text-neutral-200 border-neutral-700 capitalize")}>
+                    <span key={msg} className={cn(DC.chip, "text-neutral-200 border-neutral-700")}>
                       {msg}
                     </span>
                   ))}
@@ -473,22 +498,24 @@ export function StrategistDashboard() {
             />
             <div className="grid gap-2 md:grid-cols-2">
               {openAngles.map((r, i) => {
-                const label = [r.category, r.emotion].filter(Boolean).join(" · ");
+                const territoryLabel = translateTerritory(r.emotion);
+                const saturated = (r.market_density ?? "").toLowerCase() === "high"
+                  || (r.strategic_priority ?? "").toLowerCase() === "saturated";
+                const body = buildOpenAngleCopy({
+                  clientName: brief?.client_name ?? "Your client",
+                  territoryRaw: r.emotion ?? "",
+                  brandCount: undefined,
+                  saturated,
+                });
                 return (
                   <button
                     key={`${r.category}-${r.emotion}-${i}`}
                     type="button"
-                    onClick={() => openPanel("whitespace", i, label || undefined)}
+                    onClick={() => openPanel("whitespace", i, territoryLabel)}
                     className={cn(DC.card, "text-left py-3 px-3 hover:border-emerald-800/50 transition-colors")}
                   >
-                    <div className={cn(DC.label, "text-emerald-400/90 mb-1")}>Angles nobody is owning</div>
-                    <div className="text-sm font-medium text-neutral-100">{label || "Unclaimed positioning"}</div>
-                    {r.recommendation && (
-                      <p className="text-xs text-neutral-400 mt-2 leading-relaxed line-clamp-3">{r.recommendation}</p>
-                    )}
-                    {brief?.whitespace_emotion && r.emotion?.toLowerCase() === brief.whitespace_emotion.toLowerCase() && (
-                      <div className={cn(DC.meta, "mt-2 text-emerald-400/80")}>Best fit for your client</div>
-                    )}
+                    <div className="text-sm font-medium text-neutral-100">{territoryLabel}</div>
+                    <p className="text-xs text-neutral-400 mt-2 leading-relaxed">{body}</p>
                   </button>
                 );
               })}
@@ -496,8 +523,8 @@ export function StrategistDashboard() {
           </section>
         )}
 
-        {/* 06 — What I'd recommend tomorrow */}
-        {(brief?.recommended_action || actionablePitch.length > 0) && (
+        {/* 06 — Recommended next moves */}
+        {recommendedMoves.length > 0 && (
           <section>
             <SectionHeader
               index={MODULE_META.pitch.index}
@@ -505,30 +532,17 @@ export function StrategistDashboard() {
               subtitle={MODULE_META.pitch.subtitle}
               onEvidence={() => openPanel("pitch")}
             />
-            <div className="space-y-3">
-              {brief?.recommended_action && (
-                <div className={cn(DC.card, "bg-neutral-950 border-amber-800/40")}>
-                  <div className={cn(DC.label, "mb-2 text-amber-400/90")}>Recommended next moves</div>
-                  <p className="text-sm font-medium leading-relaxed text-neutral-100">{brief.recommended_action}</p>
-                </div>
-              )}
-              {actionablePitch.map((r, i) => {
-                const pitchIndex = pitch.indexOf(r);
-                return (
-                  <button
-                    key={`${r.category}-${r.action}-${i}`}
-                    type="button"
-                    onClick={() => openPanel("pitch", pitchIndex >= 0 ? pitchIndex : i, r.category ?? undefined)}
-                    className={cn(DC.card, "text-left w-full hover:border-neutral-600 transition-colors")}
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className={cn(DC.meta)}>{r.category ?? "Category"}</span>
-                      <span className={cn(DC.chip, "text-amber-400 border-amber-800/80 shrink-0")}>{r.action}</span>
-                    </div>
-                    <p className="text-sm text-neutral-200 leading-relaxed">{r.recommendation}</p>
-                  </button>
-                );
-              })}
+            <div className={cn(DC.card, "bg-neutral-950 border-amber-800/40 space-y-3")}>
+              <ol className="space-y-3 list-none m-0 p-0">
+                {recommendedMoves.map((move, i) => (
+                  <li key={i} className="flex gap-3 text-sm leading-relaxed text-neutral-100">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-amber-950 border border-amber-800/60 text-amber-400 text-xs font-semibold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <span>{move}</span>
+                  </li>
+                ))}
+              </ol>
             </div>
           </section>
         )}

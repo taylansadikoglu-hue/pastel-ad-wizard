@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Lock, TrendingUp, TrendingDown, Minus, Search, Grid3x3, FileText } from "lucide-react";
 import { WorkspaceShell } from "./WorkspaceShell";
+import { buildOpenAngleCopy, translateTerritory } from "@/lib/radInsightTranslator";
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -569,45 +570,21 @@ function WhitespaceSection({ winConditions, categoryLabel }: {
       <SectionHeader title="Whitespace opportunities" />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
         {winConditions.slice(0, 4).map((w, i) => {
-          const n = parseInt((w.why.match(/\d+/) ?? ["1"])[0], 10) || 1;
-          const status = n <= 1 ? "Emerging" : "Competitive";
-          const statusStyle = status === "Emerging"
-            ? { bg: "#F0F9F4", color: "#2D7D46" }
-            : { bg: "#F0EDE8", color: "#9E9D94" };
-          const templates = [
-            (theme: string, count: number) => count === 0
-              ? `${theme} is uncontested in ${categoryLabel}. Your client could own this angle.`
-              : `${theme} is underleveraged here. Your client could own this angle.`,
-            (theme: string, count: number) => count === 0
-              ? `No brand in ${categoryLabel} is using ${theme}. Unclaimed territory.`
-              : `Only ${count} brand${count === 1 ? "" : "s"} using ${theme} in ${categoryLabel}. Unclaimed territory.`,
-            (theme: string, count: number) => count === 0
-              ? `${theme} sits open in ${categoryLabel}. First mover sets the price of entry.`
-              : `${theme} is thinly contested in ${categoryLabel} — ${count} brand${count === 1 ? "" : "s"} only.`,
-            (theme: string, count: number) => count === 0
-              ? `Nobody owns ${theme} in ${categoryLabel} yet. Build the position before competitors notice.`
-              : `${count} brand${count === 1 ? "" : "s"} touch ${theme} in ${categoryLabel}. Room to lead, not follow.`,
-          ];
-          const body = templates[i % templates.length](w.gap, n);
+          const territoryLabel = translateTerritory(w.gap);
+          const body = buildOpenAngleCopy({
+            clientName: categoryLabel,
+            territoryRaw: w.gap,
+            saturated: false,
+          });
           return (
             <div key={i} style={{
               background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10,
-              padding: 20, display: "flex", flexDirection: "column", gap: 8, position: "relative",
+              padding: 20, display: "flex", flexDirection: "column", gap: 8,
             }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: "#1C1C1A", textTransform: "capitalize", lineHeight: 1.3 }}>
-                  {w.gap}
-                </div>
-                <span style={{
-                  background: statusStyle.bg, color: statusStyle.color,
-                  fontSize: 10, fontWeight: 600, textTransform: "uppercase",
-                  letterSpacing: "0.1em", padding: "3px 8px", borderRadius: 4, flexShrink: 0,
-                }}>{status}</span>
+              <div style={{ fontSize: 15, fontWeight: 600, color: "#1C1C1A", lineHeight: 1.3 }}>
+                {territoryLabel}
               </div>
               <div style={{ fontSize: 13, color: "#6B6B62", lineHeight: 1.5 }}>{body}</div>
-              <div style={{ fontSize: 11, color: "#C4C2BA", marginTop: "auto", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Confidence · {w.confidence}
-              </div>
             </div>
           );
         })}
