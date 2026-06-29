@@ -7,7 +7,7 @@ import {
   Search as SearchIcon,
   Youtube,
 } from "lucide-react";
-import type { ChannelConfidence } from "@/lib/radAdvertiserBrief";
+import type { ChannelConfidence } from "@/lib/channelMix";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -50,21 +50,17 @@ function sortRows(rows: ChannelMixBarRow[]): ChannelMixBarRow[] {
 }
 
 const CONFIDENCE_STYLES: Record<ChannelConfidence, { light: { bg: string; color: string }; dark: { bg: string; color: string } }> = {
-  Observed: {
+  High: {
     light: { bg: "#F0F9F4", color: "#2D7D46" },
     dark: { bg: "rgba(45,125,70,0.2)", color: "#7DCE9A" },
   },
-  Modelled: {
+  Medium: {
     light: { bg: "#FDF6E8", color: "#A07830" },
     dark: { bg: "rgba(201,150,58,0.2)", color: "#E8C47A" },
   },
-  "Partial coverage": {
-    light: { bg: "#F0EDE8", color: "#6B6B62" },
+  Low: {
+    light: { bg: "#F7F6F3", color: "#6B6B62" },
     dark: { bg: "rgba(255,255,255,0.08)", color: "#C4C2BA" },
-  },
-  "No signal detected": {
-    light: { bg: "#F7F6F3", color: "#C4C2BA" },
-    dark: { bg: "rgba(255,255,255,0.05)", color: "#8A8980" },
   },
 };
 
@@ -82,13 +78,13 @@ export type ChannelMixBarsProps = {
 
 export function ChannelMixBars({
   rows,
-  overallConfidence,
+  overallConfidence = "Low",
   sourceLabel,
   estimationTooltip,
-  available = rows.some((r) => r.pct > 0 || (r.ads ?? 0) > 0),
+  available: _available = true,
   variant = "light",
   animate = true,
-  emptyMessage = "Channel mix unavailable for this view.",
+  emptyMessage: _emptyMessage,
   className,
 }: ChannelMixBarsProps) {
   const [mounted, setMounted] = useState(!animate);
@@ -100,16 +96,6 @@ export function ChannelMixBars({
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
   }, [animate, rows]);
-
-  if (!available) {
-    return (
-      <p
-        className={cn("m-0 text-sm leading-relaxed", isLight ? "text-[#6B6B62]" : "text-neutral-300", className)}
-      >
-        {emptyMessage}
-      </p>
-    );
-  }
 
   const barFill = isLight ? "#C9963A" : "rgba(245,158,11,0.85)";
   const barTrack = isLight ? "#F0EDE8" : "rgba(38,38,36,0.9)";
@@ -171,7 +157,7 @@ export function ChannelMixBars({
         })}
       </div>
 
-      {(overallConfidence || sourceLabel || estimationTooltip) && (
+      {(sourceLabel || estimationTooltip) && (
         <div
           className={cn(
             "mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t pt-3 text-[11px] leading-snug",
@@ -179,14 +165,12 @@ export function ChannelMixBars({
           )}
           style={{ color: mutedColor }}
         >
-          {overallConfidence && confidenceStyle && (
-            <span
-              className="inline-flex items-center rounded px-2 py-0.5 font-semibold"
-              style={{ background: confidenceStyle.bg, color: confidenceStyle.color }}
-            >
-              Confidence: {overallConfidence}
-            </span>
-          )}
+          <span
+            className="inline-flex items-center rounded px-2 py-0.5 font-semibold"
+            style={{ background: confidenceStyle?.bg, color: confidenceStyle?.color }}
+          >
+            Confidence: {overallConfidence}
+          </span>
           {sourceLabel && <span>Source: {sourceLabel}</span>}
           {estimationTooltip && (
             <TooltipProvider delayDuration={200}>

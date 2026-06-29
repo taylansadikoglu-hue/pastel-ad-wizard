@@ -24,7 +24,6 @@ import {
   buildRecommendedMoves,
   buildWhatThisMeans,
   isThemeAllowed,
-  parseMarketChannelMix,
   parseSpendRange,
   sanitizeInsightCopy,
   selectDominantTheme,
@@ -32,6 +31,7 @@ import {
   translateTerritory,
 } from "@/lib/radInsightTranslator";
 import { fetchMarketStrategistIntel, type MarketStrategistIntel } from "@/lib/marketStrategistIntel";
+import { buildMarketChannelMix } from "@/lib/channelMix";
 import { fetchAdlibraryCoverage, EMPTY_COVERAGE, type AdlibraryCoverage } from "@/lib/adlibraryCoverage";
 import { safeOptional } from "@/lib/safeQuery";
 
@@ -326,7 +326,7 @@ export function StrategistDashboard() {
     ...buildRecommendedMoves(brief?.client_name),
   ].filter((v, i, arr) => v && arr.indexOf(v) === i).slice(0, 3);
 
-  const channelMix = parseMarketChannelMix(intelBundle?.brief.data as Record<string, unknown> | null);
+  const channelMixResult = buildMarketChannelMix(intelBundle?.brief.data as Record<string, unknown> | null);
   const spendRange = parseSpendRange(intelBundle?.brief.data as Record<string, unknown> | null);
 
   const marketMessages = selectSurfacedThemes(
@@ -508,24 +508,13 @@ export function StrategistDashboard() {
           />
           <div className={cn(DC.card)}>
             <ChannelMixBars
-              rows={channelMix}
-              overallConfidence={channelMix.length > 0 ? "Observed" : undefined}
-              sourceLabel={channelMix.length > 0 ? "Category intelligence bundle" : undefined}
-              estimationTooltip={
-                channelMix.length > 0
-                  ? "Channel share is parsed from the market brief bundle when channel-level data is present across the category."
-                  : undefined
-              }
-              available={channelMix.length > 0}
+              rows={channelMixResult.rows}
+              overallConfidence={channelMixResult.overallConfidence}
+              sourceLabel={channelMixResult.sourceLabel}
+              estimationTooltip={channelMixResult.estimationTooltip}
               variant="dark"
               animate={false}
-              emptyMessage="Channel mix unavailable for this market view."
             />
-            {channelMix.length === 0 && (
-              <p className="text-xs text-neutral-500 leading-relaxed mt-3 mb-0">
-                Channel-level signals are available on advertiser pages where source coverage is stronger.
-              </p>
-            )}
           </div>
         </section>
 

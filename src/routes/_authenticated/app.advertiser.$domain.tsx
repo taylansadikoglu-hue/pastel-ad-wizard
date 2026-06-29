@@ -49,6 +49,7 @@ import {
   PLACEMENT_INTEL_UNAVAILABLE,
   type AdvertiserIntelWar,
   type AdvertiserPlacementRow,
+  type PlacementChannelEntry,
 } from "@/lib/advertiserPlacements";
 import { buildCampaignIntelligence } from "@/lib/campaignIntelligence";
 import { buildCampaignStory } from "@/lib/campaignStory";
@@ -249,6 +250,8 @@ function AdvertiserPage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [outOfScope, setOutOfScope] = useState(false);
   const [placementRowCount, setPlacementRowCount] = useState(0);
+  const [placementRows, setPlacementRows] = useState<AdvertiserPlacementRow[]>([]);
+  const [warroomChannels, setWarroomChannels] = useState<PlacementChannelEntry[] | undefined>(undefined);
   const [strategistIntel, setStrategistIntel] = useState<AdvertiserStrategistIntel | null>(null);
   const [adlibraryIntel, setAdlibraryIntel] = useState<AdlibraryAdvertiserIntel | null>(null);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>(defaultLoadStatus);
@@ -385,6 +388,12 @@ function AdvertiserPage() {
         if (!alive) return;
 
         setPlacementRowCount(placementFetch.rows.length);
+        setPlacementRows(placementFetch.rows);
+        setWarroomChannels(
+          Array.isArray(w?.channels) && w.channels.length
+            ? (w.channels as PlacementChannelEntry[])
+            : undefined,
+        );
         setStrategistIntel(strategistFetch);
         setAdlibraryIntel(adlibraryFetch);
         setWar(merged);
@@ -433,7 +442,11 @@ function AdvertiserPage() {
 
   const advertiserBrief = useMemo(() => safeBuild("advertiserBrief", () => ({
     marketingRead: buildCurrentMarketingRead(brand, intelWar),
-    channelMix: buildAdvertiserChannelMix(intelWar),
+    channelMix: buildAdvertiserChannelMix(intelWar, {
+      placementRows,
+      adlibraryRows: adlibraryIntel?.channelRows,
+      warroomChannels,
+    }),
     spend: buildAdvertiserSpendBand(intelWar),
     products: buildProductsPromoted(intelWar),
     audiences: buildAudiencesPersonas(intelWar),
@@ -441,7 +454,7 @@ function AdvertiserPage() {
     missing: buildWhatTheyreMissing(brand, intelWar),
     moves: buildAdvertiserRecommendedMoves(brand, intelWar, strategistIntel),
     talkingPoints: buildMeetingTalkingPoints(brand, intelWar, strategistIntel),
-  }), null), [intelWar, brand, strategistIntel]);
+  }), null), [intelWar, brand, strategistIntel, placementRows, adlibraryIntel, warroomChannels]);
 
   const campaignIntel = useMemo(
     () => safeBuild("campaignIntel", () => buildCampaignIntelligence(brand, intelWar), null),
@@ -740,9 +753,7 @@ function AdvertiserPage() {
                   overallConfidence={advertiserBrief.channelMix.overallConfidence}
                   sourceLabel={advertiserBrief.channelMix.sourceLabel}
                   estimationTooltip={advertiserBrief.channelMix.estimationTooltip}
-                  available={advertiserBrief.channelMix.available}
                   variant="light"
-                  emptyMessage="Channel mix unavailable for this advertiser."
                 />
               </InsightSection>
 

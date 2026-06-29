@@ -3,6 +3,10 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { safeCount, safeQuery } from "@/lib/safeQuery";
+import {
+  normalisePlacementRow,
+  type AdvertiserPlacementRow,
+} from "@/lib/advertiserPlacements";
 
 export type AdlibraryCoverage = {
   advertisersTracked: number;
@@ -27,6 +31,7 @@ export type AdlibraryAdvertiserIntel = {
   }[];
   sampleSourceUrl: string | null;
   available: boolean;
+  channelRows: AdvertiserPlacementRow[];
 };
 
 const EMPTY_COVERAGE: AdlibraryCoverage = {
@@ -46,6 +51,7 @@ const EMPTY_ADVERTISER_INTEL: AdlibraryAdvertiserIntel = {
   winningConcepts: [],
   sampleSourceUrl: null,
   available: false,
+  channelRows: [],
 };
 
 export async function fetchAdlibraryCoverage(
@@ -98,10 +104,10 @@ export async function fetchAdlibraryAdvertiserIntel(
     safeQuery("ad_placements_adlibrary", () =>
       supabase
         .from("ad_placements")
-        .select("id, source_archive_url, creative_url, media_url")
+        .select("id, channel, channel_platform, ad_type, source_archive_url, creative_url, media_url")
         .eq("source_platform", "adlibrary")
         .or(`domain.eq.${domain},advertiser_name.ilike.%${brand}%`)
-        .limit(20),
+        .limit(50),
     ),
     safeQuery("adlibrary_enrichments", () =>
       supabase
@@ -130,6 +136,7 @@ export async function fetchAdlibraryAdvertiserIntel(
   }
 
   const ads = Array.isArray(adsRes.data) ? adsRes.data : [];
+  const channelRows = ads.map((row) => normalisePlacementRow(row as Record<string, unknown>));
   const sample = ads[0] as
     | { source_archive_url?: string; creative_url?: string; media_url?: string }
     | undefined;
@@ -145,6 +152,7 @@ export async function fetchAdlibraryAdvertiserIntel(
     sampleSourceUrl:
       sample?.source_archive_url ?? sample?.creative_url ?? sample?.media_url ?? null,
     available: optionalAvailable || adsRes.available,
+    channelRows,
   };
 }
 
