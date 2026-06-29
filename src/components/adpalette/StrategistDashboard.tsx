@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { WorkspaceShell } from "./WorkspaceShell";
 import {
   loadStrategistIntelligence,
@@ -414,29 +415,25 @@ export function StrategistDashboard() {
             title="Where activity is showing up"
             subtitle="Channel share across observed category activity"
           />
-          <div className={cn(DC.card, "space-y-3")}>
-            {channelMix.length > 0 ? (
-              <div className="space-y-2">
-                {channelMix.map((row) => (
-                  <div key={row.channel} className="flex items-center gap-3 text-sm">
-                    <span className="w-24 text-neutral-300">{row.channel}</span>
-                    <div className="flex-1 h-2 bg-neutral-800 rounded overflow-hidden">
-                      <div
-                        className="h-full bg-amber-500/80 rounded"
-                        style={{ width: `${Math.min(100, row.pct)}%` }}
-                      />
-                    </div>
-                    <span className="w-10 text-right text-neutral-400 tabular-nums">{Math.round(row.pct)}%</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <>
-                <p className="text-sm text-neutral-300">Channel mix unavailable for this market view.</p>
-                <p className="text-xs text-neutral-500 leading-relaxed">
-                  Channel-level signals are available on advertiser pages where source coverage is stronger.
-                </p>
-              </>
+          <div className={cn(DC.card)}>
+            <ChannelMixBars
+              rows={channelMix}
+              overallConfidence={channelMix.length > 0 ? "Observed" : undefined}
+              sourceLabel={channelMix.length > 0 ? "Category intelligence bundle" : undefined}
+              estimationTooltip={
+                channelMix.length > 0
+                  ? "Channel share is parsed from the market brief bundle when channel-level data is present across the category."
+                  : undefined
+              }
+              available={channelMix.length > 0}
+              variant="dark"
+              animate={false}
+              emptyMessage="Channel mix unavailable for this market view."
+            />
+            {channelMix.length === 0 && (
+              <p className="text-xs text-neutral-500 leading-relaxed mt-3 mb-0">
+                Channel-level signals are available on advertiser pages where source coverage is stronger.
+              </p>
             )}
           </div>
         </section>

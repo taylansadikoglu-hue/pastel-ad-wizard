@@ -24,6 +24,7 @@ import {
 import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
+import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import {
   buildAdvertiserChannelMix,
   buildAdvertiserRecommendedMoves,
@@ -32,7 +33,6 @@ import {
   buildMeetingTalkingPoints,
   buildWhatTheyreMissing,
   buildWhatTheyreSaying,
-  type ChannelConfidence,
 } from "@/lib/radAdvertiserBrief";
 
 const API_BASE = "https://api.revenuad.com";
@@ -363,9 +363,6 @@ function AdvertiserPage() {
   }, [war?.recent_ads, channelFilter]);
 
   // Mount flag for spend-bar animation.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setMounted(true), 50); return () => clearTimeout(t); }, [war]);
-
   // Debug: log API responses to see what's coming back
   useEffect(() => {
     if (war) console.log("[WarRoom]", { war, channels, spend, news });
@@ -584,45 +581,16 @@ function AdvertiserPage() {
                 </p>
               </InsightSection>
 
-              <InsightSection
-                title="Estimated channel mix"
-                meta={`Confidence: ${advertiserBrief.channelMix.overallConfidence}`}
-              >
-                {advertiserBrief.channelMix.available ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {advertiserBrief.channelMix.rows.map((r) => {
-                      const pct = Math.max(0, Math.min(100, r.pct));
-                      const empty = pct <= 0 && r.ads <= 0;
-                      const mixRow = CHANNEL_MIX.find((c) => c.label === r.channel) ?? { ...CHANNEL_MIX[2], label: r.channel, key: "other" };
-                      return (
-                        <div
-                          key={r.channel}
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "130px 1fr 52px 88px",
-                            alignItems: "center",
-                            gap: 12,
-                            opacity: empty ? 0.45 : 1,
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, color: "#1C1C1A" }}>
-                            <mixRow.Icon size={16} style={{ color: empty ? "#C4C2BA" : mixRow.colour }} />
-                            {r.channel}
-                          </div>
-                          <div style={{ height: 8, background: "#F0EDE8", borderRadius: 4, overflow: "hidden" }}>
-                            <div style={{ width: mounted ? `${pct}%` : "0%", height: "100%", background: "#C9963A", transition: "width 600ms ease-out" }} />
-                          </div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: empty ? "#C4C2BA" : "#1C1C1A", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                            {pct > 0 ? `${pct.toFixed(0)}%` : "—"}
-                          </div>
-                          <ConfidenceChip value={empty ? "No signal detected" : r.confidence} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p style={{ fontSize: 13, color: "#6B6B62", margin: 0 }}>Channel mix unavailable for this advertiser.</p>
-                )}
+              <InsightSection title="Estimated channel mix">
+                <ChannelMixBars
+                  rows={advertiserBrief.channelMix.rows}
+                  overallConfidence={advertiserBrief.channelMix.overallConfidence}
+                  sourceLabel={advertiserBrief.channelMix.sourceLabel}
+                  estimationTooltip={advertiserBrief.channelMix.estimationTooltip}
+                  available={advertiserBrief.channelMix.available}
+                  variant="light"
+                  emptyMessage="Channel mix unavailable for this advertiser."
+                />
               </InsightSection>
 
               <InsightSection title="Estimated spend">
@@ -1033,24 +1001,6 @@ function BriefList({ label, items, empty }: { label: string; items: string[]; em
         <div style={{ fontSize: 13, color: "#9E9D94" }}>{empty}</div>
       )}
     </div>
-  );
-}
-
-function ConfidenceChip({ value }: { value: ChannelConfidence }) {
-  const styles: Record<ChannelConfidence, { bg: string; color: string }> = {
-    Observed: { bg: "#F0F9F4", color: "#2D7D46" },
-    Modelled: { bg: "#FDF6E8", color: "#A07830" },
-    "Partial coverage": { bg: "#F0EDE8", color: "#6B6B62" },
-    "No signal detected": { bg: "#F7F6F3", color: "#C4C2BA" },
-  };
-  const s = styles[value];
-  return (
-    <span style={{
-      fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 4,
-      background: s.bg, color: s.color, textAlign: "right", whiteSpace: "nowrap",
-    }}>
-      {value}
-    </span>
   );
 }
 

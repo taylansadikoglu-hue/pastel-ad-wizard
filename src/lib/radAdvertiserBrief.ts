@@ -13,6 +13,17 @@ export type AdvertiserChannelRow = {
   confidence: ChannelConfidence;
 };
 
+export type ChannelMixDataSource = "channels" | "spend_weight" | "none";
+
+export type AdvertiserChannelMixResult = {
+  rows: AdvertiserChannelRow[];
+  overallConfidence: ChannelConfidence;
+  available: boolean;
+  sourceLabel: string;
+  estimationTooltip: string;
+  dataSource: ChannelMixDataSource;
+};
+
 export type SpendBand = "Low" | "Medium" | "High" | "Very high";
 
 const DISPLAY_CHANNELS = ["Display", "YouTube", "Search", "Meta", "TikTok", "Other"] as const;
@@ -107,21 +118,60 @@ function modelledFromSpendWeight(war: AdvertiserWarInput): Record<string, { pct:
   return out;
 }
 
+function channelMixSourceMeta(
+  dataSource: ChannelMixDataSource,
+  overallConfidence: ChannelConfidence,
+): { sourceLabel: string; estimationTooltip: string } {
+  if (dataSource === "channels") {
+    return {
+      sourceLabel: "Observed ad counts",
+      estimationTooltip:
+        "Channel share is the percentage of indexed ads attributed to each platform from your latest warroom scan. Percentages sum from observed ad counts per channel.",
+    };
+  }
+  if (dataSource === "spend_weight") {
+    return {
+      sourceLabel: "Modelled spend weights",
+      estimationTooltip:
+        "Direct ad-count splits were unavailable. Shares are estimated from spend-weight signals across channels and should be treated as directional.",
+    };
+  }
+  return {
+    sourceLabel: "No indexed placements",
+    estimationTooltip: "Run a scan to index live placements before channel mix can be estimated.",
+  };
+}
+
 /** Estimated channel mix with per-row confidence. */
-export function buildAdvertiserChannelMix(war: AdvertiserWarInput | null | undefined): {
-  rows: AdvertiserChannelRow[];
-  overallConfidence: ChannelConfidence;
-  available: boolean;
-} {
+export function buildAdvertiserChannelMix(
+  war: AdvertiserWarInput | null | undefined,
+): AdvertiserChannelMixResult {
   if (!war) {
-    return { rows: [], overallConfidence: "No signal detected", available: false };
+    const meta = channelMixSourceMeta("none", "No signal detected");
+    return {
+      rows: [],
+      overallConfidence: "No signal detected",
+      available: false,
+      sourceLabel: meta.sourceLabel,
+      estimationTooltip: meta.estimationTooltip,
+      dataSource: "none",
+    };
   }
 
   const observed = channelByBadgeFromWar(war);
   const hasObserved = Object.values(observed).some((r) => r.pct > 0 || r.ads > 0);
   const modelled = hasObserved ? {} : modelledFromSpendWeight(war);
   const source = hasObserved ? observed : modelled;
-  const rowConfidence: ChannelConfidence = hasObserved ? "Observed" : Object.keys(modelled).length ? "Modelled" : "No signal detected";
+  const dataSource: ChannelMixDataSource = hasObserved
+    ? "channels"
+    : Object.keys(modelled).length
+      ? "spend_weight"
+      : "none";
+  const rowConfidence: ChannelConfidence = hasObserved
+    ? "Observed"
+    : Object.keys(modelled).length
+      ? "Modelled"
+      : "No signal detected";
 
   const rows: AdvertiserChannelRow[] = DISPLAY_CHANNELS.map((channel) => {
     const data = source[channel];
@@ -142,7 +192,21 @@ export function buildAdvertiserChannelMix(war: AdvertiserWarInput | null | undef
   }
 
   const available = rows.some((r) => r.pct > 0 || r.ads > 0);
-  return { rows, overallConfidence, available };
+  const meta = channelMixSourceMeta(dataSource, overallConfidence);
+  let estimationTooltip = meta.estimationTooltip;
+  if (overallConfidence === "Partial coverage") {
+    estimationTooltip +=
+      " Coverage is limited — fewer than five indexed ads or fewer than three active channels.";
+  }
+
+  return {
+    rows,
+    overallConfidence,
+    available,
+    sourceLabel: meta.sourceLabel,
+    estimationTooltip,
+    dataSource,
+  };
 }
 
 /** Directional spend band — no fake precision. */
