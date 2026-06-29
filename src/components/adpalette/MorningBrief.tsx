@@ -463,7 +463,7 @@ function SovSection({ brands, categoryLabel, periodDays }: { brands: SovBrand[];
       </div>
       {brands.length === 0 ? (
         <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 36, textAlign: "center", color: "#6B6B62", fontSize: 14 }}>
-          Signal incoming for {categoryLabel}.
+          No share-of-voice data for {categoryLabel} yet.
         </div>
       ) : (
         <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, overflow: "hidden", position: "relative" }}>

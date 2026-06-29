@@ -164,36 +164,76 @@ export function buildChannelsFromPlacements(
     .sort((a, b) => b.ad_count - a.ad_count);
 }
 
-const AD_PLACEMENTS_SELECT = PLACEMENT_INTEL_SELECT.replace("normalized_product,", "");
+export const PLACEMENT_INTEL_UNAVAILABLE =
+  "Placement intelligence unavailable from browser client";
+
+export type PlacementFetchSource = "normalized_ad_placements" | "ad_placements" | "none";
+
+export type PlacementFetchResult = {
+  rows: AdvertiserPlacementRow[];
+  source: PlacementFetchSource;
+  error: string | null;
+};
 
 export async function fetchAdvertiserPlacements(
   supabase: SupabaseClient<Database>,
   domain: string,
   limit = 100,
-): Promise<AdvertiserPlacementRow[]> {
+): Promise<PlacementFetchResult> {
   const root = rootSlug(domain);
   const normalized = normaliseDomain(domain);
   const pattern = `%${root}%`;
+  const domainFilter = `domain.ilike.${pattern},domain.ilike.%${normalized}%`;
 
-  const { data: normalizedRows } = await supabase
+  const { data: normalizedRows, error: normalizedError } = await supabase
     .from("normalized_ad_placements")
     .select(PLACEMENT_INTEL_SELECT)
-    .or(`domain.ilike.${pattern},domain.ilike.%${normalized}%`)
+    .or(domainFilter)
     .order("last_seen", { ascending: false, nullsFirst: false })
     .limit(limit);
 
-  if (normalizedRows?.length) {
-    return normalizedRows.map((row) => normalisePlacementRow(row as Record<string, unknown>));
+  if (normalizedError) {
+    console.warn(
+      "[advertiser placements] normalized_ad_placements fetch failed:",
+      normalizedError.message,
+      { domain },
+    );
+  } else if (!normalizedRows?.length) {
+    console.warn(
+      "[advertiser placements] normalized_ad_placements returned 0 rows:",
+      { domain },
+    );
   }
 
-  const { data: placementRows } = await supabase
+  if (normalizedRows?.length) {
+    return {
+      rows: normalizedRows.map((row) => normalisePlacementRow(row as Record<string, unknown>)),
+      source: "normalized_ad_placements",
+      error: normalizedError?.message ?? null,
+    };
+  }
+
+  const { data: placementRows, error: placementError } = await supabase
     .from("ad_placements")
-    .select(AD_PLACEMENTS_SELECT)
-    .or(`domain.ilike.${pattern},domain.ilike.%${normalized}%`)
+    .select(PLACEMENT_INTEL_SELECT.replace("normalized_product,", ""))
+    .or(domainFilter)
     .order("last_seen", { ascending: false, nullsFirst: false })
     .limit(limit);
 
-  return (placementRows ?? []).map((row) => normalisePlacementRow(row as Record<string, unknown>));
+  if (placementError) {
+    console.warn(
+      "[advertiser placements] ad_placements fallback fetch failed:",
+      placementError.message,
+      { domain },
+    );
+  }
+
+  const rows = (placementRows ?? []).map((row) => normalisePlacementRow(row as Record<string, unknown>));
+  return {
+    rows,
+    source: rows.length ? "ad_placements" : "none",
+    error: normalizedError?.message ?? placementError?.message ?? null,
+  };
 }
 
 export type AdvertiserIntelWar = {
