@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "mock-scan": "node scripts/mock-scan-success.js"
+    "mock-scan": "node scripts/mock-scan-success.js",
+    "meta-daily-ingest": "node sources/meta-daily-ingestion.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
