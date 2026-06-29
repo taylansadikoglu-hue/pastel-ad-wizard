@@ -27,6 +27,7 @@ import { formatTimeAgo } from "@/utils/timeAgo";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { CampaignIntelligenceBlock } from "@/components/adpalette/CampaignIntelligenceBlock";
 import { CampaignStoryBlock } from "@/components/adpalette/CampaignStoryBlock";
+import { AdvertiserStrategistIntelBlock } from "@/components/adpalette/AdvertiserStrategistIntelBlock";
 import {
   buildAdvertiserChannelMix,
   buildAdvertiserRecommendedMoves,
@@ -48,6 +49,10 @@ import {
 } from "@/lib/advertiserPlacements";
 import { buildCampaignIntelligence } from "@/lib/campaignIntelligence";
 import { buildCampaignStory } from "@/lib/campaignStory";
+import {
+  fetchAdvertiserStrategistIntel,
+  type AdvertiserStrategistIntel,
+} from "@/lib/advertiserStrategistIntel";
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -179,6 +184,7 @@ function AdvertiserPage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [outOfScope, setOutOfScope] = useState(false);
   const [placementRowCount, setPlacementRowCount] = useState(0);
+  const [strategistIntel, setStrategistIntel] = useState<AdvertiserStrategistIntel | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -229,10 +235,12 @@ function AdvertiserPage() {
       }
 
       const placementFetch = await fetchAdvertiserPlacements(supabase, domain, 100);
+      const strategistFetch = await fetchAdvertiserStrategistIntel(supabase, domain);
       const merged = mergeAdvertiserIntel(w, placementFetch.rows, resolved, domain);
 
       if (!alive) return;
       setPlacementRowCount(placementFetch.rows.length);
+      setStrategistIntel(strategistFetch);
       setWar(merged as War | null);
       setSpend(null);
       setChannels(null);
@@ -539,6 +547,12 @@ function AdvertiserPage() {
             story={campaignStory}
           />
 
+          <AdvertiserStrategistIntelBlock
+            brand={brand}
+            loading={loading}
+            intel={strategistIntel}
+          />
+
           {advertiserBrief && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div
@@ -628,6 +642,11 @@ function AdvertiserPage() {
                     <BriefList label="CTAs" items={advertiserBrief.saying.ctas} />
                     <BriefList label="Hooks" items={advertiserBrief.saying.hooks} />
                     <BriefList label="Offer themes" items={advertiserBrief.saying.offerThemes} />
+                  </div>
+                )}
+                {!placementIntelUnavailable && advertiserBrief.saying.copySnippets.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <BriefList label="Ad copy" items={advertiserBrief.saying.copySnippets} />
                   </div>
                 )}
               </InsightSection>
@@ -1112,11 +1131,15 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
 
   const sightings = Number(ad.times_seen ?? ad.sighting_count ?? 0);
   const pills = [ad.emotional_driver, ad.offer_type, ad.buyer_stage].filter(isUsableCopy);
-  const title = isUsableCopy(ad.headline)
-    ? ad.headline
-    : isUsableCopy(ad.page_title)
-      ? ad.page_title
-      : null;
+  const title = isUsableCopy(ad.ad_title)
+    ? ad.ad_title
+    : isUsableCopy(ad.headline)
+      ? ad.headline
+      : isUsableCopy(ad.page_title)
+        ? ad.page_title
+        : null;
+  const archiveUrl = ad.source_archive_url?.trim() || null;
+  const takeaway = isUsableCopy(ad.strategist_takeaway) ? ad.strategist_takeaway : null;
   const openVideo = () => {
     if (ad.video_url) window.open(ad.video_url, "_blank", "noopener,noreferrer");
   };
@@ -1241,10 +1264,27 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
         {title && (
           <div style={{ fontSize: 13, color: "#1C1C1A", marginBottom: 4, lineHeight: 1.4 }}>{title}</div>
         )}
+        {takeaway && (
+          <div style={{ fontSize: 12, color: "#6B6B62", lineHeight: 1.45, marginBottom: 4 }}>{takeaway}</div>
+        )}
         <div style={{ fontSize: 12, color: "#6B6B62" }}>
           {ad.first_seen ? formatTimeAgo(ad.first_seen) : "—"}
           {ad.last_seen ? ` → ${formatTimeAgo(ad.last_seen)}` : ""}
           {sightings > 0 && ` · ${sightings.toLocaleString()} impressions`}
+          {archiveUrl && (
+            <>
+              {" · "}
+              <a
+                href={archiveUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#A07830", textDecoration: "none" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                View in ad library
+              </a>
+            </>
+          )}
         </div>
       </div>
       {pills.length > 0 && (
