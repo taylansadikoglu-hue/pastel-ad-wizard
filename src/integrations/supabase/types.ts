@@ -273,6 +273,66 @@ export type Database = {
         }
         Relationships: []
       }
+      advertiser_destinations: {
+        Row: {
+          ad_count: number
+          advertiser: string
+          created_at: string
+          cta: string | null
+          domain: string
+          first_seen: string
+          funnel_stage: string | null
+          id: number
+          last_seen: string
+          offer: string | null
+          page_title: string | null
+          persona: string | null
+          product: string | null
+          theme: string | null
+          updated_at: string
+          url: string
+          url_hash: string
+        }
+        Insert: {
+          ad_count?: number
+          advertiser: string
+          created_at?: string
+          cta?: string | null
+          domain: string
+          first_seen?: string
+          funnel_stage?: string | null
+          id?: number
+          last_seen?: string
+          offer?: string | null
+          page_title?: string | null
+          persona?: string | null
+          product?: string | null
+          theme?: string | null
+          updated_at?: string
+          url: string
+          url_hash: string
+        }
+        Update: {
+          ad_count?: number
+          advertiser?: string
+          created_at?: string
+          cta?: string | null
+          domain?: string
+          first_seen?: string
+          funnel_stage?: string | null
+          id?: number
+          last_seen?: string
+          offer?: string | null
+          page_title?: string | null
+          persona?: string | null
+          product?: string | null
+          theme?: string | null
+          updated_at?: string
+          url?: string
+          url_hash?: string
+        }
+        Relationships: []
+      }
       advertiser_discovery_candidates: {
         Row: {
           advertiser_id: string | null
