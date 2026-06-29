@@ -20,6 +20,15 @@ export function formatVisits(n: number | null | undefined): string {
   return String(Math.round(n));
 }
 
+/** Format a 0–1 fraction or raw percent for display. */
+export function formatPct(n: number | null | undefined, opts?: { fromFraction?: boolean }): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  const fromFraction = opts?.fromFraction ?? Math.abs(n) <= 1;
+  const pct = fromFraction ? n * 100 : n;
+  const sign = pct > 0 ? "+" : "";
+  return `${sign}${pct.toFixed(1)}%`;
+}
+
 export function formatCurrency(n: number | null | undefined): string {
   if (n == null || !Number.isFinite(n)) return "—";
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;

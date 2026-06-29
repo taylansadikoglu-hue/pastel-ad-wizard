@@ -9,32 +9,50 @@ export type FeedSourceMeta = {
   fetchedAt?: string;
 };
 
+/** Audience-overlap peer — affinity and category position only (no global rank). */
 export type SimilarCompetitor = {
   domain: string;
-  title: string | null;
-  description: string | null;
-  monthlyVisits: number | null;
-  globalRank: number | null;
+  category: string | null;
   categoryRank: number | null;
-  topCountry: string | null;
-  topCountryRank: number | null;
-  /** Similarity score when API provides it; Similar Sites endpoint uses list order instead. */
+  /** 0–1 similarity when API provides it. */
   affinity: number | null;
   favicon: string | null;
-  /** Preserves Similarweb Similar Sites response order (most relevant first). */
   peerOrder: number;
 };
 
+export type VisitTrendPoint = {
+  date: string;
+  changePct: number;
+};
+
+/** Domain traffic profile — angles, trends, and category context (no global rank). */
 export type TrafficProfile = {
   domain: string;
   title: string | null;
   description: string | null;
   monthlyVisits: number | null;
-  globalRank: number | null;
+  /** Month-over-month visit change (e.g. -0.055 = -5.5%). */
+  visitsChangePct: number | null;
   category: string | null;
   categoryRank: number | null;
+  categoryRankChange: number | null;
   topCountry: string | null;
   topCountryRank: number | null;
+  countryRankChange: number | null;
+  topCountryShare: number | null;
+  bounceRate: number | null;
+  pagesPerVisit: number | null;
+  avgVisitDuration: string | null;
+  organicSearchShare: number | null;
+  paidSearchShare: number | null;
+  keywordsTotalCount: number | null;
+  topKeywords: string[];
+  topSocialNetwork: string | null;
+  topSocialShare: number | null;
+  primaryTrafficSource: string | null;
+  primaryTrafficShare: number | null;
+  topAdPublishers: string[];
+  visitTrend: VisitTrendPoint[];
   tags: string[];
   favicon: string | null;
 };

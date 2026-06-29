@@ -2,6 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { render } from '@react-email/components'
 import React from 'react'
 import { z } from 'zod'
+import { enrichDomainScanWithMarketSignals } from '@/lib/feeds/enrich-domain-scan'
+import { formatPct, formatVisits } from '@/lib/feeds/normalize-domain'
 import { supabaseAdmin } from '@/integrations/supabase/client.server'
 import ScanReadyEmail from '@/lib/email-templates/scan-ready'
 
@@ -86,7 +88,28 @@ export const Route = createFileRoute('/api/public/hooks/scan-ready')({
           return new Response('No recipient', { status: 422 })
         }
 
-        // 5. Pull enriched stats for the email body
+        // 5. Market signals (Similar Web) — non-fatal, enriches domain_scans.engine_output
+        let monthlyVisits: number | null = null
+        let visitsChangeLabel: string | null = null
+        let categoryPosition: string | null = null
+        try {
+          const intel = await enrichDomainScanWithMarketSignals(supabaseAdmin, {
+            userId: scan.user_id,
+            domain: scan.domain,
+            persist: true,
+          })
+          monthlyVisits = intel.traffic?.monthlyVisits ?? null
+          if (intel.traffic?.visitsChangePct != null) {
+            visitsChangeLabel = formatPct(intel.traffic.visitsChangePct, { fromFraction: true })
+          }
+          if (intel.traffic?.categoryRank != null) {
+            categoryPosition = `#${intel.traffic.categoryRank} ${intel.traffic.category ?? 'category'}`
+          }
+        } catch (err) {
+          console.error('scan-ready: market signals enrich failed', err)
+        }
+
+        // 6. Pull enriched stats for the email body
         const [{ data: matrix }, { count: advCount }] = await Promise.all([
           supabaseAdmin
             .from('advertiser_matrix')
@@ -99,13 +122,16 @@ export const Route = createFileRoute('/api/public/hooks/scan-ready')({
             .eq('scan_id', scan.id),
         ])
 
-        // 6. Render + send via Resend gateway
+        // 7. Render + send via Resend gateway
         const html = await render(
           React.createElement(ScanReadyEmail, {
             domain: scan.domain,
             advertiserCount: advCount ?? 0,
             estMonthlySpend: matrix?.est_monthly_spend ?? null,
             primaryChannel: matrix?.primary_channel ?? null,
+            monthlyVisits: monthlyVisits != null ? formatVisits(monthlyVisits) : null,
+            visitsChangeLabel,
+            categoryPosition,
             dashboardUrl: `${DASHBOARD_BASE}?domain=${encodeURIComponent(scan.domain)}`,
             recipientName: userRes?.user?.user_metadata?.full_name ?? null,
           }),

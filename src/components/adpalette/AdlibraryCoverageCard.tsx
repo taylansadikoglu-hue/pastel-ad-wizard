@@ -31,19 +31,19 @@ export function AdlibraryCoverageCard({ coverage, onEvidence, variant = "dark" }
             className={isLinen ? undefined : "text-sm font-semibold tracking-wide text-neutral-300"}
             style={isLinen ? { fontSize: 14, fontWeight: 600, color: "#1C1C1A" } : undefined}
           >
-            AdLibrary coverage
+            Observed creative activity
           </h3>
           {!coverage.available ? (
             <p className={isLinen ? undefined : "mt-1 text-sm text-neutral-500"} style={isLinen ? { marginTop: 4, fontSize: 13, color: "#6B6B62" } : undefined}>
-              Coverage data unavailable
+              Pipeline configured — awaiting first sync
             </p>
           ) : coverage.hasData ? (
             <p className={isLinen ? undefined : "mt-1 text-xs text-emerald-400"} style={isLinen ? { marginTop: 4, fontSize: 12, color: "#2D7D46" } : undefined}>
-              Live pipeline data
+              Live indexed creatives
             </p>
           ) : (
             <p className={isLinen ? undefined : "mt-1 text-sm text-neutral-500"} style={isLinen ? { marginTop: 4, fontSize: 13, color: "#6B6B62" } : undefined}>
-              No AdLibrary rows indexed yet
+              Pipeline ready — awaiting index credits to populate
             </p>
           )}
         </div>
@@ -93,7 +93,11 @@ export function AdlibraryCoverageCard({ coverage, onEvidence, variant = "dark" }
             </p>
           ) : null}
         </>
-      ) : null}
+      ) : (
+        <p className={isLinen ? undefined : "mt-2 text-xs text-neutral-500"} style={isLinen ? { marginTop: 8, fontSize: 12, color: "#6B6B62" } : undefined}>
+          Once credits are topped up, creatives will index automatically and appear in evidence drawers.
+        </p>
+      )}
     </section>
   );
 }

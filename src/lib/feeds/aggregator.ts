@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchNewsFeed } from "./newspi";
-import { formatCurrency, formatVisits, normalizeDomain } from "./normalize-domain";
+import { formatCurrency, formatPct, formatVisits, normalizeDomain } from "./normalize-domain";
 import { fetchSimilarwebBundle, resolveSimilarwebConfig } from "./similarweb";
 import { loadPaidMediaFromSupabase, loadTrendSignalsFromSupabase } from "./supabase-feeds";
 import type {
@@ -26,47 +26,102 @@ function emptySources(): Record<FeedSource, FeedSourceMeta> {
 function synthesizeInsights(input: {
   domain: string;
   trafficVisits: number | null;
-  globalRank: number | null;
+  visitsChangePct: number | null;
   category: string | null;
   categoryRank: number | null;
+  categoryRankChange: number | null;
   topCountry: string | null;
+  topCountryShare: number | null;
+  organicSearchShare: number | null;
+  paidSearchShare: number | null;
+  topSocialNetwork: string | null;
+  topSocialShare: number | null;
+  primaryTrafficSource: string | null;
+  primaryTrafficShare: number | null;
+  topKeywords: string[];
   similarCount: number;
   topSimilar: string | null;
-  topSimilarTitle: string | null;
+  topSimilarAffinity: number | null;
   paidSpend: number | null;
   creativeCount: number;
-  apifyCount: number;
-  dataforseoCount: number;
   newsCount: number;
 }): SynthesizedInsight[] {
   const insights: SynthesizedInsight[] = [];
 
   if (input.trafficVisits != null) {
+    const trend =
+      input.visitsChangePct != null
+        ? `${formatPct(input.visitsChangePct, { fromFraction: true })} MoM visits`
+        : null;
     const rankParts = [
-      input.globalRank != null ? `#${input.globalRank} global` : null,
-      input.categoryRank != null ? `#${input.categoryRank} in category` : null,
-      input.topCountry ? `top geo ${input.topCountry}` : null,
+      input.categoryRank != null ? `#${input.categoryRank} in ${input.category ?? "category"}` : null,
+      input.categoryRankChange != null && input.categoryRankChange !== 0
+        ? `${input.categoryRankChange > 0 ? "↑" : "↓"}${Math.abs(input.categoryRankChange)} rank`
+        : null,
+      input.topCountry && input.topCountryShare != null
+        ? `${input.topCountry} ${formatPct(input.topCountryShare, { fromFraction: true })} of traffic`
+        : null,
     ].filter(Boolean);
     insights.push({
-      id: "traffic-weight",
-      label: "Digital weight",
+      id: "traffic-trend",
+      label: "Visit trend",
       value: `${formatVisits(input.trafficVisits)} monthly visits`,
-      detail: [input.category, rankParts.join(" · ")].filter(Boolean).join(" — ") || "Observed traffic profile from R-AD Engine",
+      detail: [trend, rankParts.join(" · ")].filter(Boolean).join(" — ") || "Observed traffic from market signals.",
       sources: ["similarweb"],
       priority: "high",
     });
   }
 
+  if (input.organicSearchShare != null || input.paidSearchShare != null) {
+    const organic = input.organicSearchShare != null ? formatPct(input.organicSearchShare, { fromFraction: true }) : "—";
+    const paid = input.paidSearchShare != null ? formatPct(input.paidSearchShare, { fromFraction: true }) : "—";
+    const kw = input.topKeywords[0];
+    insights.push({
+      id: "search-mix",
+      label: "Search mix",
+      value: `${organic} organic · ${paid} paid`,
+      detail: kw
+        ? `Top intent: “${kw}” — ${input.paidSearchShare != null && input.paidSearchShare < 0.08 ? "brand-heavy, low paid search pressure." : "paid search is active in the category."}`
+        : "Organic vs paid search split for acquisition angle.",
+      sources: ["similarweb"],
+      priority: "high",
+    });
+  }
+
+  if (input.topSocialNetwork && input.topSocialShare != null) {
+    insights.push({
+      id: "social-driver",
+      label: "Social traffic",
+      value: `${input.topSocialNetwork} ${formatPct(input.topSocialShare, { fromFraction: true })}`,
+      detail: "Where social referrals land — cross-check against your creative channel mix.",
+      sources: ["similarweb"],
+      priority: "medium",
+    });
+  }
+
+  if (input.primaryTrafficSource && input.primaryTrafficShare != null) {
+    insights.push({
+      id: "traffic-source",
+      label: "Primary source",
+      value: `${input.primaryTrafficSource.replace(/_/g, " ")} ${formatPct(input.primaryTrafficShare, { fromFraction: true })}`,
+      detail:
+        input.primaryTrafficSource === "direct"
+          ? "Strong direct traffic — brand pull is doing the heavy lifting."
+          : "Acquisition-led traffic — creative and media matter more for share shifts.",
+      sources: ["similarweb"],
+      priority: "medium",
+    });
+  }
+
   if (input.similarCount > 0) {
-    const peerLabel = input.topSimilarTitle
-      ? `${input.topSimilarTitle} (${input.topSimilar})`
-      : input.topSimilar;
+    const affinityLabel =
+      input.topSimilarAffinity != null ? `${Math.round(input.topSimilarAffinity * 100)}% overlap` : null;
     insights.push({
       id: "peer-set",
-      label: "Competitive peer set",
-      value: `${input.similarCount} similar domains`,
-      detail: peerLabel
-        ? `Closest audience overlap: ${peerLabel}. Worth adding to the client competitor set.`
+      label: "Closest rivals",
+      value: `${input.similarCount} audience peers`,
+      detail: input.topSimilar
+        ? `Nearest rival: ${input.topSimilar}${affinityLabel ? ` (${affinityLabel})` : ""} — validate your watchlist.`
         : "Audience-overlap peers from observed market signals.",
       sources: ["similarweb"],
       priority: "high",
@@ -77,22 +132,10 @@ function synthesizeInsights(input: {
     const spendLabel = input.paidSpend != null ? formatCurrency(input.paidSpend) : "spend pending";
     insights.push({
       id: "paid-signal",
-      label: "Paid media signal",
-      value: `${spendLabel} · ${input.creativeCount} tracked placements`,
-      detail: `${input.creativeCount} tracked placements — cross-check channel mix against site traffic.`,
+      label: "Paid creative",
+      value: `${spendLabel} · ${input.creativeCount} placements`,
+      detail: "Tracked ad placements — pair with visit trend for the pitch story.",
       sources: ["apify", "dataforseo"],
-      priority: "medium",
-    });
-  }
-
-  if (input.trafficVisits != null && input.paidSpend != null && input.trafficVisits > 0) {
-    const ratio = input.paidSpend / input.trafficVisits;
-    insights.push({
-      id: "spend-per-visit",
-      label: "Spend intensity proxy",
-      value: `$${ratio.toFixed(4)} est. spend per visit`,
-      detail: "Estimated paid intensity relative to site visits. High ratio often means heavy acquisition spend.",
-      sources: ["similarweb", "dataforseo"],
       priority: "medium",
     });
   }
@@ -102,7 +145,7 @@ function synthesizeInsights(input: {
       id: "news-momentum",
       label: "News momentum",
       value: `${input.newsCount} recent headlines`,
-      detail: "Recent headlines — pair with paid bursts for the pitch narrative.",
+      detail: "Recent headlines — pair with visit spikes for timing the brief.",
       sources: ["newspi"],
       priority: "low",
     });
@@ -226,17 +269,24 @@ export async function aggregateDomainIntelligence(
   const insights = synthesizeInsights({
     domain,
     trafficVisits: traffic?.monthlyVisits ?? null,
-    globalRank: traffic?.globalRank ?? null,
+    visitsChangePct: traffic?.visitsChangePct ?? null,
     category: traffic?.category ?? null,
     categoryRank: traffic?.categoryRank ?? null,
+    categoryRankChange: traffic?.categoryRankChange ?? null,
     topCountry: traffic?.topCountry ?? null,
+    topCountryShare: traffic?.topCountryShare ?? null,
+    organicSearchShare: traffic?.organicSearchShare ?? null,
+    paidSearchShare: traffic?.paidSearchShare ?? null,
+    topSocialNetwork: traffic?.topSocialNetwork ?? null,
+    topSocialShare: traffic?.topSocialShare ?? null,
+    primaryTrafficSource: traffic?.primaryTrafficSource ?? null,
+    primaryTrafficShare: traffic?.primaryTrafficShare ?? null,
+    topKeywords: traffic?.topKeywords ?? [],
     similarCount: similarCompetitors.length,
     topSimilar: similarCompetitors[0]?.domain ?? null,
-    topSimilarTitle: similarCompetitors[0]?.title ?? null,
+    topSimilarAffinity: similarCompetitors[0]?.affinity ?? null,
     paidSpend: paidMedia?.estimatedMonthlySpend ?? null,
     creativeCount: paidMedia?.creativeCount ?? 0,
-    apifyCount: paidMedia?.byPlatform.apify ?? 0,
-    dataforseoCount: paidMedia?.byPlatform.dataforseo ?? 0,
     newsCount: news.length,
   });
 

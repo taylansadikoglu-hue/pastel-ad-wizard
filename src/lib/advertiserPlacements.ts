@@ -36,6 +36,7 @@ export const PLACEMENT_INTEL_SELECT = [
   "first_seen",
   "last_seen",
   "times_seen",
+  "days_running",
   "campaign_cluster",
   "media_url",
   "creative_url",
@@ -73,6 +74,7 @@ export type AdvertiserPlacementRow = {
   first_seen?: string | null;
   last_seen?: string | null;
   times_seen?: number | null;
+  days_running?: number | null;
   campaign_cluster?: string | null;
   media_url?: string | null;
   creative_url?: string | null;
@@ -147,6 +149,7 @@ export function normalisePlacementRow(row: Record<string, unknown>): AdvertiserP
     first_seen: (row.first_seen as string | null) ?? null,
     last_seen: (row.last_seen as string | null) ?? null,
     times_seen: row.times_seen != null ? Number(row.times_seen) : null,
+    days_running: row.days_running != null ? Number(row.days_running) : null,
     campaign_cluster: (row.campaign_cluster as string | null) ?? null,
     media_url: (row.media_url as string | null) ?? null,
     creative_url: (row.creative_url as string | null) ?? null,

@@ -184,20 +184,26 @@ function appendQueryParams(
   return parsed.toString();
 }
 
-async function fetchFromUrl<T>(url: string, agencyId: string): Promise<GatewayResponse<T>> {
+async function fetchFromUrl<T>(url: string, agencyId: string, timeoutMs = 12_000): Promise<GatewayResponse<T>> {
   const source = url;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(url, {
       headers: {
         Accept: "application/json",
         "X-Agency-Id": agencyId,
       },
+      signal: controller.signal,
     });
     if (!res.ok) return error<T>(source, `http_${res.status}`);
     const data = (await res.json()) as T;
     return ok(data, source);
-  } catch {
-    return error<T>(source, "network_error");
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === "AbortError";
+    return error<T>(source, aborted ? "timeout" : "network_error");
+  } finally {
+    clearTimeout(timer);
   }
 }
 

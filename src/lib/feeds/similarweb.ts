@@ -1,11 +1,10 @@
 import { normalizeDomain } from "./normalize-domain";
-import type { SimilarCompetitor, TrafficProfile } from "./types";
+import type { SimilarCompetitor, TrafficProfile, VisitTrendPoint } from "./types";
 
 export type SimilarwebConfig = {
   apiKey: string;
   host: string;
-  similarSitesPath: string;
-  overviewPath: string;
+  analysisPath: string;
 };
 
 export type SimilarwebBundle = {
@@ -14,138 +13,175 @@ export type SimilarwebBundle = {
   raw: Record<string, unknown>;
 };
 
-/** Shape returned by RapidAPI Similarweb API Pro — GET Similar Sites */
-export type SimilarwebSimilarSitesResponse = {
-  success?: boolean;
-  sourceSite?: SimilarwebSiteRecord;
-  similarSites?: SimilarwebSiteRecord[];
-};
-
-export type SimilarwebSiteRecord = {
-  site?: string;
-  domain?: string;
-  url?: string;
-  title?: string | null;
-  description?: string | null;
-  totalVisits?: number;
-  visits?: number;
-  globalRank?: number;
-  category?: string;
-  categoryRank?: number;
-  rank?: number;
-  topCountry?: string;
-  topCountryRank?: number;
-  affinity?: number;
-  score?: number;
-  tags?: string[];
-  images?: {
-    favicon?: string;
-    smartphone?: string;
-    desktop?: string;
-  };
-};
-
 function num(v: unknown): number | null {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : null;
 }
 
-function siteDomain(row: SimilarwebSiteRecord): string | null {
-  const raw = row.site ?? row.domain ?? row.url;
-  if (!raw || typeof raw !== "string") return null;
-  return normalizeDomain(raw);
+function str(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
-function faviconFrom(row: SimilarwebSiteRecord): string | null {
-  const fav = row.images?.favicon;
-  return typeof fav === "string" && fav.length > 0 ? fav : null;
+function pct(v: unknown): number | null {
+  const n = num(v);
+  if (n == null) return null;
+  // API returns 0–1 fractions for shares; leave as-is for formatPct
+  return n;
 }
 
-function toTrafficProfile(site: SimilarwebSiteRecord, fallbackDomain: string): TrafficProfile {
-  const domain = siteDomain(site) ?? fallbackDomain;
-  return {
-    domain,
-    title: typeof site.title === "string" ? site.title : null,
-    description: typeof site.description === "string" ? site.description : null,
-    monthlyVisits: num(site.totalVisits ?? site.visits),
-    globalRank: num(site.globalRank),
-    category: typeof site.category === "string" ? site.category : null,
-    categoryRank: num(site.categoryRank ?? site.rank),
-    topCountry: typeof site.topCountry === "string" ? site.topCountry : null,
-    topCountryRank: num(site.topCountryRank),
-    tags: Array.isArray(site.tags) ? site.tags.filter((t): t is string => typeof t === "string") : [],
-    favicon: faviconFrom(site),
-  };
+function formatCategoryId(id: string | null): string | null {
+  if (!id) return null;
+  return id
+    .split("/")
+    .pop()
+    ?.replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase()) ?? id;
 }
 
-function toSimilarCompetitor(row: SimilarwebSiteRecord, peerOrder: number): SimilarCompetitor | null {
-  const domain = siteDomain(row);
-  if (!domain) return null;
-  return {
-    domain,
-    title: typeof row.title === "string" ? row.title : null,
-    description: typeof row.description === "string" ? row.description : null,
-    monthlyVisits: num(row.totalVisits ?? row.visits),
-    globalRank: num(row.globalRank),
-    categoryRank: num(row.categoryRank ?? row.rank),
-    topCountry: typeof row.topCountry === "string" ? row.topCountry : null,
-    topCountryRank: num(row.topCountryRank),
-    affinity: num(row.affinity ?? row.score),
-    favicon: faviconFrom(row),
-    peerOrder,
-  };
+function parseVisitTrend(history: unknown): VisitTrendPoint[] {
+  if (!Array.isArray(history)) return [];
+  return history
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const r = row as Record<string, unknown>;
+      const date = str(r.date) ?? "";
+      const changePct = num(r.percentageChange);
+      if (!date || changePct == null) return null;
+      return { date, changePct };
+    })
+    .filter((p): p is VisitTrendPoint => p != null);
 }
 
-/**
- * Parse RapidAPI Similarweb API Pro — GET Similar Sites response.
- * @see SimilarwebSimilarSitesResponse — `{ success, sourceSite, similarSites }`
- */
-export function parseSimilarwebPayload(raw: unknown, domain: string): SimilarwebBundle {
+function parseTrafficSources(sources: unknown): { source: string; share: number } | null {
+  if (!Array.isArray(sources)) return null;
+  let best: { source: string; share: number } | null = null;
+  for (const row of sources) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const source = str(r.source);
+    const share = pct(r.percentage);
+    if (!source || share == null) continue;
+    if (!best || share > best.share) best = { source, share };
+  }
+  return best;
+}
+
+function parseTopSocial(body: Record<string, unknown>): { name: string; share: number } | null {
+  const src = body.socialNetworksSource as Record<string, unknown> | undefined;
+  const networks = src?.topSocialNetworks;
+  if (!Array.isArray(networks) || !networks.length) return null;
+  const top = networks[0] as Record<string, unknown>;
+  const name = str(top.name);
+  const share = pct(top.visitsShare);
+  if (!name || share == null) return null;
+  return { name, share };
+}
+
+function parseTopAdPublishers(body: Record<string, unknown>): string[] {
+  const src = body.adsSource as Record<string, unknown> | undefined;
+  const sites = src?.topAdsSites;
+  if (!Array.isArray(sites)) return [];
+  return sites
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const domain = str((row as Record<string, unknown>).domain);
+      const locked = (row as Record<string, unknown>).isLocked === true;
+      return domain && !locked ? domain : null;
+    })
+    .filter((d): d is string => Boolean(d))
+    .slice(0, 5);
+}
+
+function parseTopKeywords(body: Record<string, unknown>): string[] {
+  const src = body.searchesSource as Record<string, unknown> | undefined;
+  const kws = src?.topKeywords;
+  if (!Array.isArray(kws)) return [];
+  return kws
+    .map((row) => (row && typeof row === "object" ? str((row as Record<string, unknown>).name) : null))
+    .filter((k): k is string => Boolean(k))
+    .slice(0, 5);
+}
+
+/** Parse Similar Web Data API — GET /?domain= */
+export function parseSimilarWebDataPayload(raw: unknown, domain: string): SimilarwebBundle {
   const body = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const normalized = normalizeDomain(domain);
 
-  if (body.success === false) {
-    throw new Error("Similarweb API returned success: false");
+  if (body.status === "error" || body.success === false) {
+    throw new Error(str(body.message) ?? "Market signals API returned an error");
   }
 
-  const sourceSite = (body.sourceSite ?? body.source_site) as SimilarwebSiteRecord | undefined;
+  const overview = (body.overview ?? {}) as Record<string, unknown>;
+  const trafficBlock = (body.traffic ?? {}) as Record<string, unknown>;
+  const ranking = (body.ranking ?? {}) as Record<string, unknown>;
+  const searches = (body.searchesSource ?? {}) as Record<string, unknown>;
+  const geo = (body.geography ?? {}) as Record<string, unknown>;
+  const topCountries = geo.topCountriesTraffics;
+  const topGeo =
+    Array.isArray(topCountries) && topCountries[0] && typeof topCountries[0] === "object"
+      ? (topCountries[0] as Record<string, unknown>)
+      : null;
 
-  let traffic: TrafficProfile | null = null;
-  if (sourceSite && typeof sourceSite === "object") {
-    traffic = toTrafficProfile(sourceSite, normalized);
-  }
+  const primarySource = parseTrafficSources(body.trafficSources);
+  const topSocial = parseTopSocial(body);
+  const categoryId = str(overview.companyCategoryId ?? body.categoryId);
 
-  const similarRaw =
-    body.similarSites ??
-    body.similar_sites ??
-    body.sites ??
-    (Array.isArray(body.data) ? body.data : null);
+  const traffic: TrafficProfile = {
+    domain: str(body.domain) ?? normalized,
+    title: str(overview.companyName) ?? null,
+    description: str(overview.description) ?? null,
+    monthlyVisits: num(overview.visitsTotalCount ?? trafficBlock.visitsTotalCount),
+    visitsChangePct: num(trafficBlock.visitsTotalCountChange),
+    category: formatCategoryId(categoryId),
+    categoryRank: num(overview.categoryRank ?? ranking.categoryRank),
+    categoryRankChange: num(overview.categoryRankChange ?? ranking.categoryRankChange),
+    topCountry: str(overview.countryAlpha2Code ?? topGeo?.countryAlpha2Code) ?? null,
+    topCountryRank: num(overview.countryRank ?? ranking.countryRank),
+    countryRankChange: num(overview.countryRankChange ?? ranking.countryRankChange),
+    topCountryShare: topGeo ? pct(topGeo.visitsShare) : null,
+    bounceRate: pct(overview.bounceRate ?? trafficBlock.bounceRate),
+    pagesPerVisit: num(overview.pagesPerVisit ?? trafficBlock.pagesPerVisit),
+    avgVisitDuration: str(overview.visitsAvgDurationFormatted ?? trafficBlock.visitsAvgDurationFormatted),
+    organicSearchShare: pct(searches.organicSearchShare),
+    paidSearchShare: pct(searches.paidSearchShare),
+    keywordsTotalCount: num(searches.keywordsTotalCount),
+    topKeywords: parseTopKeywords(body),
+    topSocialNetwork: topSocial?.name ?? null,
+    topSocialShare: topSocial?.share ?? null,
+    primaryTrafficSource: primarySource?.source ?? null,
+    primaryTrafficShare: primarySource?.share ?? null,
+    topAdPublishers: parseTopAdPublishers(body),
+    visitTrend: parseVisitTrend(trafficBlock.history),
+    tags: [],
+    favicon: str(body.icon) ?? null,
+  };
 
+  const competitorsRaw = (body.competitors as Record<string, unknown> | undefined)?.topSimilarityCompetitors;
   const similarCompetitors: SimilarCompetitor[] = [];
-  if (Array.isArray(similarRaw)) {
-    similarRaw.forEach((row, index) => {
+  if (Array.isArray(competitorsRaw)) {
+    competitorsRaw.forEach((row, index) => {
       if (!row || typeof row !== "object") return;
-      const mapped = toSimilarCompetitor(row as SimilarwebSiteRecord, index);
-      if (mapped && mapped.domain !== normalized) similarCompetitors.push(mapped);
+      const r = row as Record<string, unknown>;
+      const peerDomain = str(r.domain);
+      if (!peerDomain) return;
+      const peerNorm = normalizeDomain(peerDomain);
+      if (peerNorm === normalized) return;
+      similarCompetitors.push({
+        domain: peerNorm,
+        category: formatCategoryId(str(r.categoryId)),
+        categoryRank: num(r.categoryRank),
+        affinity: num(r.affinity),
+        favicon: str(r.icon),
+        peerOrder: index,
+      });
     });
   }
 
-  // Similar Sites endpoint has no affinity — preserve API list order (most relevant first).
-  similarCompetitors.sort((a, b) => {
-    if (a.affinity != null && b.affinity != null && a.affinity !== b.affinity) {
-      return b.affinity - a.affinity;
-    }
-    return a.peerOrder - b.peerOrder;
-  });
-
-  return {
-    traffic,
-    similarCompetitors: similarCompetitors.slice(0, 20),
-    raw: body,
-  };
+  return { traffic, similarCompetitors: similarCompetitors.slice(0, 12), raw: body };
 }
 
-async function rapidGet(config: SimilarwebConfig, path: string, domain: string): Promise<unknown> {
+async function rapidGet(config: SimilarwebConfig, domain: string): Promise<unknown> {
+  const path = config.analysisPath.startsWith("/") ? config.analysisPath : `/${config.analysisPath}`;
   const url = new URL(path, `https://${config.host}`);
   url.searchParams.set("domain", domain);
 
@@ -155,12 +191,12 @@ async function rapidGet(config: SimilarwebConfig, path: string, domain: string):
       "x-rapidapi-host": config.host,
       Accept: "application/json",
     },
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(25_000),
   });
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Similarweb ${path} failed (${res.status})${text ? `: ${text.slice(0, 120)}` : ""}`);
+    throw new Error(`Market signals failed (${res.status})${text ? `: ${text.slice(0, 120)}` : ""}`);
   }
 
   return res.json();
@@ -178,53 +214,21 @@ export function resolveSimilarwebConfig(opts?: {
   if (!apiKey) return null;
 
   const host =
-    process.env.SIMILARWEB_RAPIDAPI_HOST?.trim() ||
-    "similarweb-api-pro.p.rapidapi.com";
+    process.env.SIMILARWEB_RAPIDAPI_HOST?.trim() || "similar-web-data.p.rapidapi.com";
 
   return {
     apiKey,
     host,
-    similarSitesPath: process.env.SIMILARWEB_SIMILAR_SITES_PATH?.trim() || "/similar-sites",
-    overviewPath: process.env.SIMILARWEB_OVERVIEW_PATH?.trim() || "/website-overview",
+    analysisPath: process.env.SIMILARWEB_ANALYSIS_PATH?.trim() || "/",
   };
 }
 
-/** Fetch Similarweb traffic + peer set via RapidAPI Similarweb API Pro. */
+/** Fetch domain analysis via RapidAPI Similar Web Data. */
 export async function fetchSimilarwebBundle(domain: string, config: SimilarwebConfig): Promise<SimilarwebBundle> {
   const normalized = normalizeDomain(domain);
-  const merged: Record<string, unknown> = {};
-  let traffic: TrafficProfile | null = null;
-  let similarCompetitors: SimilarCompetitor[] = [];
-
-  const attempts = [
-    { path: config.similarSitesPath, label: "similar-sites" },
-    { path: config.overviewPath, label: "overview" },
-  ];
-
-  for (const attempt of attempts) {
-    try {
-      const payload = await rapidGet(config, attempt.path, normalized);
-      const parsed = parseSimilarwebPayload(payload, normalized);
-      merged[attempt.label] = parsed.raw;
-      if (!traffic && parsed.traffic) traffic = parsed.traffic;
-      if (!similarCompetitors.length && parsed.similarCompetitors.length) {
-        similarCompetitors = parsed.similarCompetitors;
-      }
-      // Similar Sites returns sourceSite + similarSites in one call — stop when complete.
-      if (traffic && similarCompetitors.length) break;
-    } catch (err) {
-      merged[`${attempt.label}_error`] = err instanceof Error ? err.message : String(err);
-    }
-  }
-
-  if (!traffic && !similarCompetitors.length) {
-    const errKey = Object.keys(merged).find((k) => k.endsWith("_error"));
-    throw new Error(
-      errKey && typeof merged[errKey] === "string"
-        ? (merged[errKey] as string)
-        : "Similarweb returned no traffic or peer data",
-    );
-  }
-
-  return { traffic, similarCompetitors, raw: merged };
+  const payload = await rapidGet(config, normalized);
+  return parseSimilarWebDataPayload(payload, normalized);
 }
+
+/** @deprecated Legacy parser alias — use parseSimilarWebDataPayload */
+export const parseSimilarwebPayload = parseSimilarWebDataPayload;

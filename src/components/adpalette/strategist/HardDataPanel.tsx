@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronRight, PanelRightOpen, X } from "lucide-react";
 import {
   Sheet,
@@ -8,9 +8,12 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { loadEvidenceSupport, type EvidenceSupportBundle } from "@/lib/evidence.functions";
 import type { PanelFocus } from "./data-module-types";
 import { MODULE_META } from "./data-module-types";
 import { renderHardDataBody, type HardDataPayload } from "./render-hard-data";
+import { resolveFocusDomain } from "./evidence-context";
+import type { EvidenceDrawerExtras } from "./evidence-frame";
 
 type HardDataPanelProps = {
   focus: PanelFocus | null;
@@ -21,13 +24,80 @@ type HardDataPanelProps = {
 export function HardDataPanel({ focus, onClose, data }: HardDataPanelProps) {
   const open = focus != null;
   const meta = focus ? MODULE_META[focus.moduleId] : null;
+  const [support, setSupport] = useState<EvidenceSupportBundle | null>(null);
+  const [supportLoading, setSupportLoading] = useState(false);
+
+  useEffect(() => {
+    if (!focus || !data.workspace) {
+      setSupport(null);
+      return;
+    }
+
+    let alive = true;
+    const ctx = data;
+    const focusDomain = resolveFocusDomain(
+      ctx,
+      focus.moduleId,
+      focus.rowLabel,
+      focus.rowIndex,
+    );
+
+    setSupportLoading(true);
+    loadEvidenceSupport({
+      data: {
+        focusDomain,
+        workspaceDomains: [
+          ctx.workspace.client_domain,
+          ...ctx.workspace.competitor_domains,
+        ],
+        clientDomain: ctx.workspace.client_domain,
+        clientName: ctx.workspace.client_name,
+        competitorDomains: ctx.workspace.competitor_domains,
+        threatMetrics: ctx.threats
+          .filter((t) => t.competitor_domain)
+          .map((t) => ({
+            domain: t.competitor_domain!,
+            creativeVolume: t.creative_volume,
+            threatScore: t.threat_score,
+            demand: t.demand,
+          })),
+      },
+    })
+      .then((bundle) => {
+        if (alive) setSupport(bundle);
+      })
+      .catch(() => {
+        if (alive) setSupport({ creatives: [], marketSignal: null, crossBrand: [] });
+      })
+      .finally(() => {
+        if (alive) setSupportLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [focus, data]);
+
+  const extras: EvidenceDrawerExtras | undefined = focus
+    ? {
+        creatives: support?.creatives ?? [],
+        marketSignal: support?.marketSignal ?? null,
+        crossBrand: support?.crossBrand ?? [],
+        channelMix: data.channelMix,
+        creativesLoading: supportLoading,
+        crossBrandLoading: supportLoading,
+        creativePipelineReady: Boolean(
+          data.adlibraryCoverage?.available && !data.adlibraryCoverage?.hasData,
+        ),
+      }
+    : undefined;
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
       <SheetContent
         side="right"
         className={cn(
-          "dark-dense w-full sm:max-w-xl md:max-w-2xl",
+          "dark-dense w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl",
           "bg-neutral-950 border-neutral-800 text-neutral-100",
           "p-0 gap-0 overflow-hidden",
           "[&>button.absolute]:hidden",
@@ -39,14 +109,14 @@ export function HardDataPanel({ focus, onClose, data }: HardDataPanelProps) {
               <div className="flex items-start justify-between gap-3 pr-8">
                 <div>
                   <div className="dense-meta uppercase tracking-wider text-neutral-500">
-                    Evidence · {meta.index}
+                    Evidence
                   </div>
                   <SheetTitle className="text-sm font-semibold text-neutral-100">
                     {meta.title}
                     {focus.rowLabel ? ` · ${focus.rowLabel}` : ""}
                   </SheetTitle>
                   <SheetDescription className="dense-meta text-neutral-500 normal-case">
-                    Source: R-AD Signal · rows, metrics, and calculation notes below
+                    {meta.subtitle}
                   </SheetDescription>
                 </div>
                 <button
@@ -61,7 +131,7 @@ export function HardDataPanel({ focus, onClose, data }: HardDataPanelProps) {
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-              {renderHardDataBody(focus, data)}
+              {renderHardDataBody(focus, data, extras)}
             </div>
           </div>
         )}
