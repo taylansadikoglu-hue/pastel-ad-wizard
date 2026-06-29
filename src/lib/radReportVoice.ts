@@ -1,38 +1,41 @@
-/** R-AD report personality — 20% story layer on top of hard data. */
+/** R-AD report personality — 20% bite-sized strategist facts on top of hard data. */
 
 export function radGreeting(category: string): string {
   const cat = category.trim() || "your category";
-  return `R-AD here. ${cat} just shifted — here's the read before tomorrow's meeting.`;
+  return `${cat} pulse — numbers first, one-line reads where it matters.`;
 }
 
-export function radTemperatureLine(level: string | null | undefined): string {
+export function radTemperatureBite(level: string | null | undefined): string {
   const v = (level ?? "").toLowerCase();
-  if (v.includes("heat") || v.includes("hot") || v.includes("rising")) {
-    return "The category's heating up. More brands are pushing spend and fresh creative.";
-  }
-  if (v.includes("cool") || v.includes("decl")) {
-    return "Activity cooled slightly — good window to steal share with a sharper angle.";
-  }
-  return "Steady week. No one's sleeping, but no one's sprinting either.";
+  if (v.includes("heat") || v.includes("hot") || v.includes("rising")) return "Category heat is up — rivals are spending.";
+  if (v.includes("cool") || v.includes("decl")) return "Activity cooled — window to steal share.";
+  return "Steady week — no sprint, no sleep.";
 }
 
-export function radChannelInsight(topChannel: string, secondChannel: string): string {
-  return `${topChannel} dominates while ${secondChannel} stays under-invested — classic banking imbalance.`;
+export function radChannelBite(topChannel: string, secondChannel: string): string {
+  return `${topChannel} leads; ${secondChannel} still under-weighted.`;
 }
 
-export function radProductHook(seasonalLabel: string | null, topProduct: string | null): string {
-  if (seasonalLabel) {
-    return `${seasonalLabel} are live across the category — product-led angles are clustering fast.`;
-  }
-  if (topProduct) {
-    return `${topProduct} is where most of the messaging volume sits this week.`;
-  }
-  return "Product themes are splintering — no single offer owns the category yet.";
+export function radProductBite(seasonalLabel: string | null, topProduct: string | null): string {
+  if (seasonalLabel) return `${seasonalLabel} creative is clustering — product angles converging.`;
+  if (topProduct) return `${topProduct} owns the messaging volume this week.`;
+  return "Themes are splintered — no single offer leads yet.";
 }
 
-export function radSignOff(clientName: string): string {
-  const client = clientName.trim() || "your client";
-  return `That's the 80% you need in the room. The other 20% is what you say about ${client}.`;
+export function radWeeklyBite(risingBrand: string | null): string {
+  if (risingBrand) return `${risingBrand} moved fastest WoW — watch their next drop.`;
+  return "No breakout brand this week — marginal shifts only.";
+}
+
+export function radCompetitorBite(topBrand: string | null, wow: number | null): string {
+  if (topBrand && wow != null && wow > 5) return `${topBrand} is loudest at +${wow}% WoW.`;
+  if (topBrand) return `${topBrand} still tops share-of-voice.`;
+  return "SOV is spread — no clear category bully.";
+}
+
+export function radWhitespaceBite(topTerritory: string | null): string {
+  if (topTerritory) return `White space sits on ${topTerritory.toLowerCase()} — few rivals own it.`;
+  return "Pick a territory competitors aren't defending.";
 }
 
 export function radHeroKicker(): string {
@@ -40,5 +43,20 @@ export function radHeroKicker(): string {
 }
 
 export function radDataRuleNote(): string {
-  return "80% signal · 20% story — tap Evidence on any block for the full trail.";
+  return "80% charts & deltas · 20% strategist bites · Evidence for depth";
+}
+
+/** @deprecated Use radTemperatureBite — kept for imports during transition */
+export function radTemperatureLine(level: string | null | undefined): string {
+  return radTemperatureBite(level);
+}
+
+/** @deprecated Use radChannelBite */
+export function radChannelInsight(topChannel: string, secondChannel: string): string {
+  return radChannelBite(topChannel, secondChannel);
+}
+
+/** @deprecated Use radProductBite */
+export function radProductHook(seasonalLabel: string | null, topProduct: string | null): string {
+  return radProductBite(seasonalLabel, topProduct);
 }

@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClientWorkspaceEmptyState } from "@/components/adpalette/ClientWorkspaceEmptyState";
-import {
-  buildCompetitorRisers,
-  buildWeeklyChanges,
-  MarketIntelReport,
-} from "@/components/adpalette/market-intel/MarketIntelReport";
+import { MarketIntelReport } from "@/components/adpalette/market-intel/MarketIntelReport";
 import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
 import { WorkspaceShell } from "./WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,7 +22,14 @@ import {
   buildProductThemes,
   detectSeasonalTheme,
 } from "@/lib/marketCampaignThemes";
-import { radChannelInsight } from "@/lib/radReportVoice";
+import {
+  buildCategoryKpis,
+  buildHeroPulse,
+  enrichCompetitorRisers,
+  enrichProductThemes,
+  enrichWeeklyChanges,
+} from "@/lib/marketPulseMetrics";
+import { radChannelBite } from "@/lib/radReportVoice";
 import {
   buildRecommendedMoves,
   isThemeAllowed,
@@ -264,7 +267,44 @@ export function StrategistDashboard() {
   );
 
   const productThemes = useMemo(() => buildProductThemes(challengers, category), [challengers, category]);
+  const enrichedProductThemes = useMemo(
+    () => enrichProductThemes(productThemes, category),
+    [productThemes, category],
+  );
   const seasonalTheme = useMemo(() => detectSeasonalTheme(challengers, category), [challengers, category]);
+
+  const marketTemperature =
+    marketIntel?.executivePack?.marketTemperature ??
+    (marketIntel?.dashboardHero?.marketStory ? "Heating up" : "Stable");
+
+  const pulseData = (intelBundle?.pulse.data ?? null) as Record<string, unknown> | null;
+
+  const categoryKpis = useMemo(
+    () =>
+      buildCategoryKpis({
+        brandsTracked: confidence?.brands_tracked,
+        adsIndexed: confidence?.ads_analysed,
+        marketTemperature,
+        pulse: pulseData,
+        category,
+      }),
+    [confidence, marketTemperature, pulseData, category],
+  );
+
+  const heroPulse = useMemo(
+    () => buildHeroPulse(marketTemperature, pulseData, category),
+    [marketTemperature, pulseData, category],
+  );
+
+  const weeklyChanges = useMemo(
+    () => enrichWeeklyChanges(marketIntel?.dailyChanges ?? [], clientName, pulseData),
+    [marketIntel?.dailyChanges, clientName, pulseData],
+  );
+
+  const competitorRisers = useMemo(
+    () => enrichCompetitorRisers(threats, momentum, pulseData),
+    [threats, momentum, pulseData],
+  );
 
   const recommendedMoves = useMemo(
     () =>
@@ -305,13 +345,9 @@ export function StrategistDashboard() {
         threats[0]?.competitor_domain,
     ) || "Westpac";
 
-  const marketTemperature =
-    marketIntel?.executivePack?.marketTemperature ??
-    (marketIntel?.dashboardHero?.marketStory ? "Heating up" : "Stable");
-
-  const channelInsight = useMemo(() => {
+  const channelBite = useMemo(() => {
     const active = channelMixResult.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct);
-    if (active.length >= 2) return radChannelInsight(active[0].channel, active[1].channel);
+    if (active.length >= 2) return radChannelBite(active[0].channel, active[1].channel);
     return "Search dominates while video remains under-invested across Banking.";
   }, [channelMixResult.rows]);
 
@@ -371,11 +407,13 @@ export function StrategistDashboard() {
         biggestThreat={biggestThreat}
         biggestOpportunity={topOpportunity}
         recommendedMove={recommendedMoves[0] ?? null}
-        weeklyChanges={buildWeeklyChanges(marketIntel?.dailyChanges ?? [], clientName)}
-        competitorRisers={buildCompetitorRisers(threats, momentum)}
+        categoryKpis={categoryKpis}
+        heroPulse={heroPulse}
+        weeklyChanges={weeklyChanges}
+        competitorRisers={competitorRisers}
         channelMix={channelMixResult}
-        channelInsight={channelInsight}
-        productThemes={productThemes}
+        channelBite={channelBite}
+        productThemes={enrichedProductThemes}
         seasonalTheme={seasonalTheme}
         whitespaceCards={whitespaceCards}
         recommendedActions={recommendedMoves}

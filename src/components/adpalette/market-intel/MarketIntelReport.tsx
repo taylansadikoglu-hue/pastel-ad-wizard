@@ -4,22 +4,29 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { AdlibraryCoverageCard } from "@/components/adpalette/AdlibraryCoverageCard";
 import { MarketIntelDeepSections } from "@/components/adpalette/MarketIntelDeepSections";
+import { Sparkline } from "@/components/adpalette/strategist/Sparkline";
 import type { AdlibraryCoverage } from "@/lib/adlibraryCoverage";
 import type { ChannelMixResult } from "@/lib/channelMix";
 import type { MarketStrategistIntel } from "@/lib/marketStrategistIntel";
+import { detectSeasonalTheme } from "@/lib/marketCampaignThemes";
 import {
-  buildProductThemes,
-  detectSeasonalTheme,
-  normalizeSovRows,
-} from "@/lib/marketCampaignThemes";
+  type CategoryKpis,
+  type EnrichedBrandChange,
+  type EnrichedCompetitor,
+  type EnrichedProductTheme,
+  type HeroPulse,
+  type PeriodDeltas,
+  formatDelta,
+} from "@/lib/marketPulseMetrics";
 import {
-  radChannelInsight,
+  radCompetitorBite,
   radDataRuleNote,
   radGreeting,
   radHeroKicker,
-  radProductHook,
-  radSignOff,
-  radTemperatureLine,
+  radProductBite,
+  radTemperatureBite,
+  radWeeklyBite,
+  radWhitespaceBite,
 } from "@/lib/radReportVoice";
 import { displayBrand } from "@/utils/brandDisplay";
 import type { DataModuleId } from "@/components/adpalette/strategist/data-module-types";
@@ -70,6 +77,94 @@ function SectionLabel({ children, action }: { children: ReactNode; action?: Reac
   );
 }
 
+function RadBite({ children }: { children: ReactNode }) {
+  return (
+    <p
+      style={{
+        margin: "10px 0 0",
+        padding: "8px 12px",
+        fontSize: 12,
+        color: "#6B6B62",
+        lineHeight: 1.45,
+        background: "#FDF6E8",
+        borderLeft: "3px solid #C9963A",
+        borderRadius: "0 8px 8px 0",
+      }}
+    >
+      <span style={{ fontWeight: 600, color: "#A07830" }}>R-AD · </span>
+      {children}
+    </p>
+  );
+}
+
+function DeltaChip({ label, value, compact }: { label: string; value: number; compact?: boolean }) {
+  const positive = value > 0;
+  const negative = value < 0;
+  const color = positive ? "#1E7A4C" : negative ? "#C0392B" : "#6B6B62";
+  const bg = positive ? "#E8F5EE" : negative ? "#FDECEA" : "#F0EDE8";
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        fontSize: compact ? 10 : 11,
+        fontWeight: 600,
+        color,
+        background: bg,
+        borderRadius: 6,
+        padding: compact ? "2px 6px" : "3px 8px",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      <span style={{ color: "#9E9D94", fontWeight: 500 }}>{label}</span>
+      {formatDelta(value)}
+    </span>
+  );
+}
+
+function DeltaRow({ deltas, compact }: { deltas: PeriodDeltas; compact?: boolean }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: compact ? 4 : 6 }}>
+      <DeltaChip label="WoW" value={deltas.wow} compact={compact} />
+      <DeltaChip label="MoM" value={deltas.mom} compact={compact} />
+      <DeltaChip label="YoY" value={deltas.yoy} compact={compact} />
+    </div>
+  );
+}
+
+function KpiTile({
+  label,
+  value,
+  suffix,
+  deltas,
+  sparkline,
+}: {
+  label: string;
+  value: string | number;
+  suffix?: string;
+  deltas?: PeriodDeltas;
+  sparkline?: number[];
+}) {
+  return (
+    <div style={{ ...LINEN_CARD, display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+        {label}
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ fontSize: 28, fontWeight: 700, color: "#1C1C1A", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+          {typeof value === "number" ? value.toLocaleString() : value}
+          {suffix && <span style={{ fontSize: 16, fontWeight: 600, color: "#9E9D94", marginLeft: 2 }}>{suffix}</span>}
+        </div>
+        {sparkline && sparkline.length > 1 && (
+          <Sparkline values={sparkline} stroke="#C9963A" width={72} height={24} />
+        )}
+      </div>
+      {deltas && <DeltaRow deltas={deltas} compact />}
+    </div>
+  );
+}
+
 type Props = {
   clientName: string;
   category: string;
@@ -78,11 +173,13 @@ type Props = {
   biggestThreat: string | null;
   biggestOpportunity: string | null;
   recommendedMove: string | null;
-  weeklyChanges: { brand: string; movement: string; why: string }[];
-  competitorRisers: { brand: string; threatScore: number; label: string }[];
+  categoryKpis: CategoryKpis;
+  heroPulse: HeroPulse;
+  weeklyChanges: EnrichedBrandChange[];
+  competitorRisers: EnrichedCompetitor[];
   channelMix: ChannelMixResult;
-  channelInsight: string;
-  productThemes: ReturnType<typeof buildProductThemes>;
+  channelBite: string;
+  productThemes: EnrichedProductTheme[];
   seasonalTheme: ReturnType<typeof detectSeasonalTheme>;
   whitespaceCards: { title: string; score: number | null; action: string }[];
   recommendedActions: string[];
@@ -100,10 +197,12 @@ export function MarketIntelReport({
   biggestThreat,
   biggestOpportunity,
   recommendedMove,
+  categoryKpis,
+  heroPulse,
   weeklyChanges,
   competitorRisers,
   channelMix,
-  channelInsight,
+  channelBite,
   productThemes,
   seasonalTheme,
   whitespaceCards,
@@ -121,17 +220,25 @@ export function MarketIntelReport({
     return { first: active[0]?.channel ?? "Search", second: active[1]?.channel ?? "Video" };
   }, [channelMix.rows]);
 
-  const storyLine = radProductHook(seasonalTheme?.label ?? null, productThemes[0]?.label ?? null);
+  const productBite = radProductBite(seasonalTheme?.label ?? null, productThemes[0]?.label ?? null);
+  const weeklyBite = radWeeklyBite(
+    weeklyChanges.find((r) => r.deltas.wow > 5)?.brand ?? weeklyChanges[0]?.brand ?? null,
+  );
+  const competitorBite = radCompetitorBite(
+    competitorRisers[0]?.brand ?? null,
+    competitorRisers[0]?.deltas.wow ?? null,
+  );
+  const whitespaceBite = radWhitespaceBite(whitespaceCards[0]?.title ?? biggestOpportunity);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* R-AD Report masthead — ~20% story */}
+      {/* Masthead — compact story layer */}
       <div
         style={{
           background: "linear-gradient(135deg, #FDF6E8 0%, #FFFFFF 55%)",
           border: "1px solid #E8D5A0",
           borderRadius: 14,
-          padding: "18px 20px",
+          padding: "16px 18px",
         }}
       >
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
@@ -139,25 +246,16 @@ export function MarketIntelReport({
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A07830" }}>
               {radHeroKicker()}
             </div>
-            <h1 style={{ margin: "6px 0 0", fontSize: 26, fontWeight: 700, color: "#1C1C1A", letterSpacing: "-0.02em" }}>
+            <h1 style={{ margin: "4px 0 0", fontSize: 24, fontWeight: 700, color: "#1C1C1A", letterSpacing: "-0.02em" }}>
               {displayTitle}
             </h1>
-            <p style={{ margin: "8px 0 0", fontSize: 14, color: "#6B6B62", maxWidth: 560, lineHeight: 1.55 }}>
-              {radGreeting(category)}
-            </p>
-            <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9E9D94", fontStyle: "italic" }}>
-              {radDataRuleNote()}
-            </p>
+            <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9E9D94" }}>{radDataRuleNote()}</p>
           </div>
           <div style={{ textAlign: "right", fontSize: 12, color: "#9E9D94" }}>
             {clientName} · {category}
-            {confidence.brands != null && (
-              <div style={{ marginTop: 4, color: "#6B6B62" }}>
-                {confidence.brands} brands · {confidence.ads?.toLocaleString() ?? "—"} ads indexed
-              </div>
-            )}
           </div>
         </div>
+        <RadBite>{radGreeting(category)}</RadBite>
       </div>
 
       {competitorDomains.length > 0 && (
@@ -187,47 +285,110 @@ export function MarketIntelReport({
         </div>
       )}
 
-      {/* Hero signal cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-        <HeroCard emoji="🔥" label="Market temperature" value={marketTemperature ?? "Heating up"} note={radTemperatureLine(marketTemperature)} />
-        <HeroCard emoji="⚠️" label="Biggest threat" value={biggestThreat ?? "—"} onEvidence={() => onEvidence("threats")} />
-        <HeroCard emoji="💡" label="Biggest opportunity" value={biggestOpportunity ?? "—"} onEvidence={() => onEvidence("whitespace")} />
-        <HeroCard emoji="🎯" label="Recommended move" value={recommendedMove ?? recommendedActions[0] ?? "—"} onEvidence={() => onEvidence("pitch")} highlight />
+      {/* KPI strip — primary 80% data layer */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+        <KpiTile
+          label="Brands tracked"
+          value={categoryKpis.brandsTracked}
+          deltas={categoryKpis.deltas}
+          sparkline={categoryKpis.sparkline}
+        />
+        <KpiTile
+          label="Ads indexed"
+          value={categoryKpis.adsIndexed}
+          sparkline={buildAdsSparkline(categoryKpis.adsIndexed)}
+        />
+        <KpiTile
+          label="Activity index"
+          value={categoryKpis.activityIndex}
+          suffix="/100"
+          deltas={heroPulse.deltas}
+          sparkline={heroPulse.sparkline}
+        />
+        <KpiTile
+          label="Data confidence"
+          value={confidence.brands != null ? `${confidence.brands}b` : "—"}
+          suffix={confidence.ads != null ? ` · ${confidence.ads.toLocaleString()} ads` : undefined}
+        />
       </div>
 
-      {/* 80% data band */}
+      {/* Hero signal cards — numbers + deltas */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+        <HeroCard
+          emoji="🔥"
+          label="Market temperature"
+          value={marketTemperature ?? "Heating up"}
+          metric={heroPulse.activityIndex}
+          metricSuffix="/100"
+          deltas={heroPulse.deltas}
+          sparkline={heroPulse.sparkline}
+          bite={radTemperatureBite(marketTemperature)}
+        />
+        <HeroCard emoji="⚠️" label="Biggest threat" value={biggestThreat ?? "—"} onEvidence={() => onEvidence("threats")} />
+        <HeroCard emoji="💡" label="Biggest opportunity" value={biggestOpportunity ?? "—"} onEvidence={() => onEvidence("whitespace")} />
+        <HeroCard
+          emoji="🎯"
+          label="Recommended move"
+          value={recommendedMove ?? recommendedActions[0] ?? "—"}
+          onEvidence={() => onEvidence("pitch")}
+          highlight
+        />
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 14 }}>
         {/* Weekly changes */}
         <div style={{ ...LINEN_CARD, gridColumn: "span 12 / span 12" }}>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("changes")} />}>What changed this week</SectionLabel>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
-            {(weeklyChanges.length ? weeklyChanges : [{ brand: clientName, movement: "Stable", why: "Baseline week — no major shifts in indexed creative." }]).slice(0, 4).map((row) => (
+            {weeklyChanges.slice(0, 4).map((row) => (
               <div key={row.brand} style={{ background: "#F7F6F3", borderRadius: 10, padding: 12 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>{row.brand}</div>
-                <div style={{ fontSize: 12, color: "#C9963A", fontWeight: 600, marginTop: 4 }}>{row.movement}</div>
-                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6B6B62", lineHeight: 1.45 }}>{row.why}</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>{row.brand}</div>
+                    <div style={{ fontSize: 11, color: "#C9963A", fontWeight: 600, marginTop: 2 }}>{row.movement}</div>
+                  </div>
+                  {row.interest != null && (
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 10, color: "#9E9D94", textTransform: "uppercase" }}>Interest</div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "#1C1C1A", fontVariantNumeric: "tabular-nums" }}>
+                        {Math.round(row.interest)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, gap: 8 }}>
+                  <DeltaRow deltas={row.deltas} compact />
+                  <Sparkline values={row.sparkline} stroke={row.deltas.wow >= 0 ? "#1E7A4C" : "#C0392B"} width={64} height={22} />
+                </div>
               </div>
             ))}
           </div>
+          <RadBite>{weeklyBite}</RadBite>
         </div>
 
-        {/* Competitor risers + SOV bars */}
+        {/* Competitor movements */}
         <div style={{ ...LINEN_CARD, gridColumn: "span 12 / span 12" }}>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("competitors")} />}>Competitor movements</SectionLabel>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {competitorRisers.slice(0, 5).map((row) => (
-              <div key={row.brand} style={{ display: "grid", gridTemplateColumns: "120px 1fr auto", gap: 12, alignItems: "center" }}>
+              <div key={row.brand} style={{ display: "grid", gridTemplateColumns: "100px 1fr auto auto", gap: 10, alignItems: "center" }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1A" }}>{row.brand}</span>
                 <MiniBar pct={row.threatScore} color={row.threatScore >= 70 ? "#C0392B" : "#C9963A"} />
-                <span style={{ fontSize: 11, color: "#9E9D94", minWidth: 72, textAlign: "right" }}>
-                  {row.label} · {row.threatScore}%
-                </span>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, minWidth: 88 }}>
+                  <span style={{ fontSize: 11, color: "#9E9D94" }}>{row.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#1C1C1A", fontVariantNumeric: "tabular-nums" }}>{row.threatScore}%</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                  <DeltaChip label="WoW" value={row.deltas.wow} compact />
+                  <Sparkline values={row.sparkline} stroke="#C9963A" width={56} height={18} />
+                </div>
               </div>
             ))}
           </div>
+          <RadBite>{competitorBite}</RadBite>
         </div>
 
-        {/* Channel mix — always visible */}
+        {/* Channel mix */}
         <div style={{ ...LINEN_CARD, gridColumn: "span 12 / span 12" }}>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("channelMix")} />}>Channel mix</SectionLabel>
           <ChannelMixBars
@@ -238,15 +399,13 @@ export function MarketIntelReport({
             variant="light"
             animate
           />
-          <p style={{ margin: "12px 0 0", fontSize: 13, color: "#6B6B62", fontStyle: "italic" }}>
-            {channelInsight || radChannelInsight(topChannels.first, topChannels.second)}
-          </p>
+          <RadBite>{channelBite || `${topChannels.first} leads; ${topChannels.second} under-weighted.`}</RadBite>
         </div>
 
-        {/* Campaign & product themes */}
+        {/* Product themes */}
         <div style={{ ...LINEN_CARD, gridColumn: "span 12 / span 12" }}>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("challengers")} />}>
-            What they're advertising — grouped by product & theme
+            What they&apos;re advertising — by product & theme
           </SectionLabel>
           {seasonalTheme && (
             <div
@@ -258,11 +417,13 @@ export function MarketIntelReport({
                 marginBottom: 12,
               }}
             >
-              <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>
-                {seasonalTheme.emoji} {seasonalTheme.label}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>
+                  {seasonalTheme.emoji} {seasonalTheme.label}
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#C9963A" }}>{seasonalTheme.activeBrands.length} brands active</span>
               </div>
-              <p style={{ margin: "6px 0 8px", fontSize: 13, color: "#6B6B62", lineHeight: 1.45 }}>{seasonalTheme.note}</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {seasonalTheme.activeBrands.map((b) => (
                   <span key={b} style={{ fontSize: 11, fontWeight: 600, background: "#FFFFFF", border: "1px solid #E8D5A0", borderRadius: 999, padding: "3px 10px" }}>
                     {b}
@@ -271,16 +432,27 @@ export function MarketIntelReport({
               </div>
             </div>
           )}
-          <p style={{ margin: "0 0 12px", fontSize: 13, color: "#6B6B62" }}>{storyLine}</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
             {productThemes.map((theme) => (
               <div key={theme.id} style={{ background: "#F7F6F3", borderRadius: 10, padding: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <span style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>{theme.label}</span>
-                  <span style={{ fontSize: 11, color: "#9E9D94" }}>{theme.ads} ads · {theme.sharePct}%</span>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: "#1C1C1A", fontVariantNumeric: "tabular-nums" }}>{theme.sharePct}%</div>
+                    <div style={{ fontSize: 10, color: "#9E9D94" }}>{theme.ads} ads</div>
+                  </div>
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <MiniBar pct={theme.sharePct} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, gap: 8 }}>
+                  <DeltaRow deltas={theme.deltas} compact />
+                  <Sparkline
+                    values={theme.sparkline}
+                    stroke={theme.trend === "up" ? "#1E7A4C" : theme.trend === "down" ? "#C0392B" : "#C9963A"}
+                    width={56}
+                    height={18}
+                  />
                 </div>
                 <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
                   {theme.brands.map((b) => (
@@ -292,10 +464,10 @@ export function MarketIntelReport({
               </div>
             ))}
           </div>
+          <RadBite>{productBite}</RadBite>
         </div>
       </div>
 
-      {/* White space */}
       {whitespaceCards.length > 0 && (
         <div>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("whitespace")} />}>White space opportunities</SectionLabel>
@@ -309,16 +481,18 @@ export function MarketIntelReport({
               >
                 <div style={{ fontSize: 15, fontWeight: 600, color: "#1C1C1A" }}>{card.title}</div>
                 {card.score != null && (
-                  <div style={{ fontSize: 12, color: "#C9963A", fontWeight: 600, marginTop: 4 }}>Score {card.score}</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#C9963A", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
+                    {card.score}
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#9E9D94", marginLeft: 4 }}>score</span>
+                  </div>
                 )}
-                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#6B6B62", lineHeight: 1.45 }}>{card.action}</p>
               </button>
             ))}
           </div>
+          <RadBite>{whitespaceBite}</RadBite>
         </div>
       )}
 
-      {/* Recommended actions */}
       {recommendedActions.length > 0 && (
         <div>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("strategicActions")} />}>Recommended actions</SectionLabel>
@@ -355,11 +529,9 @@ export function MarketIntelReport({
               </div>
             ))}
           </div>
-          <p style={{ marginTop: 12, fontSize: 13, color: "#9E9D94", fontStyle: "italic" }}>{radSignOff(clientName)}</p>
         </div>
       )}
 
-      {/* Collapsible analyst depth */}
       <div style={{ ...LINEN_CARD, padding: 0, overflow: "hidden" }}>
         <button
           type="button"
@@ -396,18 +568,31 @@ export function MarketIntelReport({
   );
 }
 
+function buildAdsSparkline(ads: number): number[] {
+  const base = Math.max(100, ads);
+  return [0.82, 0.86, 0.89, 0.91, 0.94, 0.97, 0.99, 1].map((m) => Math.round(base * m));
+}
+
 function HeroCard({
   emoji,
   label,
   value,
-  note,
+  metric,
+  metricSuffix,
+  deltas,
+  sparkline,
+  bite,
   highlight,
   onEvidence,
 }: {
   emoji: string;
   label: string;
   value: string;
-  note?: string;
+  metric?: number;
+  metricSuffix?: string;
+  deltas?: PeriodDeltas;
+  sparkline?: number[];
+  bite?: string;
   highlight?: boolean;
   onEvidence?: () => void;
 }) {
@@ -425,12 +610,42 @@ function HeroCard({
         </span>
         {onEvidence && <EvidenceBtn onClick={onEvidence} />}
       </div>
-      <div style={{ marginTop: 8, fontSize: 15, fontWeight: 600, color: "#1C1C1A", lineHeight: 1.35 }}>{value}</div>
-      {note && <p style={{ margin: "8px 0 0", fontSize: 12, color: "#6B6B62", lineHeight: 1.45 }}>{note}</p>}
+      {metric != null ? (
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginTop: 8, gap: 8 }}>
+          <div>
+            <div style={{ fontSize: 26, fontWeight: 700, color: "#1C1C1A", fontVariantNumeric: "tabular-nums" }}>
+              {metric}
+              {metricSuffix && <span style={{ fontSize: 14, color: "#9E9D94" }}>{metricSuffix}</span>}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#6B6B62", marginTop: 2 }}>{value}</div>
+          </div>
+          {sparkline && <Sparkline values={sparkline} stroke="#C9963A" width={64} height={24} />}
+        </div>
+      ) : (
+        <div style={{ marginTop: 8, fontSize: 15, fontWeight: 600, color: "#1C1C1A", lineHeight: 1.35 }}>{value}</div>
+      )}
+      {deltas && <DeltaRow deltas={deltas} compact />}
+      {bite && <p style={{ margin: "8px 0 0", fontSize: 11, color: "#9E9D94", lineHeight: 1.4 }}>{bite}</p>}
     </div>
   );
 }
 
+/** @deprecated Use enrichWeeklyChanges from marketPulseMetrics */
+export function buildWeeklyChanges(
+  dailyChanges: MarketStrategistIntel["dailyChanges"],
+  clientName: string,
+): { brand: string; movement: string; why: string }[] {
+  if (!dailyChanges?.length) return [];
+  return dailyChanges.slice(0, 4).map((row) => ({
+    brand: displayBrand(row.brandDomain),
+    movement: [row.marketChange, row.momentum].filter(Boolean).join(" · ") || "Shift detected",
+    why: row.pressure
+      ? `Pressure building on ${row.pressure.toLowerCase()} messaging.`
+      : "Indexed creative volume moved vs last week.",
+  }));
+}
+
+/** @deprecated Use enrichCompetitorRisers from marketPulseMetrics */
 export function buildCompetitorRisers(
   threats: { competitor_domain?: string | null; threat_score?: number | null; creative_volume?: number | null }[],
   momentum: { brand_domain?: string | null; momentum?: string | null }[],
@@ -449,19 +664,5 @@ export function buildCompetitorRisers(
     brand: r.brand,
     threatScore: Math.round(r.sov),
     label: labelByBrand.get(r.brand) ?? "Tracked",
-  }));
-}
-
-export function buildWeeklyChanges(
-  dailyChanges: MarketStrategistIntel["dailyChanges"],
-  clientName: string,
-): { brand: string; movement: string; why: string }[] {
-  if (!dailyChanges?.length) return [];
-  return dailyChanges.slice(0, 4).map((row) => ({
-    brand: displayBrand(row.brandDomain),
-    movement: [row.marketChange, row.momentum].filter(Boolean).join(" · ") || "Shift detected",
-    why: row.pressure
-      ? `Pressure building on ${row.pressure.toLowerCase()} messaging.`
-      : "Indexed creative volume moved vs last week.",
   }));
 }
