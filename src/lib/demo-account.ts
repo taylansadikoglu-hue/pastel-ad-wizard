@@ -1,4 +1,5 @@
 import { ACTIVE_CLIENT_WORKSPACE_KEY, normalizeClientDomain } from "@/lib/clientWorkspace";
+import { CORE_CATEGORY_ORDER } from "@/lib/categoryCatalog";
 
 export const DEMO_EMAIL = "demo@revenuad.com";
 export const DEMO_PASSWORD = "RevenueAdDemo2026!";
@@ -61,6 +62,10 @@ export function isDemoRouteAllowed(pathname: string): boolean {
   if (path === "/app") return true;
   if (path === "/app/pcr" || path.startsWith("/app/pcr/")) return true;
   if (path === "/app/categories" || path.startsWith("/app/categories/")) return true;
+  if (path.startsWith("/app/category/")) {
+    const slug = path.slice("/app/category/".length).split("/")[0] ?? "";
+    if (CORE_CATEGORY_ORDER.includes(slug as (typeof CORE_CATEGORY_ORDER)[number])) return true;
+  }
   if (path === `/app/advertiser/${DEMO_WORKSPACE_DOMAIN}`) return true;
   return false;
 }
