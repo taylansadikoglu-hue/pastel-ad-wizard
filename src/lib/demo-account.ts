@@ -5,14 +5,37 @@ export const DEMO_EMAIL = "demo@revenuad.com";
 export const DEMO_PASSWORD = "RevenueAdDemo2026!";
 export const DEMO_ROLE = "demo";
 
+/** Primary demo workspace — Banking */
 export const DEMO_WORKSPACE_NAME = "CommBank";
 export const DEMO_WORKSPACE_DOMAIN = "commbank.com.au";
+
+/**
+ * Second showcase advertiser: Woolworths leads Retail — the most populated
+ * non-banking core vertical in our category index (31 tracked brands).
+ */
+export const DEMO_SECOND_WORKSPACE_NAME = "Woolworths";
+export const DEMO_SECOND_WORKSPACE_DOMAIN = "woolworths.com.au";
+
+export type DemoShowcaseAdvertiser = {
+  name: string;
+  domain: string;
+  category: string;
+};
+
+export const DEMO_SHOWCASE_ADVERTISERS: DemoShowcaseAdvertiser[] = [
+  { name: DEMO_WORKSPACE_NAME, domain: DEMO_WORKSPACE_DOMAIN, category: "Banking" },
+  { name: DEMO_SECOND_WORKSPACE_NAME, domain: DEMO_SECOND_WORKSPACE_DOMAIN, category: "Retail" },
+];
+
+const DEMO_ALLOWED_DOMAINS = new Set(
+  DEMO_SHOWCASE_ADVERTISERS.map((a) => normalizeClientDomain(a.domain)),
+);
 
 /** User-facing label for the seeded workspace (localStorage). */
 export const DEMO_ACTIVE_WORKSPACE_KEY = "active_workspace";
 
 export const DEMO_ADVERTISER_BLOCKED_MESSAGE =
-  "This demo environment currently showcases CommBank only.";
+  "This demo environment showcases CommBank (Banking) and Woolworths (Retail) only.";
 
 export const DEMO_READ_ONLY_MESSAGE = "Demo accounts are read-only.";
 
@@ -66,21 +89,36 @@ export function isDemoRouteAllowed(pathname: string): boolean {
     const slug = path.slice("/app/category/".length).split("/")[0] ?? "";
     if (CORE_CATEGORY_ORDER.includes(slug as (typeof CORE_CATEGORY_ORDER)[number])) return true;
   }
-  if (path === `/app/advertiser/${DEMO_WORKSPACE_DOMAIN}`) return true;
+  for (const domain of DEMO_ALLOWED_DOMAINS) {
+    if (path === `/app/advertiser/${domain}`) return true;
+  }
   return false;
 }
 
 export function isDemoAdvertiserAllowed(domain: string): boolean {
-  return normalizeClientDomain(domain) === DEMO_WORKSPACE_DOMAIN;
+  return DEMO_ALLOWED_DOMAINS.has(normalizeClientDomain(domain));
 }
 
-export function isCommBankWorkspace(workspace: {
+export function isDemoShowcaseWorkspace(workspace: {
   client_name?: string | null;
   client_domain?: string | null;
 }): boolean {
   const name = (workspace.client_name ?? "").trim().toLowerCase();
   const domain = normalizeClientDomain(workspace.client_domain ?? "");
-  return name === DEMO_WORKSPACE_NAME.toLowerCase() || domain === DEMO_WORKSPACE_DOMAIN;
+  return DEMO_SHOWCASE_ADVERTISERS.some(
+    (a) =>
+      name === a.name.toLowerCase() ||
+      domain === normalizeClientDomain(a.domain) ||
+      domain.includes(a.domain.split(".")[0] ?? ""),
+  );
+}
+
+/** @deprecated Use isDemoShowcaseWorkspace */
+export function isCommBankWorkspace(workspace: {
+  client_name?: string | null;
+  client_domain?: string | null;
+}): boolean {
+  return isDemoShowcaseWorkspace(workspace);
 }
 
 export function seedDemoLocalStorage(workspaceId?: number | null): void {
@@ -89,4 +127,8 @@ export function seedDemoLocalStorage(workspaceId?: number | null): void {
   if (workspaceId != null && Number.isFinite(workspaceId)) {
     localStorage.setItem(ACTIVE_CLIENT_WORKSPACE_KEY, String(workspaceId));
   }
+}
+
+export function demoShowcaseLabel(): string {
+  return DEMO_SHOWCASE_ADVERTISERS.map((a) => a.name).join(" + ");
 }

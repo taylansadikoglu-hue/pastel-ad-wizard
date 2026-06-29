@@ -2,13 +2,39 @@ import { Link } from "@tanstack/react-router";
 import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
 import { useDemoAccount } from "@/contexts/DemoAccountContext";
 import { DEMO_WORKSPACE_DOMAIN } from "@/lib/demo-account";
+import { cn } from "@/lib/utils";
 
 /** Active client workspace chip for the top navigation bar. */
 export function ActiveClientWorkspaceBadge() {
-  const { activeWorkspace, loading } = useClientWorkspace();
+  const { activeWorkspace, workspaces, loading, setActiveWorkspaceId } = useClientWorkspace();
   const { isDemo } = useDemoAccount();
 
   if (loading) return null;
+
+  if (isDemo && workspaces.length > 1) {
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {workspaces.map((ws) => {
+          const active = activeWorkspace?.id === ws.id;
+          return (
+            <button
+              key={ws.id}
+              type="button"
+              onClick={() => setActiveWorkspaceId(ws.id)}
+              className={cn(
+                "text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors",
+                active
+                  ? "bg-[#FDF6E8] border-[#E8D5A0] text-[#1C1C1A]"
+                  : "bg-transparent border-[#EBE9E4] text-[#6B6B62] hover:border-[#E8D5A0]",
+              )}
+            >
+              {ws.client_name}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
   if (!activeWorkspace) {
     if (isDemo) {

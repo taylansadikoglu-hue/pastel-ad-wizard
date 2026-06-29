@@ -45,6 +45,76 @@ export const LOCKED_CATEGORY_ORDER: LockedCategoryPreview[] = [
   { slug: "fmcg", name: "FMCG", logoSeeds: ["Unilever", "P&G", "Nestle", "Coca-Cola"] },
 ];
 
+const LOCKED_FALLBACKS: Record<LockedCategorySlug, Omit<CategoryIntel, "slug">> = {
+  automotive: {
+    name: "Automotive",
+    brandCount: 22,
+    leading: "Toyota",
+    rising: "BYD",
+    threat: "Mazda",
+    healthScore: 69,
+    topOpportunity: "EV finance bundles",
+  },
+  superannuation: {
+    name: "Superannuation",
+    brandCount: 16,
+    leading: "AustralianSuper",
+    rising: "Hostplus",
+    threat: "REST Super",
+    healthScore: 64,
+    topOpportunity: "Retirement confidence",
+  },
+  travel: {
+    name: "Travel",
+    brandCount: 19,
+    leading: "Qantas",
+    rising: "Jetstar",
+    threat: "Flight Centre",
+    healthScore: 67,
+    topOpportunity: "Loyalty-led deals",
+  },
+  energy: {
+    name: "Energy",
+    brandCount: 14,
+    leading: "Origin",
+    rising: "AGL",
+    threat: "EnergyAustralia",
+    healthScore: 62,
+    topOpportunity: "Bill relief messaging",
+  },
+  property: {
+    name: "Property",
+    brandCount: 20,
+    leading: "realestate.com.au",
+    rising: "Domain",
+    threat: "Ray White",
+    healthScore: 70,
+    topOpportunity: "First-home buyer hooks",
+  },
+  fmcg: {
+    name: "FMCG",
+    brandCount: 26,
+    leading: "Unilever",
+    rising: "P&G",
+    threat: "Nestlé",
+    healthScore: 72,
+    topOpportunity: "Everyday value packs",
+  },
+};
+
+export function buildUnlockedPackCategories(): CategoryIntel[] {
+  return LOCKED_CATEGORY_ORDER.map((preview) => {
+    const base = LOCKED_FALLBACKS[preview.slug];
+    return {
+      slug: preview.slug,
+      ...base,
+      leading: displayBrand(base.leading),
+      rising: displayBrand(base.rising),
+      threat: displayBrand(base.threat),
+    };
+  });
+}
+
 const CORE_FALLBACKS: Record<CoreCategorySlug, Omit<CategoryIntel, "slug">> = {
   banking: {
     name: "General Banking",

@@ -58,6 +58,28 @@ export const COMM_BANK_FALLBACK_WORKSPACE: ClientWorkspace = {
   updated_at: "",
 };
 
+/** Second demo showcase — Retail category leader (most populated non-banking vertical). */
+export const WOOLWORTHS_FALLBACK_WORKSPACE: ClientWorkspace = {
+  id: 2,
+  agency_id: null,
+  client_name: "Woolworths",
+  client_domain: "woolworths.com.au",
+  category: "Retail",
+  competitor_domains: ["coles.com.au", "aldi.com.au", "kmart.com.au", "bunnings.com.au"],
+  audience: null,
+  tone: null,
+  objective: null,
+  excluded_channels: [],
+  status: "active",
+  created_at: "",
+  updated_at: "",
+};
+
+export const DEMO_FALLBACK_WORKSPACES: ClientWorkspace[] = [
+  COMM_BANK_FALLBACK_WORKSPACE,
+  WOOLWORTHS_FALLBACK_WORKSPACE,
+];
+
 export function normalizeClientDomain(domain: string): string {
   return domain
     .trim()

@@ -9,9 +9,12 @@ import {
 import {
   LOCKED_CATEGORY_ORDER,
   buildCoreCategories,
+  buildUnlockedPackCategories,
   parseCategoriesApiPayload,
   type CategoryIntel,
 } from "@/lib/categoryCatalog";
+import { hasFullCategoryAccess } from "@/lib/categoryAccess";
+import { supabase } from "@/integrations/supabase/client";
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -30,13 +33,20 @@ export const Route = createFileRoute("/_authenticated/app/categories")({
 function CategoriesPage() {
   const [coreCategories, setCoreCategories] = useState<CategoryIntel[]>(() => buildCoreCategories([]));
   const [loading, setLoading] = useState(true);
+  const [fullAccess, setFullAccess] = useState(false);
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const r = await fetch(`${API_BASE}/api/categories`);
-        const raw: unknown = r.ok ? await r.json() : null;
+        const [{ data: userRes }, apiRes] = await Promise.all([
+          supabase.auth.getUser(),
+          fetch(`${API_BASE}/api/categories`),
+        ]);
+        if (active) {
+          setFullAccess(hasFullCategoryAccess(userRes.user?.email));
+        }
+        const raw: unknown = apiRes.ok ? await apiRes.json() : null;
         const rows = parseCategoriesApiPayload(raw);
         if (active) setCoreCategories(buildCoreCategories(rows));
       } catch (e) {
@@ -50,12 +60,23 @@ function CategoriesPage() {
     };
   }, []);
 
-  const unlocked = useMemo(() => coreCategories, [coreCategories]);
+  const unlocked = useMemo(() => {
+    if (fullAccess) {
+      return [...coreCategories, ...buildUnlockedPackCategories()];
+    }
+    return coreCategories;
+  }, [coreCategories, fullAccess]);
+
+  const locked = useMemo(() => (fullAccess ? [] : LOCKED_CATEGORY_ORDER), [fullAccess]);
 
   return (
     <WorkspaceShell
       title="Categories"
-      subtitle="Core verticals included in your plan — expand with category packs when you need more markets"
+      subtitle={
+        fullAccess
+          ? "All verticals unlocked on your account — browse any Australian category"
+          : "Core verticals included in your plan — expand with category packs when you need more markets"
+      }
     >
       {loading ? (
         <div className="card-flat p-12 text-center text-sm text-muted-foreground">Loading categories…</div>
@@ -63,9 +84,13 @@ function CategoriesPage() {
         <>
           <section>
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1A" }}>Core categories</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1A" }}>
+                {fullAccess ? "All categories" : "Core categories"}
+              </div>
               <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B6B62" }}>
-                Banking, Insurance, Telco, and Retail — live benchmarks for your pitches.
+                {fullAccess
+                  ? "Banking through FMCG — full intelligence paths for your pitches."
+                  : "Banking, Insurance, Telco, and Retail — live benchmarks for your pitches."}
               </p>
             </div>
             <div
@@ -81,27 +106,29 @@ function CategoriesPage() {
             </div>
           </section>
 
-          <section style={{ marginTop: 36 }}>
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1A" }}>Locked categories</div>
-              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B6B62" }}>
-                Preview what unlocks with a category pack — full intelligence behind the blur.
-              </p>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: 16,
-              }}
-            >
-              {LOCKED_CATEGORY_ORDER.map((category) => (
-                <LockedCategoryCard key={category.slug} category={category} />
-              ))}
-            </div>
-          </section>
+          {locked.length > 0 ? (
+            <section style={{ marginTop: 36 }}>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1C1A" }}>Locked categories</div>
+                <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B6B62" }}>
+                  Preview what unlocks with a category pack — full intelligence behind the blur.
+                </p>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                  gap: 16,
+                }}
+              >
+                {locked.map((category) => (
+                  <LockedCategoryCard key={category.slug} category={category} />
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-          <CategoryPackPricing />
+          {!fullAccess ? <CategoryPackPricing /> : null}
         </>
       )}
     </WorkspaceShell>

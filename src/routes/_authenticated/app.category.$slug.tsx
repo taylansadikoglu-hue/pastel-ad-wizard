@@ -31,6 +31,12 @@ function normalizeDomain(d: string | null | undefined): string {
 }
 
 const SUB_MAP: Record<string, string> = {
+  automotive: "Automotive",
+  superannuation: "Superannuation",
+  travel: "Travel",
+  energy: "Energy",
+  property: "Property",
+  fmcg: "FMCG",
   "general-banking": "Banking",
   "digital-banking": "Banking",
   "business-banking": "Banking",

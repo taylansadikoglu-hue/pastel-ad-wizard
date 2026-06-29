@@ -1,6 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useDemoAccount } from "@/contexts/DemoAccountContext";
+import { demoShowcaseLabel } from "@/lib/demo-account";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -37,8 +38,8 @@ export function DemoEnvironmentBanner({ variant = "default" }: Props) {
           className={cn("text-sm leading-snug m-0", isDense ? "text-neutral-300" : "text-[#6B6B62]")}
         >
           This is a live demo environment using{" "}
-          <strong className={cn(isDense ? "text-neutral-100" : "text-[#1C1C1A]")}>CommBank</strong> and{" "}
-          <strong className={cn(isDense ? "text-neutral-100" : "text-[#1C1C1A]")}>Banking</strong> data.
+          <strong className={cn(isDense ? "text-neutral-100" : "text-[#1C1C1A]")}>{demoShowcaseLabel()}</strong>{" "}
+          across Banking and Retail.
         </p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className={cn(isDense ? "text-neutral-400" : "text-[#6B6B62]")}>

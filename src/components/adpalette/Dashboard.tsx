@@ -6,7 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAgencyContext, domainInWatchlist } from "@/lib/agency-watchlist";
 import { runMockScan } from "@/lib/mock-scan.functions";
 import { useDemoAccount } from "@/contexts/DemoAccountContext";
-import { DEMO_WORKSPACE_DOMAIN } from "@/lib/demo-account";
+import {
+  DEMO_SECOND_WORKSPACE_DOMAIN,
+  DEMO_WORKSPACE_DOMAIN,
+} from "@/lib/demo-account";
 import {
   Palette, FileDown, Table as TableIcon, Copy, Sliders, Send, Sparkles,
   Layers, Target, Settings, LogOut, MessageSquare, X, Search,
@@ -1140,6 +1143,7 @@ const NAV_ITEMS = [
 const DEMO_NAV_ITEMS = [
   { icon: BarChart3, label: "Market Intel", href: "/app/pcr" },
   { icon: Target, label: "CommBank War Room", href: `/app/advertiser/${DEMO_WORKSPACE_DOMAIN}` },
+  { icon: Target, label: "Woolworths War Room", href: `/app/advertiser/${DEMO_SECOND_WORKSPACE_DOMAIN}` },
   { icon: Grid3x3, label: "Categories", href: "/app/categories" },
 ];
 
