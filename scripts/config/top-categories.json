@@ -1,0 +1,214 @@
+{
+  "categories": [
+    {
+      "name": "Banking",
+      "appType": "3",
+      "geo": "AUS",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "searchKeywords": [
+        "CommBank",
+        "NAB",
+        "Westpac",
+        "ANZ",
+        "Macquarie Bank",
+        "home loan",
+        "banking Australia"
+      ],
+      "seedBrands": [
+        { "name": "CommBank", "domain": "commbank.com.au" },
+        { "name": "NAB", "domain": "nab.com.au" },
+        { "name": "Westpac", "domain": "westpac.com.au" },
+        { "name": "ANZ", "domain": "anz.com.au" },
+        { "name": "Macquarie", "domain": "macquarie.com.au" }
+      ]
+    },
+    {
+      "name": "Insurance",
+      "appType": "3",
+      "geo": "AUS",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "searchKeywords": [
+        "NRMA",
+        "AAMI",
+        "Allianz",
+        "Suncorp",
+        "Budget Direct",
+        "car insurance Australia"
+      ],
+      "seedBrands": [
+        { "name": "NRMA", "domain": "nrma.com.au" },
+        { "name": "AAMI", "domain": "aami.com.au" },
+        { "name": "Allianz", "domain": "allianz.com.au" },
+        { "name": "Suncorp", "domain": "suncorp.com.au" },
+        { "name": "Budget Direct", "domain": "budgetdirect.com.au" }
+      ]
+    },
+    {
+      "name": "Superannuation",
+      "appType": "3",
+      "geo": "AUS",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "searchKeywords": [
+        "AustralianSuper",
+        "REST Super",
+        "Hostplus",
+        "UniSuper",
+        "superannuation",
+        "retirement Australia"
+      ],
+      "seedBrands": [
+        { "name": "AustralianSuper", "domain": "australiansuper.com" },
+        { "name": "REST Super", "domain": "rest.com.au" },
+        { "name": "Hostplus", "domain": "hostplus.com.au" },
+        { "name": "UniSuper", "domain": "unisuper.com.au" },
+        { "name": "Aware Super", "domain": "aware.com.au" }
+      ]
+    },
+    {
+      "name": "Telco",
+      "appType": "3",
+      "geo": "AUS",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "searchKeywords": [
+        "Telstra",
+        "Optus",
+        "Vodafone",
+        "TPG",
+        "mobile plan Australia",
+        "nbn"
+      ],
+      "seedBrands": [
+        { "name": "Telstra", "domain": "telstra.com.au" },
+        { "name": "Optus", "domain": "optus.com.au" },
+        { "name": "Vodafone", "domain": "vodafone.com.au" },
+        { "name": "TPG", "domain": "tpg.com.au" },
+        { "name": "Belong", "domain": "belong.com.au" }
+      ]
+    },
+    {
+      "name": "Automotive",
+      "appType": "3",
+      "geo": "AUS",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "searchKeywords": [
+        "Toyota Australia",
+        "Mazda Australia",
+        "Hyundai Australia",
+        "carsales",
+        "new car Australia",
+        "SUV Australia"
+      ],
+      "seedBrands": [
+        { "name": "Toyota Australia", "domain": "toyota.com.au" },
+        { "name": "Mazda Australia", "domain": "mazda.com.au" },
+        { "name": "Hyundai Australia", "domain": "hyundai.com.au" },
+        { "name": "carsales", "domain": "carsales.com.au" },
+        { "name": "Kia Australia", "domain": "kia.com.au" }
+      ]
+    },
+    {
+      "name": "Retail",
+      "appType": "3",
+      "geo": "AUS",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "searchKeywords": [
+        "Woolworths",
+        "Coles",
+        "Kmart",
+        "Bunnings",
+        "JB Hi-Fi",
+        "shopping Australia"
+      ],
+      "seedBrands": [
+        { "name": "Woolworths", "domain": "woolworths.com.au" },
+        { "name": "Coles", "domain": "coles.com.au" },
+        { "name": "Kmart", "domain": "kmart.com.au" },
+        { "name": "Bunnings", "domain": "bunnings.com.au" },
+        { "name": "JB Hi-Fi", "domain": "jbhifi.com.au" }
+      ]
+    },
+    {
+      "name": "Travel",
+      "appType": "3",
+      "geo": "AUS",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "searchKeywords": [
+        "Qantas",
+        "Jetstar",
+        "Flight Centre",
+        "Webjet",
+        "holidays Australia",
+        "travel deals Australia"
+      ],
+      "seedBrands": [
+        { "name": "Qantas", "domain": "qantas.com" },
+        { "name": "Jetstar", "domain": "jetstar.com" },
+        { "name": "Flight Centre", "domain": "flightcentre.com.au" },
+        { "name": "Webjet", "domain": "webjet.com.au" },
+        { "name": "Booking.com", "domain": "booking.com" }
+      ]
+    },
+    {
+      "name": "Food Delivery",
+      "appType": "3",
+      "geo": "AUS",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "searchKeywords": [
+        "Uber Eats",
+        "DoorDash",
+        "Menulog",
+        "Deliveroo",
+        "food delivery Australia"
+      ],
+      "seedBrands": [
+        { "name": "Uber Eats", "domain": "ubereats.com" },
+        { "name": "DoorDash", "domain": "doordash.com" },
+        { "name": "Menulog", "domain": "menulog.com.au" },
+        { "name": "Deliveroo", "domain": "deliveroo.com.au" },
+        { "name": "Hungry Jack's", "domain": "hungryjacks.com.au" }
+      ]
+    },
+    {
+      "name": "Health Insurance",
+      "appType": "3",
+      "geo": "AUS",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "searchKeywords": [
+        "Bupa",
+        "Medibank",
+        "HCF",
+        "nib",
+        "health insurance Australia",
+        "private health"
+      ],
+      "seedBrands": [
+        { "name": "Bupa", "domain": "bupa.com.au" },
+        { "name": "Medibank", "domain": "medibank.com.au" },
+        { "name": "HCF", "domain": "hcf.com.au" },
+        { "name": "nib", "domain": "nib.com.au" },
+        { "name": "ahm", "domain": "ahm.com.au" }
+      ]
+    },
+    {
+      "name": "Real Estate",
+      "appType": "3",
+      "geo": "AUS",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "searchKeywords": [
+        "realestate.com.au",
+        "Domain",
+        "Ray White",
+        "LJ Hooker",
+        "property Australia",
+        "home for sale"
+      ],
+      "seedBrands": [
+        { "name": "realestate.com.au", "domain": "realestate.com.au" },
+        { "name": "Domain", "domain": "domain.com.au" },
+        { "name": "Ray White", "domain": "raywhite.com" },
+        { "name": "LJ Hooker", "domain": "ljhooker.com.au" },
+        { "name": "McGrath", "domain": "mcgrath.com.au" }
+      ]
+    }
+  ]
+}

@@ -101,6 +101,7 @@ const empty: MarketStrategistIntel = {
 
 export async function fetchMarketStrategistIntel(
   supabase: SupabaseClient<Database>,
+  workspace?: { client_domain: string; competitor_domains: string[] } | null,
 ): Promise<MarketStrategistIntel> {
   const [
     execRes,
@@ -139,12 +140,27 @@ export async function fetchMarketStrategistIntel(
     status: r.territory_status ?? "—",
   }));
 
-  const risks = (riskRes.data ?? []).map((r) => ({
+  const risksRaw = (riskRes.data ?? []).map((r) => ({
     competitorDomain: r.competitor_domain ?? "—",
     threatScore: Number(r.threat_score ?? 0),
     riskLevel: r.risk_level ?? "—",
     narrative: r.risk_narrative ?? "",
   }));
+
+  const scopeDomains = workspace
+    ? new Set([
+        workspace.client_domain.toLowerCase(),
+        ...workspace.competitor_domains.map((d) => d.toLowerCase()),
+      ])
+    : null;
+
+  const inScope = (domain: string | null | undefined) => {
+    if (!scopeDomains || !domain) return true;
+    const d = domain.toLowerCase().replace(/^www\./, "");
+    return [...scopeDomains].some((s) => d === s || d.includes(s.split(".")[0] ?? ""));
+  };
+
+  const risks = risksRaw.filter((r) => inScope(r.competitorDomain));
 
   const hasAny =
     Boolean(execRes.data || gapRes.data || heroRes.data)
@@ -199,7 +215,7 @@ export async function fetchMarketStrategistIntel(
       pressure: r.pressure,
       marketChange: r.market_change,
       latestInterest: r.latest_interest != null ? Number(r.latest_interest) : null,
-    })),
+    })).filter((r) => inScope(r.brandDomain)),
     positioningMap: (mapRes.data ?? []).map((r) => ({
       brand: r.brand ?? "—",
       category: r.category,
@@ -217,7 +233,7 @@ export async function fetchMarketStrategistIntel(
       threatContext: r.threat_context?.trim() || null,
       confidence: r.confidence,
       marketRank: r.market_rank,
-    })),
+    })).filter((r) => inScope(r.competitorDomain)),
     strategicActions: (actionsRes.data ?? []).map((r) => ({
       priority: r.priority != null ? Number(r.priority) : null,
       action: r.action?.trim() ?? "",

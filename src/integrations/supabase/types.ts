@@ -309,6 +309,222 @@ export type Database = {
         }
         Relationships: []
       }
+      adlibrary_advertiser_candidates: {
+        Row: {
+          id: number
+          category: string
+          advertiser_name: string
+          domain: string | null
+          platform_ids: Json | null
+          ad_count: number
+          estimated_impressions: number
+          platforms: Json | null
+          sample_ads: Json | null
+          confidence: number | null
+          source: string
+          first_seen: string | null
+          last_seen: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          category: string
+          advertiser_name: string
+          domain?: string | null
+          platform_ids?: Json | null
+          ad_count?: number
+          estimated_impressions?: number
+          platforms?: Json | null
+          sample_ads?: Json | null
+          confidence?: number | null
+          source?: string
+          first_seen?: string | null
+          last_seen?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          category?: string
+          advertiser_name?: string
+          domain?: string | null
+          platform_ids?: Json | null
+          ad_count?: number
+          estimated_impressions?: number
+          platforms?: Json | null
+          sample_ads?: Json | null
+          confidence?: number | null
+          source?: string
+          first_seen?: string | null
+          last_seen?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      adlibrary_enrichments: {
+        Row: {
+          ad_key: string
+          advertiser_name: string | null
+          platform: string | null
+          summary: string | null
+          transcription: string | null
+          analysis: string | null
+          ugc_script: string | null
+          markdown: string | null
+          source: string | null
+          cached: boolean
+          raw_json: Json | null
+          enriched_at: string | null
+          expires_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          ad_key: string
+          advertiser_name?: string | null
+          platform?: string | null
+          summary?: string | null
+          transcription?: string | null
+          analysis?: string | null
+          ugc_script?: string | null
+          markdown?: string | null
+          source?: string | null
+          cached?: boolean
+          raw_json?: Json | null
+          enriched_at?: string | null
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          ad_key?: string
+          advertiser_name?: string | null
+          platform?: string | null
+          summary?: string | null
+          transcription?: string | null
+          analysis?: string | null
+          ugc_script?: string | null
+          markdown?: string | null
+          source?: string | null
+          cached?: boolean
+          raw_json?: Json | null
+          enriched_at?: string | null
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      adlibrary_pipeline_runs: {
+        Row: {
+          run_id: string
+          started_at: string
+          finished_at: string | null
+          duration_ms: number | null
+          categories_scanned: number
+          advertisers_scanned: number
+          ads_found: number
+          ads_inserted: number
+          ads_updated: number
+          enrichments_requested: number
+          cache_hits: number
+          winners_scanned: number
+          credits_used: number
+          credits_remaining: number | null
+          errors: Json
+          status: string
+        }
+        Insert: {
+          run_id?: string
+          started_at: string
+          finished_at?: string | null
+          duration_ms?: number | null
+          categories_scanned?: number
+          advertisers_scanned?: number
+          ads_found?: number
+          ads_inserted?: number
+          ads_updated?: number
+          enrichments_requested?: number
+          cache_hits?: number
+          winners_scanned?: number
+          credits_used?: number
+          credits_remaining?: number | null
+          errors?: Json
+          status?: string
+        }
+        Update: {
+          run_id?: string
+          started_at?: string
+          finished_at?: string | null
+          duration_ms?: number | null
+          categories_scanned?: number
+          advertisers_scanned?: number
+          ads_found?: number
+          ads_inserted?: number
+          ads_updated?: number
+          enrichments_requested?: number
+          cache_hits?: number
+          winners_scanned?: number
+          credits_used?: number
+          credits_remaining?: number | null
+          errors?: Json
+          status?: string
+        }
+        Relationships: []
+      }
+      adlibrary_winning_concepts: {
+        Row: {
+          id: number
+          advertiser_name: string
+          page_id: string
+          category: string | null
+          ad_key: string | null
+          tier: string | null
+          composite_score: number | null
+          reasons: Json | null
+          variant_count: number | null
+          variants: Json | null
+          dna_diff: Json | null
+          tags: Json | null
+          raw_json: Json | null
+          scanned_at: string
+        }
+        Insert: {
+          id?: number
+          advertiser_name: string
+          page_id: string
+          category?: string | null
+          ad_key?: string | null
+          tier?: string | null
+          composite_score?: number | null
+          reasons?: Json | null
+          variant_count?: number | null
+          variants?: Json | null
+          dna_diff?: Json | null
+          tags?: Json | null
+          raw_json?: Json | null
+          scanned_at?: string
+        }
+        Update: {
+          id?: number
+          advertiser_name?: string
+          page_id?: string
+          category?: string | null
+          ad_key?: string | null
+          tier?: string | null
+          composite_score?: number | null
+          reasons?: Json | null
+          variant_count?: number | null
+          variants?: Json | null
+          dna_diff?: Json | null
+          tags?: Json | null
+          raw_json?: Json | null
+          scanned_at?: string
+        }
+        Relationships: []
+      }
       advertiser_dna_history: {
         Row: {
           created_at: string | null
@@ -483,6 +699,54 @@ export type Database = {
           slack_webhook_url?: string | null
           user_id?: string
           white_label_enabled?: boolean
+        }
+        Relationships: []
+      }
+      client_workspaces: {
+        Row: {
+          id: number
+          agency_id: string | null
+          client_name: string
+          client_domain: string
+          category: string
+          competitor_domains: string[]
+          audience: string | null
+          tone: string | null
+          objective: string | null
+          excluded_channels: string[]
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          agency_id?: string | null
+          client_name: string
+          client_domain: string
+          category: string
+          competitor_domains?: string[]
+          audience?: string | null
+          tone?: string | null
+          objective?: string | null
+          excluded_channels?: string[]
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          agency_id?: string | null
+          client_name?: string
+          client_domain?: string
+          category?: string
+          competitor_domains?: string[]
+          audience?: string | null
+          tone?: string | null
+          objective?: string | null
+          excluded_channels?: string[]
+          status?: string
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
