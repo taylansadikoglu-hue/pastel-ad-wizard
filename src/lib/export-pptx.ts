@@ -58,6 +58,7 @@ type ConfidenceShape = {
   brands_tracked: number | null;
 };
 
+function str(value: unknown): string {
   if (value == null || value === "") return "—";
   return String(value);
 }
@@ -65,19 +66,6 @@ type ConfidenceShape = {
 function num(value: unknown): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
-}
-
-function cell(text: unknown, opts: pptxgen.TableCellProps = {}): TableCell {
-  return {
-    text: str(text),
-    options: {
-      color: THEME.textSecondary,
-      fontFace: THEME.fontBody,
-      fontSize: 9,
-      valign: "middle",
-      ...opts,
-    },
-  };
 }
 
 function slideBackground(slide: pptxgen.Slide) {
