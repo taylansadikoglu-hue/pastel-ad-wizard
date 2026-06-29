@@ -518,10 +518,6 @@ function AdvertiserPage() {
         </div>
       )}
 
-      <div style={{ marginBottom: 20 }}>
-        <DataFeedPanel domain={domain} brandLabel={brand} />
-      </div>
-
       <div
         style={{
           display: "grid",
@@ -587,85 +583,29 @@ function AdvertiserPage() {
           </div>
 
 
-          {/* Account-director summary */}
+          {/* Client-ready summary — above the fold */}
           {advertiserBrief && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {SIGNAL_MAP_ENABLED && (
-                <div
-                  style={{
-                    background: "#FFFFFF",
-                    border: "1px solid #EBE9E4",
-                    borderRadius: 8,
-                    padding: "14px 22px",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSignalMapOpen((open) => !open)}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      border: "none",
-                      background: "transparent",
-                      padding: 0,
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6B62", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                        Marketing DNA map
-                      </div>
-                      <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 4 }}>
-                        Optional signal view — channels, messaging, gaps, and moves
-                      </div>
-                    </div>
-                    {signalMapOpen ? <ChevronUp size={18} color="#6B6B62" /> : <ChevronDown size={18} color="#6B6B62" />}
-                  </button>
-                  {signalMapOpen && (
-                    <div style={{ marginTop: 16 }}>
-                      <Suspense
-                        fallback={
-                          <div style={{ fontSize: 13, color: "#9E9D94", padding: "24px 0", textAlign: "center" }}>
-                            Loading signal map…
-                          </div>
-                        }
-                      >
-                        <SignalMapPanel
-                          brand={brand}
-                          war={war}
-                          peers={signalMapPeers}
-                          highlightedSections={highlightedSections}
-                          onHighlightSections={(sections) => setHighlightedSections(new Set(sections))}
-                        />
-                      </Suspense>
-                    </div>
-                  )}
-                </div>
-              )}
-
+            <div id="client-summary" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <InsightSection title="Current marketing read" accent sectionId="marketing-read" highlighted={highlightedSections.has("marketing-read")}>
                 <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.65, margin: 0 }}>
                   {advertiserBrief.marketingRead}
                 </p>
               </InsightSection>
 
-              <InsightSection title="Estimated channel mix" sectionId="channel-mix" highlighted={highlightedSections.has("channel-mix")}>
+              <InsightSection title="Channel mix" sectionId="channel-mix" highlighted={highlightedSections.has("channel-mix")}>
                 <ChannelMixBars
                   rows={advertiserBrief.channelMix.rows}
                   overallConfidence={advertiserBrief.channelMix.overallConfidence}
                   sourceLabel={advertiserBrief.channelMix.sourceLabel}
                   estimationTooltip={advertiserBrief.channelMix.estimationTooltip}
-                  available={advertiserBrief.channelMix.available}
+                  available={advertiserBrief.channelMix.rows.length > 0}
+                  sortMode="fixed"
                   variant="light"
-                  emptyMessage="Channel mix unavailable for this advertiser."
+                  emptyMessage="Channel mix unavailable for this advertiser — run a scan to index placements."
                 />
               </InsightSection>
 
-              <InsightSection title="Estimated spend">
+              <InsightSection title="Estimated spend range">
                 {advertiserBrief.spend.label ? (
                   <>
                     <div style={{ fontSize: 20, fontWeight: 600, color: "#1C1C1A", letterSpacing: "-0.02em" }}>
@@ -676,7 +616,9 @@ function AdvertiserPage() {
                     </p>
                   </>
                 ) : (
-                  <p style={{ fontSize: 13, color: "#6B6B62", margin: 0 }}>Spend estimate unavailable for this advertiser.</p>
+                  <p style={{ fontSize: 13, color: "#6B6B62", margin: 0 }}>
+                    Spend range unavailable — not enough observed activity to estimate a directional band yet.
+                  </p>
                 )}
               </InsightSection>
 
@@ -729,7 +671,68 @@ function AdvertiserPage() {
             </div>
           )}
 
-          {/* Activity metrics */}
+          <div style={{ marginTop: 8, marginBottom: 4 }}>
+            <DataFeedPanel domain={domain} brandLabel={brand} />
+          </div>
+
+          {SIGNAL_MAP_ENABLED && advertiserBrief && (
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #EBE9E4",
+                borderRadius: 8,
+                padding: "14px 22px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setSignalMapOpen((open) => !open)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6B62", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                    Marketing DNA map
+                  </div>
+                  <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 4 }}>
+                    Optional signal view — channels, messaging, gaps, and moves
+                  </div>
+                </div>
+                {signalMapOpen ? <ChevronUp size={18} color="#6B6B62" /> : <ChevronDown size={18} color="#6B6B62" />}
+              </button>
+              {signalMapOpen && (
+                <div style={{ marginTop: 16 }}>
+                  <Suspense
+                    fallback={
+                      <div style={{ fontSize: 13, color: "#9E9D94", padding: "24px 0", textAlign: "center" }}>
+                        Loading signal map…
+                      </div>
+                    }
+                  >
+                    <SignalMapPanel
+                      brand={brand}
+                      war={war}
+                      peers={signalMapPeers}
+                      highlightedSections={highlightedSections}
+                      onHighlightSections={(sections) => setHighlightedSections(new Set(sections))}
+                    />
+                  </Suspense>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Activity metrics — below client summary */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
             <MetricCard
               value={totalAds.toLocaleString()}

@@ -2,7 +2,7 @@
  * Advertiser detail insights — derived from existing warroom data only.
  */
 
-import { translateTerritory, territoryNounPhrase } from "@/lib/radInsightTranslator";
+import { territoryNounPhrase } from "@/lib/radInsightTranslator";
 
 export type ChannelConfidence = "Observed" | "Modelled" | "Partial coverage" | "No signal detected";
 
@@ -29,10 +29,10 @@ export type SpendBand = "Low" | "Medium" | "High" | "Very high";
 const DISPLAY_CHANNELS = ["Display", "YouTube", "Search", "Meta", "TikTok", "Other"] as const;
 
 const SPEND_BANDS: { band: SpendBand; label: string; min: number; max: number }[] = [
-  { band: "Low", label: "Low (<$50k/month)", min: 0, max: 50_000 },
-  { band: "Medium", label: "Medium ($50k–$250k/month)", min: 50_000, max: 250_000 },
-  { band: "High", label: "High ($250k–$750k/month)", min: 250_000, max: 750_000 },
-  { band: "Very high", label: "Very high ($750k+/month)", min: 750_000, max: Infinity },
+  { band: "Low", label: "Low — <$50k/month", min: 0, max: 50_000 },
+  { band: "Medium", label: "Medium — $50k–$250k/month", min: 50_000, max: 250_000 },
+  { band: "High", label: "High — $250k–$750k/month", min: 250_000, max: 750_000 },
+  { band: "Very high", label: "Very high — $750k+/month", min: 750_000, max: Infinity },
 ];
 
 export type WarChannelEntry = {
@@ -215,7 +215,7 @@ export function buildAdvertiserSpendBand(war: AdvertiserWarInput | null | undefi
   label: string | null;
   disclaimer: string;
 } {
-  const disclaimer = "Estimated from observed activity and should be treated as directional.";
+  const disclaimer = "Directional range from observed activity — not verified media spend.";
   const monthly = Number(war?.spend?.est_monthly_aud ?? 0);
   if (!Number.isFinite(monthly) || monthly <= 0) {
     return { band: null, label: null, disclaimer };
@@ -392,16 +392,12 @@ export function buildAdvertiserRecommendedMoves(
 ): string[] {
   const mix = buildAdvertiserChannelMix(war);
   const byChannel = Object.fromEntries(mix.rows.map((r) => [r.channel, r]));
-  const themes = extractThemes(war);
-  const openTheme = themes.find((t) => !["trust", "savings"].includes(t.toLowerCase())) ?? "curiosity";
-  const territory = translateTerritory(openTheme);
-
   const moves: string[] = [];
 
   if ((byChannel.Search?.pct ?? 0) < 10) {
     moves.push(`Test Search capture while ${brand} leans on ${byChannel.Display?.pct ? "Display" : "upper-funnel"} activity — competitors may own demand moments they are not defending.`);
   } else {
-    moves.push(`Test a smarter-choice campaign territory against ${brand}'s trust-led control creative.`);
+    moves.push(`Test discovery-led messaging against ${brand}'s trust-led control creative.`);
   }
 
   if ((byChannel.Meta?.pct ?? 0) < 15) {
@@ -437,18 +433,18 @@ export function buildMeetingTalkingPoints(
   ];
 
   if (saying.themes.length) {
-    points.push(`Messaging keeps returning to ${saying.themes.slice(0, 2).join(" and ")} — ${brand} is not yet owning a distinctive territory.`);
+    points.push(`Messaging keeps returning to ${saying.themes.slice(0, 2).join(" and ")} — ${brand} is not yet owning a distinctive message.`);
   }
 
   if (spend.label) {
-    points.push(`Directional spend sits in the ${spend.band} band (${spend.label.replace(/ \(.*\)/, "")}) — useful for scale context, not budget sign-off.`);
+    points.push(`Directional spend sits in the ${spend.band ?? "estimated"} range — useful for scale context, not budget sign-off.`);
   }
 
   if (gaps[0]) {
     points.push(gaps[0]);
   }
 
-  points.push(`Recommended test: ${translateTerritory(extractThemes(war)[0] ?? "curiosity")} with a clear offer and channel-specific execution.`);
+  points.push(`Recommended test: discovery-led messaging with a clear offer and channel-specific execution.`);
 
   return points.slice(0, 5);
 }

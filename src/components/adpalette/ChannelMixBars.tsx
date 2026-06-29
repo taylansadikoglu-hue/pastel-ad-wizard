@@ -49,6 +49,14 @@ function sortRows(rows: ChannelMixBarRow[]): ChannelMixBarRow[] {
   });
 }
 
+const CHANNEL_ORDER = ["Display", "YouTube", "Search", "Meta", "TikTok", "Other"] as const;
+
+function orderRows(rows: ChannelMixBarRow[], sortMode: "fixed" | "activity"): ChannelMixBarRow[] {
+  if (sortMode === "activity") return sortRows(rows);
+  const byChannel = Object.fromEntries(rows.map((r) => [r.channel, r]));
+  return CHANNEL_ORDER.map((channel) => byChannel[channel] ?? { channel, pct: 0, ads: 0 });
+}
+
 const CONFIDENCE_STYLES: Record<ChannelConfidence, { light: { bg: string; color: string }; dark: { bg: string; color: string } }> = {
   Observed: {
     light: { bg: "#F0F9F4", color: "#2D7D46" },
@@ -77,6 +85,7 @@ export type ChannelMixBarsProps = {
   variant?: "light" | "dark";
   animate?: boolean;
   emptyMessage?: string;
+  sortMode?: "fixed" | "activity";
   className?: string;
 };
 
@@ -85,15 +94,17 @@ export function ChannelMixBars({
   overallConfidence,
   sourceLabel,
   estimationTooltip,
-  available = rows.some((r) => r.pct > 0 || (r.ads ?? 0) > 0),
+  available = rows.length > 0,
   variant = "light",
   animate = true,
+  sortMode = "fixed",
   emptyMessage = "Channel mix unavailable for this view.",
   className,
 }: ChannelMixBarsProps) {
   const [mounted, setMounted] = useState(!animate);
   const isLight = variant === "light";
-  const displayRows = useMemo(() => sortRows(rows), [rows]);
+  const displayRows = useMemo(() => orderRows(rows, sortMode), [rows, sortMode]);
+  const hasActivity = rows.some((r) => r.pct > 0 || (r.ads ?? 0) > 0);
 
   useEffect(() => {
     if (!animate) return;
@@ -212,6 +223,11 @@ export function ChannelMixBars({
             </TooltipProvider>
           )}
         </div>
+      )}
+      {!hasActivity && (
+        <p className={cn("mt-2 mb-0 text-[11px] leading-snug", isLight ? "text-[#9E9D94]" : "text-neutral-500")}>
+          No channel activity indexed yet — run a scan to populate observed mix.
+        </p>
       )}
     </div>
   );

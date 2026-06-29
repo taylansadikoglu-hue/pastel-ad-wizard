@@ -25,6 +25,7 @@ export const TERRITORY_MAP: Record<string, string> = {
 
 const BANNED_PHRASES: { pattern: RegExp; replacement: string }[] = [
   { pattern: /controlled creative baseline/gi, replacement: "trust-led control creative" },
+  { pattern: /controlled baseline/gi, replacement: "trust-led control creative" },
   { pattern: /evidenced territory/gi, replacement: "campaign territory" },
   { pattern: /dominant trust territory/gi, replacement: "security and confidence messaging" },
   { pattern: /threat score/gi, replacement: "observed pressure" },
@@ -191,7 +192,7 @@ export function buildOpenAngleCopy(input: {
 export function buildRecommendedMoves(clientName?: string | null): string[] {
   const client = clientName?.trim() || "Your client";
   return [
-    "Test a smarter-choice campaign territory against trust-led control creative.",
+    "Test discovery-led messaging against trust-led control creative.",
     "Build one offer-led execution around value, savings, or everyday banking benefits.",
     "Review Meta/Search coverage for competitors before deciding whether to defend or attack those channels.",
   ].map((line) => line.replace("Your client", client));

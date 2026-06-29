@@ -426,6 +426,7 @@ export function StrategistDashboard() {
                   : undefined
               }
               available={channelMix.length > 0}
+              sortMode="activity"
               variant="dark"
               animate={false}
               emptyMessage="Channel mix unavailable for this market view."
