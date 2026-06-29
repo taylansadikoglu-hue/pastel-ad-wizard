@@ -35,6 +35,8 @@ export type AdvertiserStrategistIntel = {
   topBuyerStage: string | null;
   topOfferType: string | null;
   placements: number | null;
+  narrativeGap: string | null;
+  narrativeGapRisk: string | null;
 };
 
 export async function fetchAdvertiserStrategistIntel(
@@ -57,18 +59,21 @@ export async function fetchAdvertiserStrategistIntel(
     topBuyerStage: null,
     topOfferType: null,
     placements: null,
+    narrativeGap: null,
+    narrativeGapRisk: null,
   };
 
   const filter = domainOrFilter(domain);
 
-  const [snapshotRes, dnaRes, recRes, profileRes] = await Promise.all([
+  const [snapshotRes, dnaRes, recRes, profileRes, gapRes] = await Promise.all([
     supabase.from("advertiser_strategy_snapshot").select("*").or(filter).limit(1).maybeSingle(),
     supabase.from("advertiser_market_dna_summary").select("*").or(filter).limit(1).maybeSingle(),
     supabase.from("advertiser_recommendations").select("*").or(filter).limit(1).maybeSingle(),
     supabase.from("advertiser_strategy_profile").select("*").or(filter).limit(1).maybeSingle(),
+    supabase.from("ra_narrative_gap").select("*").or(`brand.ilike.%${rootSlug(domain)}%,brand.ilike.%${normaliseDomain(domain)}%`).limit(1).maybeSingle(),
   ]);
 
-  for (const res of [snapshotRes, dnaRes, recRes, profileRes]) {
+  for (const res of [snapshotRes, dnaRes, recRes, profileRes, gapRes]) {
     if (res.error) {
       console.warn("[advertiser strategist intel] fetch failed:", res.error.message, { domain });
     }
@@ -79,12 +84,14 @@ export async function fetchAdvertiserStrategistIntel(
   const rec = recRes.data;
   const profile = profileRes.data;
 
-  const hasAny = Boolean(snapshot || dna || rec || profile);
+  const hasAny = Boolean(snapshot || dna || rec || profile || gapRes.data);
   if (!hasAny) return empty;
+
+  const narrativeGap = gapRes.data;
 
   return {
     available: true,
-    domain: snapshot?.domain ?? dna?.domain ?? rec?.domain ?? profile?.domain ?? null,
+    domain: snapshot?.domain ?? dna?.domain ?? rec?.domain ?? profile?.domain ?? narrativeGap?.brand ?? null,
     strategistSummary: snapshot?.strategist_summary?.trim() || null,
     marketDna: dna?.market_dna?.trim() || null,
     recommendation: rec?.recommendation?.trim() || null,
@@ -98,5 +105,7 @@ export async function fetchAdvertiserStrategistIntel(
     topBuyerStage: snapshot?.top_buyer_stage ?? dna?.top_buyer_stage ?? profile?.buyer_stage ?? null,
     topOfferType: snapshot?.top_offer_type ?? dna?.top_offer_type ?? profile?.offer_strategy ?? null,
     placements: snapshot?.placements ?? dna?.placements ?? profile?.placements ?? null,
+    narrativeGap: narrativeGap?.narrative_gap_summary?.trim() || null,
+    narrativeGapRisk: narrativeGap?.gap_risk?.trim() || null,
   };
 }

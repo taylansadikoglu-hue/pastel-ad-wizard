@@ -111,11 +111,31 @@ export function AdvertiserStrategistIntelBlock({ brand, loading, intel }: Props)
               border: "1px solid #E8D5A0",
               borderRadius: 8,
               padding: "12px 14px",
+              marginBottom: intel.narrativeGap ? 12 : 0,
             }}
           >
             <div style={{ ...label, color: "#A07830", marginBottom: 6 }}>Recommended for your client</div>
             <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.55, margin: 0 }}>
               {intel.recommendation}
+            </p>
+          </div>
+        )}
+
+        {intel.narrativeGap && (
+          <div
+            style={{
+              background: "#F7F6F3",
+              border: "1px solid #EBE9E4",
+              borderLeft: "3px solid #6B6B62",
+              borderRadius: 8,
+              padding: "12px 14px",
+            }}
+          >
+            <div style={{ ...label, marginBottom: 6 }}>
+              Narrative gap{intel.narrativeGapRisk ? ` · ${intel.narrativeGapRisk} risk` : ""}
+            </div>
+            <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.55, margin: 0 }}>
+              {intel.narrativeGap}
             </p>
           </div>
         )}

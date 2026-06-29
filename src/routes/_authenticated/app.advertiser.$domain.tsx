@@ -268,10 +268,10 @@ function AdvertiserPage() {
       audiences: buildAudiencesPersonas(war),
       saying: buildWhatTheyreSaying(war),
       missing: buildWhatTheyreMissing(brand, war),
-      moves: buildAdvertiserRecommendedMoves(brand, war),
-      talkingPoints: buildMeetingTalkingPoints(brand, war),
+      moves: buildAdvertiserRecommendedMoves(brand, war, strategistIntel),
+      talkingPoints: buildMeetingTalkingPoints(brand, war, strategistIntel),
     };
-  }, [war, brand]);
+  }, [war, brand, strategistIntel]);
 
   const campaignIntel = useMemo(() => {
     if (!war) return null;
@@ -280,8 +280,8 @@ function AdvertiserPage() {
 
   const campaignStory = useMemo(() => {
     if (!war) return null;
-    return buildCampaignStory(brand, war);
-  }, [war, brand]);
+    return buildCampaignStory(brand, war, strategistIntel);
+  }, [war, brand, strategistIntel]);
 
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
   void (war?.total_sightings ?? 0);
@@ -642,6 +642,8 @@ function AdvertiserPage() {
                     <BriefList label="CTAs" items={advertiserBrief.saying.ctas} />
                     <BriefList label="Hooks" items={advertiserBrief.saying.hooks} />
                     <BriefList label="Offer themes" items={advertiserBrief.saying.offerThemes} />
+                    <BriefList label="Offer signals" items={advertiserBrief.saying.offerSignals} />
+                    <BriefList label="Market signals" items={advertiserBrief.saying.marketSignals} />
                   </div>
                 )}
                 {!placementIntelUnavailable && advertiserBrief.saying.copySnippets.length > 0 && (

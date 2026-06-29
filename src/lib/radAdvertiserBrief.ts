@@ -12,6 +12,7 @@ import {
   normaliseChannelBadge,
   placementCount,
 } from "@/lib/advertiserPlacements";
+import type { AdvertiserStrategistIntel } from "@/lib/advertiserStrategistIntel";
 
 export type ChannelConfidence = "Observed" | "Modelled" | "Partial coverage" | "No signal detected";
 
@@ -329,6 +330,8 @@ export type SayingSection = {
   buyerStages: string[];
   offerTypes: string[];
   offerThemes: string[];
+  offerSignals: string[];
+  marketSignals: string[];
   hooks: string[];
   copySnippets: string[];
   ctas: string[];
@@ -342,6 +345,8 @@ export function buildWhatTheyreSaying(war: AdvertiserIntelWar | null | undefined
     buyerStages: topByFrequency(rows.map((r) => r.buyer_stage), 4),
     offerTypes: topByFrequency(rows.map((r) => r.offer_type), 4),
     offerThemes: topByFrequency(rows.map((r) => r.offer_theme), 4),
+    offerSignals: topByFrequency(rows.map((r) => r.offer_signal), 4),
+    marketSignals: topByFrequency(rows.map((r) => r.market_signal), 4),
     hooks: uniqueStrings(rows.map((r) => r.hook_analysis), 3),
     copySnippets: uniqueStrings(
       rows.flatMap((r) => [r.raw_copy, r.headline, r.description]),
@@ -453,7 +458,22 @@ export function buildWhatTheyreMissing(
 export function buildAdvertiserRecommendedMoves(
   brand: string,
   war: AdvertiserIntelWar | null | undefined,
+  strategist?: AdvertiserStrategistIntel | null,
 ): string[] {
+  if (strategist?.recommendation) {
+    const mix = buildAdvertiserChannelMix(war);
+    const topChannel = mix.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct)[0]?.channel ?? "their lead channel";
+    return [
+      strategist.recommendation,
+      strategist.narrativeGap
+        ? `Close the narrative gap: ${strategist.narrativeGap.split(/[.!?]/)[0]}.`
+        : `Pressure ${topChannel} with a fresher execution than ${brand}'s current portfolio.`,
+      strategist.positioningArchetype
+        ? `Position against their ${strategist.positioningArchetype.toLowerCase()} play — own an adjacent emotional territory.`
+        : `Review channel mix and CTA clarity before the next client meeting.`,
+    ].slice(0, 3);
+  }
+
   const mix = buildAdvertiserChannelMix(war);
   const byChannel = Object.fromEntries(mix.rows.map((r) => [r.channel, r]));
   const rows = placements(war);
@@ -490,13 +510,25 @@ export function buildAdvertiserRecommendedMoves(
 export function buildMeetingTalkingPoints(
   brand: string,
   war: AdvertiserIntelWar | null | undefined,
+  strategist?: AdvertiserStrategistIntel | null,
 ): string[] {
+  const points: string[] = [];
+
+  if (strategist?.strategistSummary) {
+    points.push(strategist.strategistSummary);
+  }
+  if (strategist?.marketDna && strategist.marketDna !== strategist.strategistSummary) {
+    points.push(strategist.marketDna);
+  }
+  if (strategist?.narrativeGap) {
+    points.push(`Narrative gap (${strategist.narrativeGapRisk ?? "watch"}): ${strategist.narrativeGap}`);
+  }
+
   const mix = buildAdvertiserChannelMix(war);
   const saying = buildWhatTheyreSaying(war);
   const products = buildProductsPromoted(war);
   const rows = placements(war);
   const takeaway = uniqueStrings(rows.map((r) => r.strategist_takeaway), 1)[0];
-  const points: string[] = [];
 
   const topChannels = mix.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct).slice(0, 2);
   if (topChannels.length) {

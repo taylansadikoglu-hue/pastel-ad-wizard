@@ -5,6 +5,7 @@
 
 import type { AdvertiserIntelWar, AdvertiserPlacementRow } from "@/lib/advertiserPlacements";
 import { normaliseChannelBadge, placementCount } from "@/lib/advertiserPlacements";
+import type { AdvertiserStrategistIntel } from "@/lib/advertiserStrategistIntel";
 import { buildCampaignGroups } from "@/lib/campaignIntelligence";
 
 const MS_PER_DAY = 86_400_000;
@@ -75,6 +76,8 @@ export type CampaignStoryTableRow = {
   lastSeen: string;
   channels: string;
   message: string;
+  offerSignal: string;
+  marketSignal: string;
   cta: string;
   strategistTakeaway: string;
   creatives: number;
@@ -99,6 +102,7 @@ export type CampaignStory = {
 export function buildCampaignStory(
   brand: string,
   war: AdvertiserIntelWar | null | undefined,
+  strategist?: AdvertiserStrategistIntel | null,
 ): CampaignStory {
   const rows = placements(war);
   const rowCount = placementCount(war);
@@ -163,18 +167,22 @@ export function buildCampaignStory(
   const gapNote = gapChannels.length
     ? `test ${gapChannels.slice(0, 2).join(" and ")} where ${brand} is not visible`
     : "out-message them on their lead channels";
-  const clientShouldDo = lead
-    ? `Counter ${lead.key} with a fresher ${emotion.toLowerCase()} execution and ${gapNote}.`
-    : `Build a challenger story on ${topChannel?.channel ?? "their lead channel"} before the next client meeting.`;
+  const clientShouldDo = strategist?.recommendation
+    ?? (lead
+      ? `Counter ${lead.key} with a fresher ${emotion.toLowerCase()} execution and ${gapNote}.`
+      : `Build a challenger story on ${topChannel?.channel ?? "their lead channel"} before the next client meeting.`);
 
-  const executiveSummary = [
-    whatDoing.replace(/\.$/, ""),
+  const summaryLead = strategist?.strategistSummary ?? strategist?.strategySummary;
+  const executiveParts = [
+    summaryLead ?? whatDoing.replace(/\.$/, ""),
     whereSpending.replace(/\.$/, ""),
     whatSaying.replace(/\.$/, ""),
     whatChanged.replace(/\.$/, ""),
-    takeaway ? `Strategist read: ${takeaway.replace(/\.$/, "")}` : null,
+    !summaryLead && takeaway ? `Strategist read: ${takeaway.replace(/\.$/, "")}` : null,
+    strategist?.narrativeGap ? `Narrative gap: ${strategist.narrativeGap.replace(/\.$/, "")}` : null,
     clientShouldDo.replace(/\.$/, ""),
-  ].filter(Boolean).join(". ") + ".";
+  ].filter(Boolean);
+  const executiveSummary = executiveParts.join(". ") + ".";
 
   const table: CampaignStoryTableRow[] = groups.slice(0, 8).map((g) => ({
     campaign: g.key,
@@ -183,6 +191,8 @@ export function buildCampaignStory(
     lastSeen: fmtDate(g.lastSeen),
     channels: g.channels.length ? g.channels.join(", ") : "—",
     message: dominantForGroup(g.rows, (r) => r.emotional_driver),
+    offerSignal: dominantForGroup(g.rows, (r) => r.offer_signal),
+    marketSignal: dominantForGroup(g.rows, (r) => r.market_signal),
     cta: dominantForGroup(g.rows, (r) => r.primary_cta),
     strategistTakeaway: g.summary ?? "—",
     creatives: g.creativeCount,

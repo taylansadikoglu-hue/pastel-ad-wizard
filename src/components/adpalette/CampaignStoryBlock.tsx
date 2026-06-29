@@ -136,6 +136,8 @@ export function CampaignStoryBlock({ brand, loading, placementIntelUnavailable, 
                   <th style={th}>Last seen</th>
                   <th style={th}>Channels</th>
                   <th style={th}>Message</th>
+                  <th style={th}>Offer signal</th>
+                  <th style={th}>Market signal</th>
                   <th style={th}>CTA</th>
                   <th style={th}>Strategist takeaway</th>
                   <th style={th}>Creatives</th>
@@ -150,6 +152,8 @@ export function CampaignStoryBlock({ brand, loading, placementIntelUnavailable, 
                     <td style={td}>{row.lastSeen}</td>
                     <td style={td}>{row.channels}</td>
                     <td style={td}>{row.message}</td>
+                    <td style={{ ...td, maxWidth: 200 }}>{row.offerSignal}</td>
+                    <td style={{ ...td, maxWidth: 200 }}>{row.marketSignal}</td>
                     <td style={td}>{row.cta}</td>
                     <td style={{ ...td, maxWidth: 280 }}>{row.strategistTakeaway}</td>
                     <td style={{ ...td, textAlign: "center" }}>{row.creatives}</td>
