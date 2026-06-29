@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  ChevronDown,
+  ChevronUp,
   Presentation,
   Loader2,
   Newspaper,
@@ -24,11 +26,22 @@ import {
 import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
+import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
+import { SIGNAL_MAP_ENABLED } from "@/lib/feature-flags";
+import { peersFromWatchlist } from "@/lib/advertiserSignalMap";
 import {
-  describeChannelConcentration,
-  recommendChannelOpportunity,
-  recommendNextMove,
-} from "@/lib/radCreativeStory";
+  buildAdvertiserChannelMix,
+  buildAdvertiserRecommendedMoves,
+  buildAdvertiserSpendBand,
+  buildCurrentMarketingRead,
+  buildMeetingTalkingPoints,
+  buildWhatTheyreMissing,
+  buildWhatTheyreSaying,
+} from "@/lib/radAdvertiserBrief";
+
+const SignalMapPanel = lazy(() =>
+  import("@/components/adpalette/SignalMap").then((m) => ({ default: m.SignalMapPanel })),
+);
 
 const API_BASE = "https://api.revenuad.com";
 
@@ -78,7 +91,10 @@ type War = {
     total?: number;
     byChannel?: Record<string, { percentage?: number; adCount?: number; spend?: number } | number>;
   };
-  creative_fatigue?: { score?: number; fatigueLabel?: string; label?: string; needsRefresh?: number; fresh?: number };
+  creative_fatigue?: { score?: number; fatigueLabel?: string; label?: string; needsRefresh?: number; fresh?: number; portfolioFatigueScore?: number; fatigued?: number };
+  spend?: { est_monthly_aud?: number; spend_confidence?: string; total_lifetime_aud?: number };
+  top_cta?: string | null;
+  themes?: { theme: string; count?: number }[];
 };
 
 type Spend = { estimated_monthly_spend?: number };
@@ -168,98 +184,6 @@ const CHANNEL_TAB_MAP: Record<string, string[]> = {
   Meta: ["Meta", "Facebook", "Instagram", "meta", "facebook"],
   TikTok: ["TikTok", "tiktok"],
 };
-
-// ─── Channel config ───────────────────────────────────────────────────────────
-
-const CHANNELS: { key: string; label: string; aliases: string[]; Icon: typeof SearchIcon }[] = [
-  { key: "youtube", label: "YouTube", aliases: ["youtube", "video"], Icon: Youtube },
-  { key: "search", label: "Search", aliases: ["search", "google search", "google_search", "google"], Icon: SearchIcon },
-  { key: "display", label: "Display", aliases: ["display", "google display", "google_display", "programmatic", "image"], Icon: ImageIcon },
-  { key: "meta", label: "Meta", aliases: ["meta", "facebook", "instagram"], Icon: Facebook },
-  { key: "tiktok", label: "TikTok", aliases: ["tiktok"], Icon: Music2 },
-  { key: "linkedin", label: "LinkedIn", aliases: ["linkedin"], Icon: Linkedin },
-];
-
-// Normalize any channel source (array of strings OR object of counts) into a counts map.
-function toChannelCounts(src: Record<string, number> | string[] | undefined): Record<string, number> {
-  if (!src) return {};
-  if (Array.isArray(src)) {
-    const out: Record<string, number> = {};
-    for (const raw of src) {
-      const k = String(raw ?? "").toLowerCase().trim();
-      if (!k || k === "null") continue;
-      out[k] = (out[k] ?? 0) + 1;
-    }
-    return out;
-  }
-  const out: Record<string, number> = {};
-  for (const [k, v] of Object.entries(src)) {
-    const key = String(k ?? "").toLowerCase().trim();
-    const n = Number(v);
-    if (!key || key === "null" || !Number.isFinite(n)) continue;
-    out[key] = (out[key] ?? 0) + n;
-  }
-  return out;
-}
-
-function readChannelValue(src: Record<string, number> | undefined, aliases: string[]): number {
-  if (!src) return 0;
-  let total = 0;
-  for (const a of aliases) {
-    const v = src[a];
-    if (typeof v === "number") total += v;
-  }
-  return total;
-}
-
-// Normalise any raw channel label (from war.channels[].channel) → badge name.
-function normaliseToBadge(ch: unknown): string | null {
-  const r = String(ch ?? "").toLowerCase();
-  if (!r) return null;
-  if (r.includes("youtube")) return "YouTube";
-  if (r.includes("search")) return "Search";
-  if (r.includes("display") || r.includes("programmatic")) return "Display";
-  if (r.includes("meta") || r.includes("facebook") || r.includes("instagram")) return "Meta";
-  if (r.includes("tiktok")) return "TikTok";
-  if (r.includes("linkedin")) return "LinkedIn";
-  return null;
-}
-
-type WarChannelEntry = { channel?: string; name?: string; ad_count?: number; count?: number; pct?: number; last_seen?: string };
-function warChannelList(war: { channels?: unknown } | null | undefined): WarChannelEntry[] {
-  const c = war?.channels;
-  if (Array.isArray(c) && c.length && typeof c[0] === "object") return c as WarChannelEntry[];
-  return [];
-}
-
-function channelByBadgeFromWar(war: { channels?: unknown } | null | undefined): Record<string, { pct: number; ads: number }> {
-  const channelByBadge: Record<string, { pct: number; ads: number }> = {};
-  for (const entry of warChannelList(war)) {
-    const badge = normaliseToBadge(entry.channel ?? entry.name);
-    if (!badge) continue;
-    const ads = Number(entry.ad_count ?? entry.count ?? 0);
-    const pct = Number(entry.pct ?? 0);
-    const existing = channelByBadge[badge];
-    if (existing) {
-      existing.ads += ads;
-      if (entry.pct != null) existing.pct = pct;
-    } else {
-      channelByBadge[badge] = { pct, ads };
-    }
-  }
-  return channelByBadge;
-}
-
-
-function missingChannelsFromWar(war: War): string[] {
-  const ALL_BADGES = ["YouTube", "Search", "Display", "Meta", "TikTok", "LinkedIn"];
-  const activeBadges = warChannelList(war)
-    .map((c) => normaliseToBadge(c.channel ?? c.name))
-    .filter((b): b is string => Boolean(b));
-  return ALL_BADGES.filter((ch) => !activeBadges.includes(ch));
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 function AdvertiserPage() {
   const { domain } = Route.useParams();
@@ -370,58 +294,23 @@ function AdvertiserPage() {
     return () => { alive = false; };
   }, [domain]);
 
-  const channelData = useMemo(() => {
-    const list = warChannelList(war);
-    // Fallback for older shapes (string[] / count map)
-    const fallback: Record<string, number> = {};
-    if (!list.length) {
-      for (const part of [war?.channels as unknown, war?.channel_split as unknown, channels?.channels as unknown, channels?.by_channel as unknown]) {
-        const counts = toChannelCounts(part as Record<string, number> | string[] | undefined);
-        for (const [k, v] of Object.entries(counts)) fallback[k] = (fallback[k] ?? 0) + v;
-      }
-    }
-    const lastSeenMap = channels?.channel_last_seen ?? {};
-    return CHANNELS.map((c) => {
-      let count = 0;
-      let lastSeen: string | null = null;
-      if (list.length) {
-        for (const entry of list) {
-          if (normaliseToBadge(entry.channel ?? entry.name) === c.label) {
-            count += Number(entry.ad_count ?? entry.count ?? 0);
-            if (entry.last_seen && !lastSeen) lastSeen = entry.last_seen;
-          }
-        }
-      } else {
-        count = readChannelValue(fallback, c.aliases);
-      }
-      if (!lastSeen) lastSeen = c.aliases.map((a) => lastSeenMap[a]).find(Boolean) ?? null;
-      return { ...c, active: count > 0, count, lastSeen };
-    });
-  }, [war, channels]);
-
-
-  // Channel mix narrative for meeting-ready copy
-  const channelNarrative = useMemo(() => {
-    const channelByBadge = channelByBadgeFromWar(war);
-    const rows = CHANNEL_MIX.map((c) => ({
-      label: c.label,
-      pct: channelByBadge[c.label]?.pct ?? 0,
-    })).filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct);
-    const heavy = rows.filter((r) => r.pct >= 25);
-    const light = CHANNEL_MIX.map((c) => c.label).filter((l) => !rows.some((r) => r.label === l && r.pct >= 10));
-    if (heavy.length === 0) {
-      return `${brand} has limited channel data so far. As more ads are indexed, you'll see where they're putting attention.`;
-    }
-    const lead = heavy.map((r) => `${r.label} (${Math.round(r.pct)}%)`).join(" and ");
-    const lightNote = light.length ? ` ${light.slice(0, 2).join(" and ")} appear light.` : "";
-    const strategy =
-      heavy.some((r) => r.label === "YouTube" || r.label === "Display") && !heavy.some((r) => r.label === "Search" || r.label === "Meta")
-        ? " That suggests broad awareness is being prioritised over direct response right now."
-        : heavy.some((r) => r.label === "Search" || r.label === "Meta")
-          ? " That mix points to a balance of demand capture and brand reach."
-          : "";
-    return `${brand} is leaning heavily on ${lead}.${lightNote}${strategy}`;
+  const advertiserBrief = useMemo(() => {
+    if (!war) return null;
+    return {
+      marketingRead: buildCurrentMarketingRead(brand, war),
+      channelMix: buildAdvertiserChannelMix(war),
+      spend: buildAdvertiserSpendBand(war),
+      saying: buildWhatTheyreSaying(war),
+      missing: buildWhatTheyreMissing(brand, war),
+      moves: buildAdvertiserRecommendedMoves(brand, war),
+      talkingPoints: buildMeetingTalkingPoints(brand, war),
+    };
   }, [war, brand]);
+
+  const signalMapPeers = useMemo(
+    () => peersFromWatchlist(domain, agencyCtx?.entries ?? []),
+    [domain, agencyCtx?.entries],
+  );
 
   const totalAds = war?.total_ads ?? war?.recent_ads?.length ?? 0;
   void (war?.total_sightings ?? 0);
@@ -434,50 +323,11 @@ function AdvertiserPage() {
 
   const firstAd = war?.recent_ads?.[0];
   const firstTags = asTags(firstAd?.ai_tags);
-  const themes: string[] = (() => {
-    // FIX 3: war.top_themes is up to 40 items — surface first 8.
-    const fromWar = (war?.top_themes ?? []).map((t) => t.theme).filter(Boolean);
-    if (fromWar.length) return fromWar.slice(0, 8);
-    const t = firstTags.themes;
-    return Array.isArray(t) ? (t as string[]).slice(0, 8) : [];
-  })();
-
-  const primaryCta = (firstTags.call_to_action as string | undefined) ?? "—";
   const sentimentRaw = (firstTags.sentiment as string | undefined) ?? "";
   const sentimentColor =
     /positive|trust|happy/i.test(sentimentRaw) ? "#2D7D46"
       : /negative|fear|urgen/i.test(sentimentRaw) ? "#C0392B"
       : "#9E9D94";
-
-  // Aggregate demographics across all recent_ads (fallback when firstAd is empty)
-  const demographics: { label: string; value: number }[] = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const ad of war?.recent_ads ?? []) {
-      const t = asTags(ad.ai_tags);
-      const raw = t.demographics;
-      if (Array.isArray(raw)) {
-        for (const tag of raw) {
-          if (typeof tag === "string" && tag.trim()) {
-            counts.set(tag, (counts.get(tag) ?? 0) + 1);
-          }
-        }
-      } else if (raw && typeof raw === "object") {
-        for (const [k, v] of Object.entries(raw)) {
-          const num = typeof v === "number" ? v : Number(v);
-          if (Number.isFinite(num) && num > 0) {
-            counts.set(k, (counts.get(k) ?? 0) + num);
-          }
-        }
-      } else if (typeof raw === "string" && raw.trim()) {
-        counts.set(raw, (counts.get(raw) ?? 0) + 1);
-      }
-    }
-    const max = Math.max(1, ...counts.values());
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([label, value]) => ({ label, value: (value / max) * 100 }));
-  }, [war?.recent_ads]);
 
   // Creative analysis (AI read)
   const creativeAnalysis = useMemo(() => {
@@ -513,6 +363,8 @@ function AdvertiserPage() {
 
   // Channel filter for recent ads — uses ad.channel_platform per spec.
   const [channelFilter, setChannelFilter] = useState<string>("all");
+  const [signalMapOpen, setSignalMapOpen] = useState(false);
+  const [highlightedSections, setHighlightedSections] = useState<Set<string>>(new Set());
   const filteredAds = useMemo(() => {
     const ads = war?.recent_ads ?? [];
     if (channelFilter === "all") return ads;
@@ -526,9 +378,6 @@ function AdvertiserPage() {
   }, [war?.recent_ads, channelFilter]);
 
   // Mount flag for spend-bar animation.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setMounted(true), 50); return () => clearTimeout(t); }, [war]);
-
   // Debug: log API responses to see what's coming back
   useEffect(() => {
     if (war) console.log("[WarRoom]", { war, channels, spend, news });
@@ -669,10 +518,6 @@ function AdvertiserPage() {
         </div>
       )}
 
-      <div style={{ marginBottom: 20 }}>
-        <DataFeedPanel domain={domain} brandLabel={brand} />
-      </div>
-
       <div
         style={{
           display: "grid",
@@ -738,23 +583,156 @@ function AdvertiserPage() {
           </div>
 
 
-          {/* What they're doing — summary */}
-          <div
-            style={{
-              background: "#FFFFFF",
-              border: "1px solid #EBE9E4",
-              borderLeft: "3px solid #C9963A",
-              borderRadius: 8,
-              padding: "16px 20px",
-            }}
-          >
-            <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>
-              What they&apos;re doing
+          {/* Client-ready summary — above the fold */}
+          {advertiserBrief && (
+            <div id="client-summary" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <InsightSection title="Current marketing read" accent sectionId="marketing-read" highlighted={highlightedSections.has("marketing-read")}>
+                <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.65, margin: 0 }}>
+                  {advertiserBrief.marketingRead}
+                </p>
+              </InsightSection>
+
+              <InsightSection title="Channel mix" sectionId="channel-mix" highlighted={highlightedSections.has("channel-mix")}>
+                <ChannelMixBars
+                  rows={advertiserBrief.channelMix.rows}
+                  overallConfidence={advertiserBrief.channelMix.overallConfidence}
+                  sourceLabel={advertiserBrief.channelMix.sourceLabel}
+                  estimationTooltip={advertiserBrief.channelMix.estimationTooltip}
+                  available={advertiserBrief.channelMix.rows.length > 0}
+                  sortMode="fixed"
+                  variant="light"
+                  emptyMessage="Channel mix unavailable for this advertiser — run a scan to index placements."
+                />
+              </InsightSection>
+
+              <InsightSection title="Estimated spend range">
+                {advertiserBrief.spend.label ? (
+                  <>
+                    <div style={{ fontSize: 20, fontWeight: 600, color: "#1C1C1A", letterSpacing: "-0.02em" }}>
+                      {advertiserBrief.spend.label}
+                    </div>
+                    <p style={{ fontSize: 12, color: "#9E9D94", margin: "8px 0 0", lineHeight: 1.5 }}>
+                      {advertiserBrief.spend.disclaimer}
+                    </p>
+                  </>
+                ) : (
+                  <p style={{ fontSize: 13, color: "#6B6B62", margin: 0 }}>
+                    Spend range unavailable — not enough observed activity to estimate a directional band yet.
+                  </p>
+                )}
+              </InsightSection>
+
+              <InsightSection title="What they're saying" sectionId="saying" highlighted={highlightedSections.has("saying-themes") || highlightedSections.has("saying-audience")}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                  <div id="insight-saying-themes" data-insight-section="saying-themes" style={insightSubHighlight(highlightedSections.has("saying-themes"))}>
+                    <BriefList label="Messaging themes" items={advertiserBrief.saying.themes} empty="Themes will appear as more creatives are indexed." />
+                  </div>
+                  <BriefList label="CTAs" items={advertiserBrief.saying.ctas} empty="No consistent CTA pattern yet." />
+                  <BriefList label="Offers" items={advertiserBrief.saying.offers} empty="No explicit offer language detected in indexed copy." />
+                  <div id="insight-saying-audience" data-insight-section="saying-audience" style={insightSubHighlight(highlightedSections.has("saying-audience"))}>
+                    <BriefList label="Audience signals" items={advertiserBrief.saying.audienceSignals} empty="Audience tags will populate after more ads are analysed." />
+                  </div>
+                </div>
+              </InsightSection>
+
+              <InsightSection title="What they're missing" sectionId="missing" highlighted={highlightedSections.has("missing")}>
+                <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {advertiserBrief.missing.map((item) => (
+                    <li key={item} style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.55 }}>{item}</li>
+                  ))}
+                </ul>
+              </InsightSection>
+
+              <InsightSection title="Recommended next moves" accentDark sectionId="moves" highlighted={highlightedSections.has("moves")}>
+                <ol style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
+                  {advertiserBrief.moves.map((move, i) => (
+                    <li key={move} style={{ display: "flex", gap: 12, fontSize: 14, color: "#1C1C1A", lineHeight: 1.55 }}>
+                      <span style={{
+                        flexShrink: 0, width: 24, height: 24, borderRadius: "50%",
+                        background: "#FDF6E8", border: "1px solid #E8D5A0",
+                        color: "#A07830", fontSize: 12, fontWeight: 600,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        {i + 1}
+                      </span>
+                      <span>{move}</span>
+                    </li>
+                  ))}
+                </ol>
+              </InsightSection>
+
+              <InsightSection title="Meeting talking points" sectionId="talking-points" highlighted={highlightedSections.has("talking-points")}>
+                <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+                  {advertiserBrief.talkingPoints.map((point) => (
+                    <li key={point} style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.55 }}>{point}</li>
+                  ))}
+                </ul>
+              </InsightSection>
             </div>
-            <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.6, margin: 0 }}>{channelNarrative}</p>
+          )}
+
+          <div style={{ marginTop: 8, marginBottom: 4 }}>
+            <DataFeedPanel domain={domain} brandLabel={brand} />
           </div>
 
-          {/* Activity metrics */}
+          {SIGNAL_MAP_ENABLED && advertiserBrief && (
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #EBE9E4",
+                borderRadius: 8,
+                padding: "14px 22px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setSignalMapOpen((open) => !open)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6B62", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                    Marketing DNA map
+                  </div>
+                  <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 4 }}>
+                    Optional signal view — channels, messaging, gaps, and moves
+                  </div>
+                </div>
+                {signalMapOpen ? <ChevronUp size={18} color="#6B6B62" /> : <ChevronDown size={18} color="#6B6B62" />}
+              </button>
+              {signalMapOpen && (
+                <div style={{ marginTop: 16 }}>
+                  <Suspense
+                    fallback={
+                      <div style={{ fontSize: 13, color: "#9E9D94", padding: "24px 0", textAlign: "center" }}>
+                        Loading signal map…
+                      </div>
+                    }
+                  >
+                    <SignalMapPanel
+                      brand={brand}
+                      war={war}
+                      peers={signalMapPeers}
+                      highlightedSections={highlightedSections}
+                      onHighlightSections={(sections) => setHighlightedSections(new Set(sections))}
+                    />
+                  </Suspense>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Activity metrics — below client summary */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
             <MetricCard
               value={totalAds.toLocaleString()}
@@ -788,51 +766,6 @@ function AdvertiserPage() {
             />
           </div>
           <SpendLegend />
-
-          {/* B2 — Channel mix */}
-          {(() => {
-            const channelByBadge = channelByBadgeFromWar(war);
-            const rows = CHANNEL_MIX.map((c) => {
-              const fromServer = channelByBadge[c.label];
-              return { ...c, pct: fromServer?.pct ?? 0, ads: fromServer?.ads ?? 0 };
-            });
-            const dominant = rows.find((r) => r.pct > 60);
-
-            return (
-              <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 20 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Where they&apos;re spending attention</div>
-                <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 14 }}>Channel mix by share of observed activity</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {rows.map((r) => {
-                    const pct = Math.max(0, Math.min(100, r.pct));
-                    const empty = pct <= 0 && r.ads <= 0;
-                    return (
-                      <div key={r.key} style={{ display: "grid", gridTemplateColumns: "150px 1fr 56px 70px", alignItems: "center", gap: 12, opacity: empty ? 0.5 : 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 500, color: "#1C1C1A" }}>
-                          <r.Icon size={16} style={{ color: empty ? "#C4C2BA" : r.colour }} />
-                          {r.label}
-                        </div>
-                        <div style={{ height: 8, background: "#F0EDE8", borderRadius: 4, overflow: "hidden" }}>
-                          <div style={{ width: mounted ? `${pct}%` : "0%", height: "100%", background: "#C9963A", transition: "width 600ms ease-out" }} />
-                        </div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: empty ? "#C4C2BA" : "#1C1C1A", textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-                          {pct > 0 ? `${pct.toFixed(0)}%` : "—"}
-                        </div>
-                        <div style={{ fontSize: 11, color: empty ? "#C4C2BA" : "#9E9D94", textAlign: "right" }}>
-                          {empty ? "No activity yet" : `${r.ads} ad${r.ads === 1 ? "" : "s"}`}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                {dominant && (
-                  <div style={{ marginTop: 14, background: "#FDF6E8", borderLeft: "2px solid #C9963A", padding: "8px 12px", borderRadius: 4, fontSize: 12, color: "#6B6B62" }}>
-                    {describeChannelConcentration(brand, dominant.label, dominant.ads, dominant.pct)}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
 
           {/* B3 — Creative health (fatigue) */}
           {(() => {
@@ -875,265 +808,46 @@ function AdvertiserPage() {
 
 
 
-          {/* C — Channel presence */}
-          <Card title="Channel presence">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
-              {channelData.map((c) => (
-                <div key={c.key} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <div
+          {/* Creative tags — supporting detail */}
+          <Card title="Creative analysis">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {creativeAnalysis.colour && (
+                <CreativePill>
+                  <span
                     style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "8px 16px",
-                      borderRadius: 8,
-                      fontSize: 12,
-                      fontWeight: 500,
-                      background: c.active ? "#FDF6E8" : "#F7F6F3",
-                      border: `1px solid ${c.active ? "#C9963A" : "#EBE9E4"}`,
-                      color: c.active ? "#A07830" : "#C4C2BA",
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      background: creativeAnalysis.colour,
+                      border: "1px solid rgba(0,0,0,0.1)",
+                      display: "inline-block",
                     }}
-                  >
-                    <c.Icon size={14} style={{ color: c.active ? "#C9963A" : "#C4C2BA" }} />
-                    {c.label}
-                  </div>
-                  {c.active && (
-                    <div style={{ fontSize: 10, color: "#9E9D94", paddingLeft: 4 }}>
-                      {c.count > 0 ? `${c.count} ad${c.count === 1 ? "" : "s"}` : ""}
-                      {c.lastSeen ? `${c.count > 0 ? " · " : ""}Active since ${fmtDate(c.lastSeen)}` : ""}
-                    </div>
-                  )}
-                </div>
-              ))}
+                  />
+                  <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.colour}</span>
+                </CreativePill>
+              )}
+              {creativeAnalysis.emotion && (
+                <CreativePill>
+                  <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.emotion}</span>
+                </CreativePill>
+              )}
+              {(() => {
+                const fmt = (firstAd?.ad_format ?? "").trim();
+                return fmt ? <CreativePill><span style={{ textTransform: "capitalize" }}>{fmt}</span></CreativePill> : null;
+              })()}
+              {creativeAnalysis.avgDuration && (
+                <CreativePill>~{creativeAnalysis.avgDuration}s avg</CreativePill>
+              )}
+              {!creativeAnalysis.colour && !creativeAnalysis.emotion && !firstAd?.ad_format && (
+                <span style={{ fontSize: 12, color: "#9E9D94" }}>Creative tags will populate after the next scan.</span>
+              )}
             </div>
+            {sentimentRaw && (
+              <div style={{ marginTop: 12, fontSize: 13, color: sentimentColor, textTransform: "capitalize" }}>
+                Overall tone: {sentimentRaw}
+              </div>
+            )}
           </Card>
-
-
-          {/* D — Creative intelligence */}
-          <Card title="What they're saying">
-            <div style={{ display: "grid", gridTemplateColumns: "55fr 45fr", gap: 28 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <Field label="Themes">
-                  {themes.length ? (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {themes.slice(0, 8).map((t, i) => (
-                        <span
-                          key={i}
-                          style={{
-                            fontSize: 12,
-                            fontWeight: 500,
-                            padding: "6px 14px",
-                            borderRadius: 5,
-                            background: "#FDF6E8",
-                            border: "1px solid #E8D5A0",
-                            color: "#A07830",
-                          }}
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span style={{ fontSize: 13, color: "#9E9D94" }}>Themes will appear as more creatives are indexed.</span>
-                  )}
-                </Field>
-                <Field label="Primary CTA">
-                  <div style={{ fontSize: 15, fontWeight: 500, color: "#1C1C1A" }}>{primaryCta}</div>
-                </Field>
-                <Field label="Sentiment">
-                  <div style={{ fontSize: 14, fontWeight: 500, color: sentimentColor, textTransform: "capitalize" }}>
-                    {sentimentRaw || "Not enough creatives to read tone yet"}
-                  </div>
-                </Field>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <Field label="Audience">
-                  {demographics.length ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                      {demographics.map((d) => (
-                        <div key={d.label}>
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              fontSize: 12,
-                              color: "#6B6B62",
-                              marginBottom: 5,
-                            }}
-                          >
-                            <span style={{ textTransform: "capitalize" }}>{d.label}</span>
-                            <span style={{ fontWeight: 600, color: "#1C1C1A" }}>{Math.round(d.value)}%</span>
-                          </div>
-                          <div style={{ height: 6, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
-                            <div style={{ width: `${d.value}%`, height: "100%", background: "#C9963A" }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : themes.length ? (
-                    <div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {themes.slice(0, 4).map((t, i) => (
-                          <div key={i}>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6B6B62", marginBottom: 5 }}>
-                              <span style={{ textTransform: "capitalize" }}>{t}</span>
-                            </div>
-                            <div style={{ height: 6, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
-                              <div style={{ width: `${100 - i * 18}%`, height: "100%", background: "#C9963A" }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ fontSize: 11, color: "#C4C2BA", marginTop: 8, fontStyle: "italic" }}>
-                        Based on creative analysis
-                      </div>
-                    </div>
-                  ) : (
-                    <span style={{ fontSize: 13, color: "#9E9D94" }}>Themes will appear as more creatives are indexed.</span>
-                  )}
-                </Field>
-              </div>
-            </div>
-
-
-            {/* Creative analysis */}
-            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #F0EDE8" }}>
-              <div
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "#9E9D94",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginBottom: 10,
-                }}
-              >
-                AI creative read
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {creativeAnalysis.colour && (
-                  <CreativePill>
-                    <span
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: "50%",
-                        background: creativeAnalysis.colour,
-                        border: "1px solid rgba(0,0,0,0.1)",
-                        display: "inline-block",
-                      }}
-                    />
-                    <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.colour}</span>
-                  </CreativePill>
-                )}
-                {creativeAnalysis.emotion && (
-                  <CreativePill>
-                    <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.emotion}</span>
-                  </CreativePill>
-                )}
-                {(() => {
-                  const fmt = (firstAd?.ad_format ?? "").trim();
-                  return fmt ? <CreativePill><span style={{ textTransform: "capitalize" }}>{fmt}</span></CreativePill> : null;
-                })()}
-                {creativeAnalysis.avgDuration && (
-                  <CreativePill>~{creativeAnalysis.avgDuration}s avg</CreativePill>
-                )}
-                {!creativeAnalysis.colour && !creativeAnalysis.emotion && !firstAd?.ad_format && (
-                  <span style={{ fontSize: 12, color: "#9E9D94" }}>Creative tags will populate after the next scan.</span>
-                )}
-              </div>
-            </div>
-          </Card>
-
-          {/* What they're missing */}
-          {(() => {
-            const missingChannels = missingChannelsFromWar(war);
-            const activeBadges = warChannelList(war)
-              .map((c) => normaliseToBadge(c.channel ?? c.name))
-              .filter((b): b is string => Boolean(b));
-            const top = themes[0];
-            const second = themes[1];
-            const audienceLabel = demographics[0]?.label ?? "Their core audience";
-            let body: string;
-            if (missingChannels.length > 0) {
-              body = recommendChannelOpportunity(missingChannels[0], 0);
-            } else if (activeBadges.length > 0) {
-              body = `${brand} is active across all major channels. The gap is in messaging — not distribution.`;
-            } else if (top && second) {
-              body = `${brand} owns ${top} in ${category}. The gap is ${second} — only a handful of competitors use it.`;
-            } else if (top) {
-              body = `${brand} owns ${top} in ${category}. Find the second theme nobody else has claimed and run it.`;
-            } else {
-              body = war.gap ?? war.insight ?? `${brand}'s positioning is still forming. Watch for the first repeated theme to set the angle.`;
-            }
-
-            return (
-              <div
-                style={{
-                  background: "#FDF6E8",
-                  border: "1px solid #E8D5A0",
-                  borderLeft: "3px solid #C9963A",
-                  borderRadius: 8,
-                  padding: "18px 22px",
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: "#A07830",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.12em",
-                    marginBottom: 8,
-                  }}
-                >
-                  What they&apos;re missing
-                </div>
-                <div style={{ fontSize: 16, color: "#1C1C1A", lineHeight: 1.6, fontWeight: 400 }}>
-                  {body}
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* What we'd recommend next */}
-          <div
-            style={{
-              background: "#FFFFFF",
-              border: "1px solid #EBE9E4",
-              borderLeft: "3px solid #1C1C1A",
-              borderRadius: 8,
-              padding: "18px 22px",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: "#6B6B62",
-                textTransform: "uppercase",
-                letterSpacing: "0.12em",
-                marginBottom: 8,
-              }}
-            >
-              What we&apos;d recommend next
-            </div>
-            <div style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.6 }}>
-              {recommendNextMove({
-                brand,
-                totalAds,
-                missingChannel: missingChannelsFromWar(war)[0] ?? null,
-                missingChannelAds: 0,
-                primaryTheme: themes[0] ?? null,
-              })}
-            </div>
-            <Link
-              to="/app/categories"
-              style={{ fontSize: 13, color: "#C9963A", fontWeight: 500, textDecoration: "none", display: "inline-block", marginTop: 10 }}
-            >
-              Compare with category benchmarks →
-            </Link>
-          </div>
 
           <Card title="Recent ads">
             {/* Channel filter tabs */}
@@ -1316,22 +1030,75 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function insightSubHighlight(active: boolean): React.CSSProperties {
+  return active
+    ? {
+        borderRadius: 6,
+        boxShadow: "0 0 0 2px #E8D5A0",
+        background: "#FFFCF5",
+        padding: 8,
+        margin: -8,
+      }
+    : {};
+}
+
+function InsightSection({
+  title,
+  meta,
+  accent,
+  accentDark,
+  sectionId,
+  highlighted,
+  children,
+}: {
+  title: string;
+  meta?: string;
+  accent?: boolean;
+  accentDark?: boolean;
+  sectionId?: string;
+  highlighted?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 600,
-          color: "#9E9D94",
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          marginBottom: 6,
-        }}
-      >
-        {label}
+    <div
+      id={sectionId ? `insight-${sectionId}` : undefined}
+      data-insight-section={sectionId}
+      style={{
+        background: highlighted ? "#FFFCF5" : "#FFFFFF",
+        border: highlighted ? "1px solid #E8D5A0" : "1px solid #EBE9E4",
+        borderLeft: accent ? "3px solid #C9963A" : accentDark ? "3px solid #1C1C1A" : highlighted ? "3px solid #C9963A" : "1px solid #EBE9E4",
+        borderRadius: 8,
+        padding: "18px 22px",
+        boxShadow: highlighted ? "0 0 0 1px #F5E6C4" : undefined,
+        transition: "box-shadow 200ms ease, border-color 200ms ease, background 200ms ease",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#6B6B62", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+          {title}
+        </div>
+        {meta && <div style={{ fontSize: 11, color: "#9E9D94" }}>{meta}</div>}
       </div>
       {children}
+    </div>
+  );
+}
+
+function BriefList({ label, items, empty }: { label: string; items: string[]; empty: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+        {label}
+      </div>
+      {items.length ? (
+        <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 6 }}>
+          {items.map((item) => (
+            <li key={item} style={{ fontSize: 13, color: "#1C1C1A", lineHeight: 1.45, textTransform: "capitalize" }}>{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <div style={{ fontSize: 13, color: "#9E9D94" }}>{empty}</div>
+      )}
     </div>
   );
 }

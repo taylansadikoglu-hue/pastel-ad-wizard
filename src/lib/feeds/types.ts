@@ -75,6 +75,9 @@ export type DomainIntelligence = {
   trendSignals: { keyword: string; score: number; source: string; date: string | null }[];
   insights: SynthesizedInsight[];
   sources: Record<FeedSource, FeedSourceMeta>;
+  /** Populated when advertiser_destinations catalog has rows (destination intelligence layer). */
+  destinations?: import("@/lib/destination-intelligence/types").AdvertiserDestinationSummary | null;
+  destinationTrends?: import("@/lib/destination-intelligence/types").MarketDestinationTrends | null;
 };
 
 export type DomainIntelligenceRequest = {

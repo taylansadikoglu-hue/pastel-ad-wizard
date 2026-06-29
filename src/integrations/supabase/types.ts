@@ -73,6 +73,7 @@ export type Database = {
           data_quality: string | null
           days_running: number | null
           description: string | null
+          destination_id: number | null
           detected_cta: string | null
           domain: string
           emotional_driver: string | null
@@ -118,6 +119,7 @@ export type Database = {
           data_quality?: string | null
           days_running?: number | null
           description?: string | null
+          destination_id?: number | null
           detected_cta?: string | null
           domain: string
           emotional_driver?: string | null
@@ -163,6 +165,7 @@ export type Database = {
           data_quality?: string | null
           days_running?: number | null
           description?: string | null
+          destination_id?: number | null
           detected_cta?: string | null
           domain?: string
           emotional_driver?: string | null
@@ -193,6 +196,13 @@ export type Database = {
           times_seen?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ad_placements_destination_id_fkey"
+            columns: ["destination_id"]
+            isOneToOne: false
+            referencedRelation: "advertiser_destinations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ad_placements_scan_id_fkey"
             columns: ["scan_id"]
@@ -270,6 +280,75 @@ export type Database = {
           messaging?: string | null
           sentiment?: string | null
           tags?: Json | null
+        }
+        Relationships: []
+      }
+      advertiser_destinations: {
+        Row: {
+          ad_count: number
+          advertiser: string
+          created_at: string
+          cta: string | null
+          domain: string
+          enriched_at: string | null
+          enrichment_status: string
+          first_seen: string
+          funnel_stage: string | null
+          id: number
+          last_seen: string
+          offer: string | null
+          page_title: string | null
+          persona: string | null
+          product: string | null
+          raw_snapshot: Json | null
+          theme: string | null
+          updated_at: string
+          url: string
+          url_hash: string
+        }
+        Insert: {
+          ad_count?: number
+          advertiser: string
+          created_at?: string
+          cta?: string | null
+          domain: string
+          enriched_at?: string | null
+          enrichment_status?: string
+          first_seen?: string
+          funnel_stage?: string | null
+          id?: number
+          last_seen?: string
+          offer?: string | null
+          page_title?: string | null
+          persona?: string | null
+          product?: string | null
+          raw_snapshot?: Json | null
+          theme?: string | null
+          updated_at?: string
+          url: string
+          url_hash: string
+        }
+        Update: {
+          ad_count?: number
+          advertiser?: string
+          created_at?: string
+          cta?: string | null
+          domain?: string
+          enriched_at?: string | null
+          enrichment_status?: string
+          first_seen?: string
+          funnel_stage?: string | null
+          id?: number
+          last_seen?: string
+          offer?: string | null
+          page_title?: string | null
+          persona?: string | null
+          product?: string | null
+          raw_snapshot?: Json | null
+          theme?: string | null
+          updated_at?: string
+          url?: string
+          url_hash?: string
         }
         Relationships: []
       }
