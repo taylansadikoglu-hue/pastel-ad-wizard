@@ -200,7 +200,7 @@ export const ADVERTISER_INSIGHT_SECTIONS: { id: AdvertiserInsightSectionId; labe
 export type AdvertiserViewPreset = "essentials" | "pitch" | "full" | "custom";
 
 const ADVERTISER_PRESETS: Record<Exclude<AdvertiserViewPreset, "custom">, AdvertiserInsightSectionId[]> = {
-  essentials: ["marketingRead", "channelMix", "products", "nextMoves"],
+  essentials: ["products", "messaging", "nextMoves"],
   pitch: ["marketingRead", "spend", "messaging", "audiences", "nextMoves", "talkingPoints"],
   full: ADVERTISER_INSIGHT_SECTIONS.map((s) => s.id),
 };

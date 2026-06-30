@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { AdvertiserViewBar, showAdvertiserSection } from "@/components/adpalette/AdvertiserViewBar";
-import { SpendIndex, SpendLegend } from "@/components/adpalette/SpendIndex";
 import {
   loadAdvertiserViewState,
   saveAdvertiserViewState,
@@ -32,10 +31,13 @@ import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
 import { displayBrand } from "@/utils/brandDisplay";
-import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { CampaignIntelligenceBlock } from "@/components/adpalette/CampaignIntelligenceBlock";
 import { CampaignStoryBlock } from "@/components/adpalette/CampaignStoryBlock";
 import { AdvertiserStrategistIntelBlock } from "@/components/adpalette/AdvertiserStrategistIntelBlock";
+import {
+  AdvertiserCommandDashboard,
+  buildQuickScan,
+} from "@/components/adpalette/AdvertiserCommandDashboard";
 import { QueryStatusCard } from "@/components/adpalette/QueryStatusCard";
 import {
   buildAdvertiserChannelMix,
@@ -494,42 +496,6 @@ function AdvertiserPage() {
     return Math.max(1, Math.floor(diff / 86_400_000));
   }, [intelWar.first_seen]);
 
-  const firstAd = intelWar.placements?.[0] ?? intelWar.recent_ads?.[0];
-  const sentimentRaw = firstAd?.emotional_driver ?? "";
-  const sentimentColor =
-    /security|trust|positive/i.test(sentimentRaw) ? "#2D7D46"
-      : /fear|urgency|negative/i.test(sentimentRaw) ? "#C0392B"
-      : "#9E9D94";
-
-  // Creative analysis from placement intel columns
-  const creativeAnalysis = useMemo(() => {
-    const ads = intelWar.placements ?? intelWar.recent_ads ?? [];
-    const emotions = new Map<string, number>();
-    const stages = new Map<string, number>();
-    const offerTypes = new Map<string, number>();
-    for (const ad of ads) {
-      if (isUsableCopy(ad.emotional_driver)) {
-        emotions.set(ad.emotional_driver!, (emotions.get(ad.emotional_driver!) ?? 0) + 1);
-      }
-      if (isUsableCopy(ad.buyer_stage)) {
-        stages.set(ad.buyer_stage!, (stages.get(ad.buyer_stage!) ?? 0) + 1);
-      }
-      if (isUsableCopy(ad.offer_type)) {
-        offerTypes.set(ad.offer_type!, (offerTypes.get(ad.offer_type!) ?? 0) + 1);
-      }
-    }
-    const topEmotion = [...emotions.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    const topStage = [...stages.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    const topOfferType = [...offerTypes.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-    const hook = ads.map((a) => a.hook_analysis).find(isUsableCopy) ?? null;
-    return {
-      emotion: topEmotion,
-      stage: topStage,
-      offerType: topOfferType,
-      hook,
-    };
-  }, [intelWar.placements, intelWar.recent_ads]);
-
   // Channel filter for recent ads — uses ad.channel_platform per spec.
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const filteredAds = useMemo(() => {
@@ -544,6 +510,20 @@ function AdvertiserPage() {
 
   const category = intelWar.category ?? intelWar.industry ?? "—";
   const updatedAgo = formatTimeAgo(intelWar.last_seen ?? null);
+
+  const creativeFatigue = intelWar.creative_fatigue ?? {};
+  const creativeScore = Math.max(0, Math.min(100, Number(creativeFatigue.score ?? 0)));
+  const creativeTier =
+    creativeScore <= 30 ? "fresh" : creativeScore <= 60 ? "maturing" : "fatigued";
+  const creativeLabel =
+    creativeFatigue.fatigueLabel ??
+    creativeFatigue.label ??
+    (creativeTier === "fresh" ? "Fresh" : creativeTier === "maturing" ? "Maturing" : "Fatigued");
+
+  const quickScan = useMemo(
+    () => buildQuickScan(campaignStory, advertiserBrief?.moves ?? []),
+    [campaignStory, advertiserBrief?.moves],
+  );
 
   const handleExport = async () => {
     setExporting(true);
@@ -686,17 +666,17 @@ function AdvertiserPage() {
       >
         {/* LEFT — main intel */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
-          {/* A — Brand header */}
+          {/* Brand header */}
           <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 4 }}>
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                background: "#FDF6E8",
-                color: "#C9963A",
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: "linear-gradient(135deg, #1C1C1A 0%, #3D3D38 100%)",
+                color: "#FBBF24",
                 fontSize: 16,
-                fontWeight: 600,
+                fontWeight: 700,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -706,10 +686,12 @@ function AdvertiserPage() {
               {initialsOf(brand)}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 24, fontWeight: 600, color: "#1C1C1A", lineHeight: 1.2 }}>{brand}</div>
-              <div style={{ fontSize: 13, color: "#9E9D94", marginTop: 3 }}>
-                {category} · {totalAds} ads
-                {updatedAgo && ` · Updated ${updatedAgo}`}
+              <div style={{ fontSize: 26, fontWeight: 700, color: "#1C1C1A", lineHeight: 1.15, letterSpacing: "-0.02em" }}>
+                {brand}
+              </div>
+              <div style={{ fontSize: 13, color: "#6B6B62", marginTop: 4 }}>
+                {category} · {totalAds.toLocaleString()} ads indexed
+                {updatedAgo ? ` · Updated ${updatedAgo}` : ""}
               </div>
             </div>
             {canExport && (
@@ -721,7 +703,7 @@ function AdvertiserPage() {
                     background: "#1C1C1A",
                     color: "#FFFFFF",
                     border: "none",
-                    borderRadius: 7,
+                    borderRadius: 8,
                     padding: "10px 20px",
                     fontSize: 14,
                     fontWeight: 500,
@@ -742,6 +724,39 @@ function AdvertiserPage() {
             )}
           </div>
 
+          {advertiserBrief ? (
+            <AdvertiserCommandDashboard
+              brand={brand}
+              category={category}
+              updatedAgo={updatedAgo}
+              totalAds={totalAds}
+              adsThisWeek={adsThisWeek}
+              daysRunning={daysRunning}
+              reachLabel={fmtReach(Number(intelWar.reach_frequency?.totalUniqueReach ?? 0))}
+              frequencyLabel={
+                intelWar.reach_frequency?.avgFrequency != null && Number(intelWar.reach_frequency.avgFrequency) > 0
+                  ? `${Number(intelWar.reach_frequency.avgFrequency).toFixed(1)}x`
+                  : "—"
+              }
+              spendSignal={
+                typeof intelWar.spend_signal === "number" && intelWar.spend_signal > 0
+                  ? intelWar.spend_signal
+                  : undefined
+              }
+              spendMonthly={spend?.estimated_monthly_spend ?? 0}
+              spendBandLabel={advertiserBrief.spend.label || null}
+              quickScan={quickScan}
+              channelMix={advertiserBrief.channelMix}
+              strategistIntel={strategistIntel}
+              campaignIntel={campaignIntel}
+              campaignStory={campaignStory}
+              topMoves={advertiserBrief.moves}
+              topProducts={advertiserBrief.products}
+              creativeScore={creativeScore}
+              creativeTier={creativeTier}
+              creativeLabel={creativeLabel}
+            />
+          ) : null}
 
           <CampaignStoryBlock
             brand={brand}
@@ -750,12 +765,15 @@ function AdvertiserPage() {
             story={campaignStory}
           />
 
-          <AdvertiserStrategistIntelBlock
-            brand={brand}
-            loading={loading}
-            intel={strategistIntel}
-            unavailableReason={loadStatus.strategist.ok ? undefined : loadStatus.strategist.reason}
-          />
+          {strategistIntel && !strategistIntel.available ? (
+            <AdvertiserStrategistIntelBlock
+              brand={brand}
+              loading={loading}
+              intel={strategistIntel}
+              unavailableReason={loadStatus.strategist.ok ? undefined : loadStatus.strategist.reason}
+            />
+          ) : null}
+
           <AdlibraryAdvertiserPanel
             intel={adlibraryIntel}
             unavailableReason={loadStatus.adlibrary.ok ? undefined : loadStatus.adlibrary.reason}
@@ -764,59 +782,83 @@ function AdvertiserPage() {
           {advertiserBrief ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <AdvertiserViewBar state={insightView} onChange={setInsightView} className="mb-2" />
-              <div
-                style={{
-                  paddingTop: 8,
-                  borderTop: "1px solid #EBE9E4",
-                  marginTop: 4,
-                }}
-              >
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                  Supporting evidence
+
+              {/* Recent ads — visual feed near top */}
+              <Card title="Live creative feed">
+                <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
+                  {[
+                    { k: "all", l: "All" },
+                    { k: "YouTube", l: "YouTube" },
+                    { k: "Search", l: "Search" },
+                    { k: "Display", l: "Display" },
+                    { k: "Meta", l: "Meta" },
+                    { k: "TikTok", l: "TikTok" },
+                  ].map((t) => {
+                    const active = channelFilter === t.k;
+                    return (
+                      <button
+                        key={t.k}
+                        onClick={() => setChannelFilter(t.k)}
+                        style={{
+                          padding: "4px 12px",
+                          borderRadius: 4,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          border: "none",
+                          cursor: "pointer",
+                          background: active ? "#1C1C1A" : "transparent",
+                          color: active ? "#FFFFFF" : "#6B6B62",
+                        }}
+                      >
+                        {t.l}
+                      </button>
+                    );
+                  })}
                 </div>
-                <p style={{ fontSize: 13, color: "#6B6B62", margin: "6px 0 0", lineHeight: 1.5 }}>
-                  Channel mix, spend estimates, products, and campaign detail for deeper prep.
+                {filteredAds.length ? (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+                      gap: 12,
+                    }}
+                  >
+                    {filteredAds.slice(0, 8).map((ad, i) => (
+                      <RecentAdRow key={ad.id ?? i} ad={ad} brand={brand} variant="card" />
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: "#9E9D94" }}>No ads match this filter.</div>
+                )}
+              </Card>
+
+              <div style={{ paddingTop: 4, borderTop: "1px solid #EBE9E4" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  Pitch depth
+                </div>
+                <p style={{ fontSize: 12, color: "#6B6B62", margin: "6px 0 0", lineHeight: 1.5 }}>
+                  Toggle blocks for meeting prep — core dashboard stays above.
                 </p>
               </div>
 
               {showInsight("marketingRead") && (
-              <InsightSection title="Current marketing read" accent>
-                <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.65, margin: 0 }}>
+              <InsightSection title="Marketing read" accent>
+                <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.55, margin: 0 }}>
                   {advertiserBrief.marketingRead}
                 </p>
               </InsightSection>
               )}
 
-              {showInsight("channelMix") && (
-              <InsightSection title="Channel mix">
-                <ChannelMixBars
-                  rows={advertiserBrief.channelMix.rows}
-                  overallConfidence={advertiserBrief.channelMix.overallConfidence}
-                  sourceLabel={advertiserBrief.channelMix.sourceLabel}
-                  estimationTooltip={advertiserBrief.channelMix.estimationTooltip}
-                  available={advertiserBrief.channelMix.available}
-                  variant="light"
-                  emptyMessage="Channel mix appears once creatives are indexed with platform tags (Meta, YouTube, Search, etc.)."
-                />
+              {showInsight("spend") && advertiserBrief.spend.label ? (
+              <InsightSection title="Spend estimate">
+                <div style={{ fontSize: 20, fontWeight: 600, color: "#1C1C1A", letterSpacing: "-0.02em" }}>
+                  {advertiserBrief.spend.label}
+                </div>
+                <p style={{ fontSize: 12, color: "#9E9D94", margin: "8px 0 0", lineHeight: 1.5 }}>
+                  {advertiserBrief.spend.disclaimer}
+                </p>
               </InsightSection>
-              )}
-
-              {showInsight("spend") && (
-              <InsightSection title="Estimated spend range">
-                {advertiserBrief.spend.label ? (
-                  <>
-                    <div style={{ fontSize: 20, fontWeight: 600, color: "#1C1C1A", letterSpacing: "-0.02em" }}>
-                      {advertiserBrief.spend.label}
-                    </div>
-                    <p style={{ fontSize: 12, color: "#9E9D94", margin: "8px 0 0", lineHeight: 1.5 }}>
-                      {advertiserBrief.spend.disclaimer}
-                    </p>
-                  </>
-                ) : (
-                  <p style={{ fontSize: 13, color: "#6B6B62", margin: 0 }}>Spend estimate unavailable for this advertiser.</p>
-                )}
-              </InsightSection>
-              )}
+              ) : null}
 
               {showInsight("products") && (
               <InsightSection title="Products being promoted">
@@ -966,163 +1008,6 @@ function AdvertiserPage() {
           <div style={{ marginBottom: 4 }}>
             <DataFeedPanel domain={domain} brandLabel={brand} />
           </div>
-
-          {/* Activity metrics */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
-            <MetricCard
-              value={totalAds.toLocaleString()}
-              label="Active ads"
-              trend={adsThisWeek > 0 ? `↑ ${adsThisWeek} this week` : null}
-            />
-            <MetricCard
-              value={fmtReach(Number(intelWar.reach_frequency?.totalUniqueReach ?? 0))}
-              label="Est. reach"
-              trend="Unique Australians · est."
-            />
-            <MetricCard
-              value={
-                intelWar.reach_frequency?.avgFrequency != null && Number(intelWar.reach_frequency.avgFrequency) > 0
-                  ? Number(intelWar.reach_frequency.avgFrequency).toFixed(1) + "x"
-                  : "—"
-              }
-              label="Avg. frequency"
-              trend="Times seen per person · est."
-            />
-            <div style={{ ...metricCardStyle, alignItems: "flex-start", padding: 18 }}>
-              <SpendIndex
-                level={typeof intelWar.spend_signal === "number" && intelWar.spend_signal > 0 ? intelWar.spend_signal : undefined}
-                spend={spend?.estimated_monthly_spend ?? 0}
-              />
-            </div>
-            <MetricCard
-              value={daysRunning.toLocaleString()}
-              label="Days running"
-              trend={intelWar.first_seen ? `Since ${fmtDate(intelWar.first_seen)}` : null}
-            />
-          </div>
-          <SpendLegend />
-
-          {/* B3 — Creative health (fatigue) */}
-          {(() => {
-            const cf = intelWar.creative_fatigue ?? {};
-            const score = Math.max(0, Math.min(100, Number(cf.score ?? 0)));
-            const tier = score <= 30 ? "fresh" : score <= 60 ? "maturing" : "fatigued";
-            const tierColour = tier === "fresh" ? "#2D7D46" : tier === "maturing" ? "#C9963A" : "#C0392B";
-            const label = cf.fatigueLabel ?? cf.label ?? (tier === "fresh" ? "Fresh" : tier === "maturing" ? "Maturing" : "Fatigued");
-            const needsRefresh = Number(cf.needsRefresh ?? 0);
-            const fresh = Number(cf.fresh ?? 0);
-            const callout =
-              tier === "fatigued"
-                ? { bg: "#FFF0EE", border: "#C0392B", title: "⚡ Attack window", titleColour: "#C0392B", body: "Their creative is showing fatigue signals. Audiences are tuning out. Now is the time to outspend them with fresh messaging." }
-                : tier === "maturing"
-                  ? { bg: "#FDF6E8", border: "#C9963A", title: "⏱ Watch this space", titleColour: "#A07830", body: "Portfolio is maturing. They'll need a refresh within 60–90 days. Plan your counter-move now." }
-                  : { bg: "#F0F9F4", border: "#2D7D46", title: "✓ Actively investing", titleColour: "#2D7D46", body: "Fresh creative signals active investment. They're in growth mode. Match their energy or find the gaps they're missing." };
-            return (
-              <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: 20 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>Creative health</div>
-                <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 16 }}>How fresh is their ad portfolio?</div>
-                <div style={{ display: "grid", gridTemplateColumns: "40fr 60fr", gap: 24, alignItems: "center" }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                    <div style={{ width: 80, height: 80, borderRadius: "50%", border: `4px solid ${tierColour}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 600, color: "#1C1C1A" }}>
-                      {score}
-                    </div>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: tierColour }}>{label}</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "center" }}>
-                      <div style={{ fontSize: 12, color: "#6B6B62" }}>{needsRefresh} ad{needsRefresh === 1 ? "" : "s"} need refresh</div>
-                      <div style={{ fontSize: 12, color: "#2D7D46" }}>{fresh} fresh creative{fresh === 1 ? "" : "s"}</div>
-                    </div>
-                  </div>
-                  <div style={{ background: callout.bg, borderLeft: `2px solid ${callout.border}`, padding: 12, borderRadius: 6 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: callout.titleColour, marginBottom: 6 }}>{callout.title}</div>
-                    <div style={{ fontSize: 12, color: "#6B6B62", lineHeight: 1.5 }}>{callout.body}</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-
-
-          {/* Creative tags — supporting detail */}
-          <Card title="Creative analysis">
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {creativeAnalysis.emotion && (
-                <CreativePill>
-                  <span style={{ textTransform: "capitalize" }}>{creativeAnalysis.emotion}</span>
-                </CreativePill>
-              )}
-              {creativeAnalysis.stage && (
-                <CreativePill>{creativeAnalysis.stage} stage</CreativePill>
-              )}
-              {creativeAnalysis.offerType && (
-                <CreativePill>{creativeAnalysis.offerType} offer</CreativePill>
-              )}
-              {(() => {
-                const fmt = (firstAd?.ad_type ?? "").trim();
-                return fmt ? <CreativePill><span style={{ textTransform: "capitalize" }}>{fmt}</span></CreativePill> : null;
-              })()}
-              {!creativeAnalysis.emotion && !creativeAnalysis.stage && !creativeAnalysis.offerType && !firstAd?.ad_type && (
-                <span style={{ fontSize: 12, color: "#9E9D94" }}>
-                  {placementIntelUnavailable
-                    ? PLACEMENT_INTEL_UNAVAILABLE
-                    : "No strategist fields on indexed placements."}
-                </span>
-              )}
-            </div>
-            {creativeAnalysis.hook && (
-              <p style={{ marginTop: 12, fontSize: 13, color: "#6B6B62", lineHeight: 1.5 }}>
-                {creativeAnalysis.hook}
-              </p>
-            )}
-            {sentimentRaw && (
-              <div style={{ marginTop: 12, fontSize: 13, color: sentimentColor }}>
-                Emotional driver: {sentimentRaw}
-              </div>
-            )}
-          </Card>
-
-          <Card title="Recent ads">
-            {/* Channel filter tabs */}
-            <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
-              {[
-                { k: "all", l: "All" },
-                { k: "YouTube", l: "YouTube" },
-                { k: "Search", l: "Search" },
-                { k: "Display", l: "Display" },
-                { k: "Meta", l: "Meta" },
-                { k: "TikTok", l: "TikTok" },
-              ].map((t) => {
-                const active = channelFilter === t.k;
-                return (
-                  <button
-                    key={t.k}
-                    onClick={() => setChannelFilter(t.k)}
-                    style={{
-                      padding: "4px 12px",
-                      borderRadius: 4,
-                      fontSize: 12,
-                      fontWeight: 500,
-                      border: "none",
-                      cursor: "pointer",
-                      background: active ? "#1C1C1A" : "transparent",
-                      color: active ? "#FFFFFF" : "#6B6B62",
-                    }}
-                  >
-                    {t.l}
-                  </button>
-                );
-              })}
-            </div>
-            {filteredAds.length ? (
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {filteredAds.slice(0, 8).map((ad, i) => (
-                  <RecentAdRow key={ad.id ?? i} ad={ad} brand={brand} />
-                ))}
-              </div>
-            ) : (
-              <div style={{ fontSize: 13, color: "#9E9D94" }}>No ads match this filter.</div>
-            )}
-          </Card>
         </div>
 
         {/* RIGHT — News panel */}
@@ -1203,16 +1088,6 @@ function AdvertiserPage() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const metricCardStyle: React.CSSProperties = {
-  background: "#F0EDE8",
-  borderRadius: 10,
-  padding: 18,
-  display: "flex",
-  flexDirection: "column",
-  gap: 6,
-  minWidth: 0,
-};
-
 const emptyCard: React.CSSProperties = {
   background: "#FFFFFF",
   border: "1px solid #EBE9E4",
@@ -1222,29 +1097,6 @@ const emptyCard: React.CSSProperties = {
   color: "#6B6B62",
   fontSize: 13,
 };
-
-function MetricCard({ value, label, trend }: { value: string; label: string; trend: string | null }) {
-  return (
-    <div style={metricCardStyle}>
-      <div style={{ fontSize: 28, fontWeight: 600, color: "#1C1C1A", lineHeight: 1, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums" }}>{value}</div>
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 500,
-          color: "#9E9D94",
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-        }}
-      >
-        {label}
-      </div>
-      {trend && (
-        <div style={{ fontSize: 12, color: "#2D7D46", marginTop: 2 }}>{trend}</div>
-      )}
-    </div>
-  );
-}
-
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -1315,28 +1167,7 @@ function BriefList({ label, items }: { label: string; items: string[] }) {
   );
 }
 
-function CreativePill({ children }: { children: React.ReactNode }) {
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        fontSize: 12,
-        fontWeight: 500,
-        padding: "4px 10px",
-        borderRadius: 4,
-        background: "#F0EDE8",
-        color: "#6B6B62",
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-
-function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
+function RecentAdRow({ ad, brand, variant = "row" }: { ad: RecentAd; brand: string; variant?: "row" | "card" }) {
   const channel = (ad.channel_platform ?? ad.channel ?? "").trim();
   const channelLow = channel.toLowerCase();
   const isYouTube = /youtube|video/.test(channelLow);
@@ -1375,25 +1206,34 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
         : null;
   const archiveUrl = ad.source_archive_url?.trim() || null;
   const takeaway = isUsableCopy(ad.strategist_takeaway) ? ad.strategist_takeaway : null;
+  const takeawayShort =
+    takeaway && takeaway.length > 72 ? `${takeaway.slice(0, 71)}…` : takeaway;
   const openVideo = () => {
     if (ad.video_url) window.open(ad.video_url, "_blank", "noopener,noreferrer");
   };
+
+  const thumbSize = variant === "card" ? 72 : 56;
 
   return (
     <div
       style={{
         display: "flex",
-        alignItems: "center",
-        gap: 16,
-        padding: "16px 0",
-        borderBottom: "1px solid #F0EDE8",
+        alignItems: variant === "card" ? "flex-start" : "center",
+        flexDirection: variant === "card" ? "column" : "row",
+        gap: variant === "card" ? 10 : 16,
+        padding: variant === "card" ? 12 : "16px 0",
+        borderBottom: variant === "card" ? "none" : "1px solid #F0EDE8",
+        border: variant === "card" ? "1px solid #EBE9E4" : "none",
+        borderRadius: variant === "card" ? 10 : 0,
+        background: variant === "card" ? "#FAFAF8" : "transparent",
+        minWidth: 0,
       }}
     >
       <div
         style={{
           position: "relative",
-          width: 56,
-          height: 56,
+          width: variant === "card" ? "100%" : thumbSize,
+          height: variant === "card" ? 100 : thumbSize,
           borderRadius: 8,
           flexShrink: 0,
           cursor: isYouTube && ad.video_url ? "pointer" : "default",
@@ -1497,11 +1337,25 @@ function RecentAdRow({ ad, brand }: { ad: RecentAd; brand: string }) {
           )}
         </div>
         {title && (
-          <div style={{ fontSize: 13, color: "#1C1C1A", marginBottom: 4, lineHeight: 1.4 }}>{title}</div>
+          <div
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: "#1C1C1A",
+              marginBottom: 4,
+              lineHeight: 1.35,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {title}
+          </div>
         )}
-        {takeaway && (
-          <div style={{ fontSize: 12, color: "#6B6B62", lineHeight: 1.45, marginBottom: 4 }}>{takeaway}</div>
-        )}
+        {takeawayShort && variant !== "card" ? (
+          <div style={{ fontSize: 12, color: "#6B6B62", lineHeight: 1.45, marginBottom: 4 }}>{takeawayShort}</div>
+        ) : null}
         <div style={{ fontSize: 12, color: "#6B6B62" }}>
           {ad.first_seen ? formatTimeAgo(ad.first_seen) : "—"}
           {ad.last_seen ? ` → ${formatTimeAgo(ad.last_seen)}` : ""}
