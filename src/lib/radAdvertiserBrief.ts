@@ -36,7 +36,7 @@ export type AdvertiserChannelMixResult = ChannelMixResult;
 
 export type SpendBand = "Low" | "Medium" | "High" | "Very high";
 
-const DISPLAY_CHANNELS = ["Display", "YouTube", "Search", "Meta", "TikTok", "Other"] as const;
+const DISPLAY_CHANNELS = ["Display", "YouTube", "Search", "Meta", "TikTok", "LinkedIn", "Other"] as const;
 
 const SPEND_BANDS: { band: SpendBand; label: string; min: number; max: number }[] = [
   { band: "Low", label: "Low (<$50k/month)", min: 0, max: 50_000 },

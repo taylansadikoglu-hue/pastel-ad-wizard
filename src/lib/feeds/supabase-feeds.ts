@@ -45,7 +45,9 @@ export async function loadPaidMediaFromSupabase(
         ? "apify"
         : platform.includes("google") || platform.includes("youtube") || platform === "dataforseo"
           ? "dataforseo"
-          : platform;
+          : platform.includes("linkedin")
+            ? "linkedin"
+            : platform;
     byPlatform[key] = (byPlatform[key] ?? 0) + (Number(row.times_seen) || 1);
   }
 

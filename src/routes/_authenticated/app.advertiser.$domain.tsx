@@ -234,6 +234,7 @@ const CHANNEL_TAB_MAP: Record<string, string[]> = {
   Display: ["Google Display", "Programmatic", "DCO", "display", "programmatic"],
   Meta: ["Meta", "Facebook", "Instagram", "meta", "facebook"],
   TikTok: ["TikTok", "tiktok"],
+  LinkedIn: ["LinkedIn", "linkedin"],
 };
 
 function AdvertiserPage() {
