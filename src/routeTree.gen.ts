@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as ApiStorageCacheCreativeRouteImport } from './routes/api/storage/cache-creative'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppSentimentRouteImport } from './routes/_authenticated/app.sentiment'
 import { Route as AuthenticatedAppPcrRouteImport } from './routes/_authenticated/app.pcr'
@@ -58,6 +59,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiStorageCacheCreativeRoute = ApiStorageCacheCreativeRouteImport.update({
+  id: '/api/storage/cache-creative',
+  path: '/api/storage/cache-creative',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppSettingsRoute =
   AuthenticatedAppSettingsRouteImport.update({
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/app/pcr': typeof AuthenticatedAppPcrRoute
   '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/api/storage/cache-creative': typeof ApiStorageCacheCreativeRoute
   '/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
   '/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
   '/api/public/hooks/resend': typeof ApiPublicHooksResendRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/app/pcr': typeof AuthenticatedAppPcrRoute
   '/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/api/storage/cache-creative': typeof ApiStorageCacheCreativeRoute
   '/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
   '/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
   '/api/public/hooks/resend': typeof ApiPublicHooksResendRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/_authenticated/app/pcr': typeof AuthenticatedAppPcrRoute
   '/_authenticated/app/sentiment': typeof AuthenticatedAppSentimentRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/api/storage/cache-creative': typeof ApiStorageCacheCreativeRoute
   '/_authenticated/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
   '/_authenticated/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
   '/api/public/hooks/resend': typeof ApiPublicHooksResendRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/app/pcr'
     | '/app/sentiment'
     | '/app/settings'
+    | '/api/storage/cache-creative'
     | '/app/advertiser/$domain'
     | '/app/category/$slug'
     | '/api/public/hooks/resend'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/app/pcr'
     | '/app/sentiment'
     | '/app/settings'
+    | '/api/storage/cache-creative'
     | '/app/advertiser/$domain'
     | '/app/category/$slug'
     | '/api/public/hooks/resend'
@@ -265,6 +276,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/pcr'
     | '/_authenticated/app/sentiment'
     | '/_authenticated/app/settings'
+    | '/api/storage/cache-creative'
     | '/_authenticated/app/advertiser/$domain'
     | '/_authenticated/app/category/$slug'
     | '/api/public/hooks/resend'
@@ -277,6 +289,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiStorageCacheCreativeRoute: typeof ApiStorageCacheCreativeRoute
   ApiPublicHooksResendRoute: typeof ApiPublicHooksResendRoute
   ApiPublicHooksScanReadyRoute: typeof ApiPublicHooksScanReadyRoute
 }
@@ -324,6 +337,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/storage/cache-creative': {
+      id: '/api/storage/cache-creative'
+      path: '/api/storage/cache-creative'
+      fullPath: '/api/storage/cache-creative'
+      preLoaderRoute: typeof ApiStorageCacheCreativeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/settings': {
       id: '/_authenticated/app/settings'
@@ -476,6 +496,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiStorageCacheCreativeRoute: ApiStorageCacheCreativeRoute,
   ApiPublicHooksResendRoute: ApiPublicHooksResendRoute,
   ApiPublicHooksScanReadyRoute: ApiPublicHooksScanReadyRoute,
 }

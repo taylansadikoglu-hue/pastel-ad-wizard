@@ -32,7 +32,7 @@ put_secret() {
     return
   fi
   echo "Setting worker secret: $name"
-  printf '%s' "$value" | wrangler secret put "$name" --name "$WORKER_NAME"
+  printf '%s' "$value" | npx wrangler secret put "$name" --name "$WORKER_NAME"
 }
 
 if $INTERACTIVE; then
