@@ -33,6 +33,9 @@ export const PLACEMENT_INTEL_SELECT = [
   "product_type",
   "offer_signal",
   "market_signal",
+  "offer_theme",
+  "description",
+  "page_description",
   "normalized_product",
   "headline",
   "description",
@@ -45,6 +48,7 @@ export const PLACEMENT_INTEL_SELECT = [
   "creative_url",
   "landing_url",
   "source_archive_url",
+  "raw",
 ].join(", ");
 
 export type AdvertiserPlacementRow = {
@@ -71,7 +75,11 @@ export type AdvertiserPlacementRow = {
   product_type?: string | null;
   offer_signal?: string | null;
   market_signal?: string | null;
+  offer_theme?: string | null;
+  description?: string | null;
+  page_description?: string | null;
   normalized_product?: string | null;
+  raw?: Record<string, unknown> | null;
   headline?: string | null;
   description?: string | null;
   first_seen?: string | null;
@@ -133,7 +141,11 @@ export function normalisePlacementRow(row: Record<string, unknown>): AdvertiserP
     product_type: (row.product_type as string | null) ?? null,
     offer_signal: (row.offer_signal as string | null) ?? null,
     market_signal: (row.market_signal as string | null) ?? null,
+    offer_theme: (row.offer_theme as string | null) ?? null,
+    description: (row.description as string | null) ?? null,
+    page_description: (row.page_description as string | null) ?? null,
     normalized_product: (row.normalized_product as string | null) ?? null,
+    raw: (row.raw as Record<string, unknown> | null) ?? null,
     headline: (row.headline as string | null) ?? null,
     description: (row.description as string | null) ?? null,
     first_seen: (row.first_seen as string | null) ?? null,

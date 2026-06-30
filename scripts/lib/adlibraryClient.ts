@@ -16,14 +16,19 @@ export type AdLibraryAd = {
   advertiser_name?: string | null;
   platform?: string | null;
   preview_img_url?: string | null;
+  image_url?: string | null;
+  video_url?: string | null;
   like_count?: number | null;
   share_count?: number | null;
   impression?: number | null;
-  geo?: string | null;
+  geo?: string | string[] | null;
   first_seen?: string | null;
   last_seen?: string | null;
   landing_url?: string | null;
+  landing_page_url?: string | null;
   source_archive_url?: string | null;
+  adsType?: string | number | null;
+  ad_type?: string | null;
   [key: string]: unknown;
 };
 
@@ -32,17 +37,23 @@ export type SearchAdsInput = {
   appType: AppType;
   page?: number;
   pageSize?: number;
-  geo?: string;
-  language?: string;
+  geo?: string | string[];
+  language?: string | string[];
   platform?: string | string[];
-  adsType?: string;
+  adsType?: string | string[];
   daysBack?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  likeBegin?: number;
+  likeEnd?: number;
   sortField?: string;
 };
 
 export type SearchAdsResponse = {
   ads: AdLibraryAd[];
   total?: number;
+  page?: number;
+  pageSize?: number;
   _credits?: number;
   _credits_remaining?: number;
 };
@@ -51,17 +62,57 @@ export type EnrichAdInput = {
   ad: AdLibraryAd | Record<string, unknown>;
 };
 
-export type EnrichAdResponse = {
+export type EnrichmentPayload = {
   summary?: string | null;
   transcription?: string | null;
   analysis?: string | null;
   ugc_script?: string | null;
   markdown?: string | null;
   source?: string | null;
+};
+
+export type EnrichAdResponse = EnrichmentPayload & {
   cached?: boolean;
+  balance?: number;
   _credits?: number;
   _credits_remaining?: number;
   [key: string]: unknown;
+};
+
+export type AdvertiserPlatformCandidate = {
+  id?: string;
+  name?: string;
+  logo?: string | null;
+  page_alias?: string | null;
+  likes?: number | null;
+  verified?: boolean;
+  ig_username?: string | null;
+  ig_followers?: number | null;
+  category?: string | null;
+  legal_name?: string | null;
+  ad_count?: number | null;
+  advertiser_url?: string | null;
+  is_person?: boolean;
+  is_restricted?: boolean;
+  [key: string]: unknown;
+};
+
+export type AdvertiserSearchResponse = {
+  query: string;
+  country?: string;
+  best_match?: {
+    name?: string;
+    confidence?: number;
+    meta?: AdvertiserPlatformCandidate;
+    google?: AdvertiserPlatformCandidate;
+    linkedin?: AdvertiserPlatformCandidate;
+  } | null;
+  candidates?: {
+    meta?: AdvertiserPlatformCandidate[];
+    google?: AdvertiserPlatformCandidate[];
+    linkedin?: AdvertiserPlatformCandidate[];
+  };
+  errors?: Record<string, string>;
 };
 
 export type AdvertiserSearchResult = {
@@ -72,12 +123,17 @@ export type AdvertiserSearchResult = {
   linkedin_id?: string;
   platforms?: string[];
   confidence?: number;
+  best_match?: boolean;
   [key: string]: unknown;
 };
 
 export type CurateAdvertiserResponse = {
   ads?: AdLibraryAd[];
+  meta?: { sources?: unknown[]; ads?: AdLibraryAd[] };
+  google?: { sources?: unknown[]; ads?: AdLibraryAd[] };
+  linkedin?: { sources?: unknown[]; ads?: AdLibraryAd[] };
   total?: number;
+  credits?: { used?: number; remaining?: number };
   _credits?: number;
   _credits_remaining?: number;
   [key: string]: unknown;
@@ -102,6 +158,9 @@ export type AdLibraryClientOptions = {
   creditTracker?: CreditTracker;
   maxRetries?: number;
 };
+
+/** Two years — default backfill window for new paying-customer brands. */
+export const ADLIBRARY_BACKFILL_DAYS = 730;
 
 export class AdLibraryError extends Error {
   constructor(
@@ -143,23 +202,35 @@ export class AdLibraryClient {
       return mock;
     }
 
-    const body = {
+    const body: Record<string, unknown> = {
       keyword: input.keyword,
       appType: input.appType,
-      ...(input.page != null ? { page: input.page } : {}),
-      ...(input.pageSize != null ? { pageSize: Math.min(input.pageSize, 50) } : {}),
-      ...(input.geo ? { geo: input.geo } : {}),
-      ...(input.language ? { language: input.language } : {}),
-      ...(input.platform ? { platform: input.platform } : {}),
-      ...(input.adsType ? { adsType: input.adsType } : {}),
-      ...(input.daysBack != null ? { daysBack: input.daysBack } : {}),
-      ...(input.sortField ? { sortField: input.sortField } : {}),
     };
+    if (input.page != null) body.page = input.page;
+    if (input.pageSize != null) body.pageSize = Math.min(input.pageSize, 50);
+    if (input.geo) body.geo = input.geo;
+    if (input.language) body.language = input.language;
+    if (input.platform) body.platform = input.platform;
+    if (input.adsType) body.adsType = input.adsType;
+    if (input.daysBack != null) body.daysBack = input.daysBack;
+    if (input.dateFrom) body.dateFrom = input.dateFrom;
+    if (input.dateTo) body.dateTo = input.dateTo;
+    if (input.likeBegin != null) body.likeBegin = input.likeBegin;
+    if (input.likeEnd != null) body.likeEnd = input.likeEnd;
+    if (input.sortField) body.sortField = input.sortField;
 
-    const data = await this.request<SearchAdsResponse>("POST", "/api/search", body, 1);
-    const ads = Array.isArray(data.ads) ? data.ads : extractAdsArray(data);
-    const result: SearchAdsResponse = { ...data, ads };
-    this.logCredits(data._credits ?? 1, data._credits_remaining);
+    const data = await this.request<Record<string, unknown>>("POST", "/api/search", body, 1);
+    const ads = extractAdsArray(data);
+    const credits = extractCredits(data);
+    const result: SearchAdsResponse = {
+      ads,
+      total: typeof data.total === "number" ? data.total : undefined,
+      page: typeof data.page === "number" ? data.page : undefined,
+      pageSize: typeof data.pageSize === "number" ? data.pageSize : undefined,
+      _credits: credits.used,
+      _credits_remaining: credits.remaining,
+    };
+    this.logCredits(credits.used ?? 1, credits.remaining);
     return result;
   }
 
@@ -170,26 +241,75 @@ export class AdLibraryClient {
       return mock;
     }
 
-    const data = await this.request<EnrichAdResponse>("POST", "/api/enrichment", input.ad, 1);
-    this.logCredits(data._credits ?? 1, data._credits_remaining);
-    return data;
+    const payload = buildEnrichmentRequest(input.ad);
+    const data = await this.request<Record<string, unknown>>("POST", "/api/enrichment", payload, 1);
+    const enrichment = unwrapEnrichment(data);
+    const credits = extractCredits(data);
+    const result: EnrichAdResponse = {
+      ...enrichment,
+      cached: Boolean(data.cached),
+      balance: typeof data.balance === "number" ? data.balance : undefined,
+      _credits: credits.used,
+      _credits_remaining: credits.remaining,
+    };
+    this.logCredits(credits.used ?? 1, credits.remaining);
+    return result;
   }
 
-  async searchAdvertisers(query: string): Promise<AdvertiserSearchResult[]> {
+  async searchAdvertisers(
+    query: string,
+    options?: { country?: string; limit?: number },
+  ): Promise<AdvertiserSearchResult[]> {
     if (this.dryRun) {
       return mockAdvertiserSearch(query);
     }
 
-    const qs = new URLSearchParams({ q: query, query }).toString();
-    const data = await this.request<AdvertiserSearchResult[] | { results?: AdvertiserSearchResult[] }>(
+    const params = new URLSearchParams({ q: query });
+    if (options?.country) params.set("country", options.country);
+    if (options?.limit) params.set("limit", String(Math.min(20, Math.max(1, options.limit))));
+
+    const data = await this.request<AdvertiserSearchResponse | AdvertiserSearchResult[]>(
       "GET",
-      `/api/advertisers/search?${qs}`,
+      `/api/advertisers/search?${params.toString()}`,
       undefined,
       0,
     );
 
     if (Array.isArray(data)) return data;
-    return data.results ?? [];
+    return flattenAdvertiserSearch(data);
+  }
+
+  async searchAdvertisersRaw(
+    query: string,
+    options?: { country?: string; limit?: number },
+  ): Promise<AdvertiserSearchResponse> {
+    if (this.dryRun) {
+      const results = mockAdvertiserSearch(query);
+      return {
+        query,
+        best_match: results[0]
+          ? {
+              name: results[0].name,
+              confidence: results[0].confidence,
+              meta: { id: results[0].meta_page_id, name: results[0].name },
+            }
+          : null,
+        candidates: {
+          meta: results.map((r) => ({ id: r.meta_page_id, name: r.name })),
+        },
+      };
+    }
+
+    const params = new URLSearchParams({ q: query });
+    if (options?.country) params.set("country", options.country);
+    if (options?.limit) params.set("limit", String(Math.min(20, Math.max(1, options.limit))));
+
+    return this.request<AdvertiserSearchResponse>(
+      "GET",
+      `/api/advertisers/search?${params.toString()}`,
+      undefined,
+      0,
+    );
   }
 
   async curateAdvertiser(advertiserId: string): Promise<CurateAdvertiserResponse> {
@@ -205,11 +325,22 @@ export class AdLibraryClient {
       {},
       1,
     );
-    this.logCredits(data._credits ?? 1, data._credits_remaining);
-    return data;
+    const ads = extractCuratedAds(data);
+    const credits = extractCredits(data);
+    const result: CurateAdvertiserResponse = {
+      ...data,
+      ads,
+      _credits: credits.used ?? data.credits?.used ?? 1,
+      _credits_remaining: credits.remaining ?? data.credits?.remaining,
+    };
+    this.logCredits(result._credits ?? 1, result._credits_remaining);
+    return result;
   }
 
-  async scanWinningAds(pageId: string): Promise<WinningConcept[]> {
+  async scanWinningAds(
+    pageId: string,
+    options?: { country?: string; topEnrich?: number; maxPages?: number },
+  ): Promise<WinningConcept[]> {
     if (this.dryRun) {
       const mock = mockWinners(pageId);
       this.logCredits(10, 990);
@@ -220,10 +351,16 @@ export class AdLibraryClient {
       throw new AdLibraryError("Winners scan blocked by credit safety cap", 402);
     }
 
+    const body: Record<string, unknown> = {};
+    if (options?.country) body.country = options.country;
+    if (options?.topEnrich != null) body.top_enrich = options.topEnrich;
+    if (options?.maxPages != null) body.max_pages = options.maxPages;
+
     const url = `${this.baseUrl}/api/winners/advertiser/${encodeURIComponent(pageId)}`;
     const res = await fetch(url, {
       method: "POST",
-      headers: this.headers(),
+      headers: this.headers(true),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -231,7 +368,7 @@ export class AdLibraryClient {
     }
 
     const text = await res.text();
-    const concepts = parseNdjson<WinningConcept>(text);
+    const concepts = parseWinnersNdjson(text);
     this.logCredits(10, parseCreditsRemaining(text));
     return concepts;
   }
@@ -271,7 +408,7 @@ export class AdLibraryClient {
         await this.handleErrorResponse(res);
       }
 
-      const data = (await res.json()) as T & { _credits?: number; _credits_remaining?: number };
+      const data = (await res.json()) as T;
       return data;
     }
   }
@@ -319,12 +456,180 @@ export class AdLibraryClient {
   }
 }
 
+/** Build enrichment body per AdLibrary API spec. */
+export function buildEnrichmentRequest(
+  ad: AdLibraryAd | Record<string, unknown>,
+): { ad: Record<string, unknown> } {
+  const root = ad as Record<string, unknown>;
+  const nested =
+    root.payload && typeof root.payload === "object"
+      ? (root.payload as Record<string, unknown>)
+      : root;
+
+  const adKey = String(nested.ad_key ?? root.ad_key ?? "");
+  const platform = String(nested.platform ?? root.platform ?? "facebook");
+
+  const videoUrl = firstString(
+    nested.video_url,
+    root.video_url,
+    nested.videoUrl,
+    root.videoUrl,
+  );
+  const imageUrl = firstString(
+    nested.image_url,
+    root.image_url,
+    nested.preview_img_url,
+    root.preview_img_url,
+  );
+  const landingUrl = firstString(
+    nested.landing_page_url,
+    root.landing_page_url,
+    nested.landing_url,
+    root.landing_url,
+  );
+
+  return {
+    ad: {
+      ad_key: adKey,
+      platform,
+      advertiser_name: nested.advertiser_name ?? root.advertiser_name ?? null,
+      title: nested.title ?? root.title ?? null,
+      body: nested.body ?? root.body ?? null,
+      video_url: videoUrl,
+      image_url: imageUrl,
+      preview_img_url: nested.preview_img_url ?? root.preview_img_url ?? imageUrl,
+      landing_page_url: landingUrl,
+    },
+  };
+}
+
+function unwrapEnrichment(data: Record<string, unknown>): EnrichmentPayload {
+  const nested =
+    data.enrichment && typeof data.enrichment === "object"
+      ? (data.enrichment as Record<string, unknown>)
+      : data;
+
+  return {
+    summary: stringOrNull(nested.summary),
+    transcription: stringOrNull(nested.transcription),
+    analysis: stringOrNull(nested.analysis),
+    ugc_script: stringOrNull(nested.ugc_script),
+    markdown: stringOrNull(nested.markdown),
+    source: stringOrNull(nested.source),
+  };
+}
+
 function extractAdsArray(data: Record<string, unknown>): AdLibraryAd[] {
-  for (const key of ["ads", "results", "data", "items"]) {
+  for (const key of ["list", "ads", "results", "data", "items"]) {
     const val = data[key];
     if (Array.isArray(val)) return val as AdLibraryAd[];
   }
   return [];
+}
+
+function extractCuratedAds(data: CurateAdvertiserResponse): AdLibraryAd[] {
+  if (Array.isArray(data.ads) && data.ads.length) return data.ads;
+
+  const merged: AdLibraryAd[] = [];
+  for (const bucket of [data.meta, data.google, data.linkedin]) {
+    if (bucket?.ads?.length) merged.push(...bucket.ads);
+  }
+  return merged;
+}
+
+function flattenAdvertiserSearch(data: AdvertiserSearchResponse): AdvertiserSearchResult[] {
+  const out: AdvertiserSearchResult[] = [];
+
+  if (data.best_match) {
+    const bm = data.best_match;
+    out.push({
+      id: bm.meta?.id ?? bm.google?.id ?? bm.linkedin?.id,
+      name: bm.name,
+      meta_page_id: bm.meta?.id,
+      google_advertiser_id: bm.google?.id,
+      linkedin_id: bm.linkedin?.id,
+      confidence: bm.confidence,
+      best_match: true,
+      platforms: [
+        bm.meta?.id ? "meta" : null,
+        bm.google?.id ? "google" : null,
+        bm.linkedin?.id ? "linkedin" : null,
+      ].filter(Boolean) as string[],
+    });
+  }
+
+  const pushCandidates = (
+    platform: string,
+    items: AdvertiserPlatformCandidate[] | undefined,
+    idKey: keyof AdvertiserSearchResult,
+  ) => {
+    for (const item of items ?? []) {
+      if (!item.id && !item.name) continue;
+      out.push({
+        id: item.id,
+        name: item.name,
+        [idKey]: item.id,
+        platforms: [platform],
+        confidence: 0.5,
+      } as AdvertiserSearchResult);
+    }
+  };
+
+  pushCandidates("meta", data.candidates?.meta, "meta_page_id");
+  pushCandidates("google", data.candidates?.google, "google_advertiser_id");
+  pushCandidates("linkedin", data.candidates?.linkedin, "linkedin_id");
+
+  const seen = new Set<string>();
+  return out.filter((r) => {
+    const key = `${r.name ?? ""}:${r.meta_page_id ?? r.google_advertiser_id ?? r.linkedin_id ?? r.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function extractCredits(data: Record<string, unknown>): { used?: number; remaining?: number } {
+  if (data._credits && typeof data._credits === "object") {
+    const c = data._credits as { used?: number; remaining?: number };
+    return { used: c.used, remaining: c.remaining };
+  }
+  return {
+    used: typeof data._credits === "number" ? data._credits : undefined,
+    remaining:
+      typeof data._credits_remaining === "number"
+        ? data._credits_remaining
+        : typeof data.balance === "number"
+          ? data.balance
+          : undefined,
+  };
+}
+
+function parseWinnersNdjson(text: string): WinningConcept[] {
+  const out: WinningConcept[] = [];
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const obj = JSON.parse(trimmed) as Record<string, unknown>;
+      if (obj._stage === "score" && obj.ad) {
+        out.push({
+          ...(obj.ad as WinningConcept),
+          tier: (obj.score as { tier?: string })?.tier,
+          composite_score: (obj.score as { composite?: number })?.composite,
+          reasons: (obj.score as { reasons?: unknown })?.reasons,
+          variant_count: (obj.score as { variant_count?: number })?.variant_count,
+          variants: (obj.score as { variants?: unknown })?.variants,
+          dna_diff: (obj.score as { dna_diff?: unknown })?.dna_diff,
+          tags: (obj.score as { tags?: unknown })?.tags,
+        });
+      } else if (!obj._stage) {
+        out.push(obj as WinningConcept);
+      }
+    } catch {
+      // skip malformed lines
+    }
+  }
+  return out;
 }
 
 function parseNdjson<T>(text: string): T[] {
@@ -344,13 +649,25 @@ function parseNdjson<T>(text: string): T[] {
 function parseCreditsRemaining(text: string): number | null {
   for (const line of text.split("\n").reverse()) {
     try {
-      const obj = JSON.parse(line) as { _credits_remaining?: number };
+      const obj = JSON.parse(line) as { _credits_remaining?: number; balance?: number };
       if (obj._credits_remaining != null) return obj._credits_remaining;
+      if (obj.balance != null) return obj.balance;
     } catch {
       // continue
     }
   }
   return null;
+}
+
+function firstString(...values: unknown[]): string | null {
+  for (const v of values) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
+function stringOrNull(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim() : null;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -359,21 +676,32 @@ function sleep(ms: number): Promise<void> {
 
 function mockSearchAds(input: SearchAdsInput): SearchAdsResponse {
   const kw = input.keyword;
+  const platforms = Array.isArray(input.platform)
+    ? input.platform
+    : input.platform
+      ? [input.platform]
+      : ["facebook"];
+  const isYoutubeOnly =
+    platforms.length === 1 && platforms.some((p) => String(p).toLowerCase().includes("youtube"));
+
   return {
     ads: [
       {
-        ad_key: `dry-${kw}-1`,
-        title: `${kw} — smarter banking`,
+        ad_key: `dry-${kw}-${isYoutubeOnly ? "yt" : "fb"}-1`,
+        title: `${kw} — ${isYoutubeOnly ? "video spot" : "smarter banking"}`,
         body: `Discover ${kw} offers tailored for Australians.`,
         advertiser_name: kw,
-        platform: "facebook",
+        platform: isYoutubeOnly ? "youtube" : "facebook",
         preview_img_url: "https://example.com/preview.jpg",
+        video_url: isYoutubeOnly ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : null,
         like_count: 120,
         share_count: 8,
         impression: 45000,
         geo: "AUS",
-        first_seen: new Date(Date.now() - 7 * 864e5).toISOString(),
-        last_seen: new Date().toISOString(),
+        first_seen: new Date(Date.now() - 180 * 864e5).toISOString().slice(0, 10),
+        last_seen: new Date().toISOString().slice(0, 10),
+        landing_page_url: `https://${kw.toLowerCase().replace(/\s+/g, "")}.com.au/home-loans`,
+        adsType: isYoutubeOnly ? "2" : "1",
       },
     ],
     total: 1,
@@ -385,9 +713,27 @@ function mockSearchAds(input: SearchAdsInput): SearchAdsResponse {
 function mockEnrichAd(ad: Record<string, unknown>): EnrichAdResponse {
   const name = String(ad.advertiser_name ?? ad.title ?? "advertiser");
   return {
-    summary: `${name} ad focuses on trust and value proposition.`,
-    analysis: "Hook: direct benefit. CTA: Learn more. Buyer stage: consideration.",
-    markdown: `## Hook\nTrust-led opener\n\n## CTA\nLearn more\n\n## Buyer stage\nconsideration`,
+    summary: `**Brand:** ${name}\n**Product:** Home lending\n**Key Message:** Compare rates and save on your mortgage`,
+    analysis: [
+      "## PHASE 1: HOOK FORENSICS",
+      "Hook: Rate comparison opener with trust cue",
+      "",
+      "## TARGET AUDIENCE",
+      "Australian homeowners 30–55, refinancing or first-home buyers, household income $120k+",
+      "",
+      "## CTA",
+      "Compare home loan rates",
+      "",
+      "## LANDING PAGE",
+      "Rate table above fold, lender logos, calculator widget — primary KPI is rate enquiry submissions",
+      "",
+      "## MEDIA ECONOMICS",
+      "Estimated CPC: $3.20–$4.80 (finance vertical, AU)",
+      "Buyer stage: consideration",
+      "Emotional driver: security",
+      "Offer type: rate comparison",
+    ].join("\n"),
+    markdown: `## Hook\nTrust-led rate comparison\n\n## CTA\nCompare home loan rates\n\n## Target audience\nHomeowners 30–55 refinancing\n\n## Landing page\nRate calculator + enquiry form\n\n## Est. CPC\n$3.20–$4.80 AUD`,
     cached: false,
     _credits: 1,
     _credits_remaining: 998,
@@ -397,17 +743,19 @@ function mockEnrichAd(ad: Record<string, unknown>): EnrichAdResponse {
 function mockAdvertiserSearch(query: string): AdvertiserSearchResult[] {
   const q = query.toLowerCase();
   const banks: AdvertiserSearchResult[] = [
-    { id: "meta-commbank", name: "CommBank", meta_page_id: "123456789", confidence: 0.95 },
-    { id: "meta-nab", name: "NAB", meta_page_id: "987654321", confidence: 0.92 },
-    { id: "meta-westpac", name: "Westpac", meta_page_id: "456789123", confidence: 0.9 },
+    { id: "meta-commbank", name: "CommBank", meta_page_id: "123456789", confidence: 0.95, best_match: true, platforms: ["meta"] },
+    { id: "meta-nab", name: "NAB", meta_page_id: "987654321", confidence: 0.92, platforms: ["meta"] },
+    { id: "meta-westpac", name: "Westpac", meta_page_id: "456789123", confidence: 0.9, platforms: ["meta"] },
   ];
   return banks.filter((b) => b.name?.toLowerCase().includes(q) || q.includes(b.name?.toLowerCase() ?? ""));
 }
 
 function mockCurate(id: string): CurateAdvertiserResponse {
+  const ads = mockSearchAds({ keyword: id, appType: "3" }).ads;
   return {
-    ads: mockSearchAds({ keyword: id, appType: "3" }).ads,
-    total: 1,
+    meta: { ads },
+    ads,
+    total: ads.length,
     _credits: 1,
     _credits_remaining: 997,
   };
@@ -417,8 +765,8 @@ function mockWinners(pageId: string): WinningConcept[] {
   return [
     {
       ad_key: `winner-${pageId}-1`,
-      tier: "A",
-      composite_score: 87.5,
+      tier: "high_confidence_winner",
+      composite_score: 0.87,
       variant_count: 4,
       reasons: ["high engagement", "long run time"],
       tags: ["trust", "savings"],

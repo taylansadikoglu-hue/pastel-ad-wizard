@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CreativeProofCard } from "@/lib/evidence/creative-proof";
+import { quickScanLine } from "@/lib/evidence/creative-proof";
 import type { MarketSignalView } from "@/lib/evidence/market-signal";
 import type { CrossBrandRow } from "@/lib/evidence/cross-brand";
 import type { ChannelMixResult } from "@/lib/channelMix";
@@ -87,8 +88,20 @@ export function CreativeProofGrid({
           className="rounded-lg border border-neutral-800 bg-neutral-900/80 overflow-hidden flex flex-col"
         >
           {card.thumbnailUrl ? (
-            <div className="aspect-video bg-neutral-950 border-b border-neutral-800 overflow-hidden">
-              {card.format === "video" ? (
+            <div className="aspect-video bg-neutral-950 border-b border-neutral-800 overflow-hidden relative">
+              {card.format === "video" && card.videoUrl ? (
+                <a
+                  href={card.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full h-full"
+                >
+                  <img src={card.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/30 text-white text-xs font-semibold">
+                    ▶ Video
+                  </span>
+                </a>
+              ) : card.format === "video" ? (
                 <video
                   src={card.thumbnailUrl}
                   className="w-full h-full object-cover"
@@ -117,6 +130,11 @@ export function CreativeProofGrid({
                 </div>
               </div>
             </div>
+            {quickScanLine(card) ? (
+              <div className="text-[10px] font-medium text-sky-300/90 tracking-wide">
+                {quickScanLine(card)}
+              </div>
+            ) : null}
             {card.headline && (
               <p className="text-xs font-medium text-neutral-200 m-0 line-clamp-2">{card.headline}</p>
             )}
@@ -124,7 +142,16 @@ export function CreativeProofGrid({
             {card.cta && (
               <div className="text-[11px] text-amber-400/90 font-medium">CTA: {card.cta}</div>
             )}
+            {card.kpiSignal && (
+              <div className="text-[10px] text-emerald-400/80">KPI: {card.kpiSignal}</div>
+            )}
+            {card.landingInsight && !card.body?.includes(card.landingInsight.slice(0, 40)) && (
+              <div className="text-[10px] text-neutral-500 line-clamp-1">
+                Landing: {card.landingInsight}
+              </div>
+            )}
             <div className="flex flex-wrap gap-1.5 mt-auto">
+              {card.targetAudience && <Tag label={card.targetAudience.slice(0, 36)} />}
               {card.emotionalDriver && (
                 <Tag label={card.emotionalDriver} />
               )}
@@ -134,8 +161,14 @@ export function CreativeProofGrid({
             </div>
             <div className="text-[10px] text-neutral-500 pt-1 border-t border-neutral-800/80 flex flex-wrap items-center gap-x-2 gap-y-0.5">
               {card.runningDays != null && <span>{card.runningDays}d running</span>}
-              {card.timesSeen != null && card.timesSeen > 1 ? (
-                <span>· Seen {card.timesSeen}×</span>
+              {card.timesSeen != null && card.timesSeen > 0 ? (
+                <span>· {card.timesSeen.toLocaleString()} imp</span>
+              ) : null}
+              {card.likeCount != null && card.likeCount > 0 ? (
+                <span>· {card.likeCount.toLocaleString()} likes</span>
+              ) : null}
+              {card.shareCount != null && card.shareCount > 0 ? (
+                <span>· {card.shareCount.toLocaleString()} shares</span>
               ) : null}
               <span>
                 · {fmtDate(card.firstSeen)} – {fmtDate(card.lastSeen)}
