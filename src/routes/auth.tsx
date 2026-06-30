@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { requestMagicLinkEmail } from "@/lib/email-auth.functions";
 
 import { ThemeProvider } from "@/components/adpalette/theme";
-import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/demo-account";
+import { BETA_DEMO_EMAIL, BETA_DEMO_PASSWORD, DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/demo-account";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -88,15 +88,14 @@ function AuthPage() {
     }
   };
 
-  const signInDemo = async () => {
+  const signInDemo = async (account: "beta" | "legacy" = "beta") => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: DEMO_EMAIL,
-        password: DEMO_PASSWORD,
-      });
+      const email = account === "beta" ? BETA_DEMO_EMAIL : DEMO_EMAIL;
+      const password = account === "beta" ? BETA_DEMO_PASSWORD : DEMO_PASSWORD;
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      toast.success("Signed in to the CommBank demo");
+      toast.success("Signed in to the live demo (CommBank + Woolworths)");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Demo sign-in failed");
     } finally {
@@ -128,13 +127,16 @@ function AuthPage() {
 
           <button
             type="button"
-            onClick={signInDemo}
+            onClick={() => void signInDemo("beta")}
             disabled={loading}
             className="btn-flat w-full justify-center"
             style={{ background: "#FDF6E8", borderColor: "#E8D5A0" }}
           >
-            Explore CommBank demo
+            Explore live demo (CommBank + Woolworths)
           </button>
+          <p className="text-[11px] text-center text-muted-foreground leading-relaxed">
+            Media beta: sign in with <strong>{BETA_DEMO_EMAIL}</strong> and the password from your invite.
+          </p>
 
           <div className="flex items-center gap-2 mono text-[11px] text-muted-foreground">
             <div className="flex-1 border-t-2 border-ink" /> OR <div className="flex-1 border-t-2 border-ink" />

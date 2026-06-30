@@ -47,11 +47,20 @@ export function magicLinkHtml(magicUrl: string, name?: string | null): string {
 
 export function betaInvitationHtml(inviteUrl: string, inviter?: string | null): string {
   return layout(
-    "You're invited to the RevenuAD beta",
-    `<p style="margin:0;font-size:15px;line-height:1.6;color:${MUTED};">
-       ${inviter ? `${inviter} invited you` : "You've been invited"} to try RevenuAD Signal — observed creative intelligence for agency pitches.
+    "You're invited to the RevenuAD media beta",
+    `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:${MUTED};">
+       ${inviter ? `${inviter} invited you` : "You've been invited"} to explore RevenuAD Signal — observed competitive ad intelligence for agency pitches.
      </p>
-     ${cta(inviteUrl, "Accept beta invite")}`,
+     <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:${BRAND};font-weight:600;">Shared demo login</p>
+     <p style="margin:0;font-size:14px;line-height:1.7;color:${MUTED};font-family:ui-monospace,monospace;">
+       Email: beta@revenuad.com<br/>
+       Password: RevenueAdBeta2026!
+     </p>
+     <p style="margin:12px 0 0;font-size:14px;line-height:1.6;color:${MUTED};">
+       Showcase: <strong>CommBank</strong> (Banking) + <strong>Woolworths</strong> (Retail). Read-only — perfect for a 15-minute pitch-prep walkthrough.
+     </p>
+     ${cta(inviteUrl, "Open the demo")}
+     <p style="margin:16px 0 0;font-size:12px;color:#9a9b8c;">We'd love blunt feedback: trust, war room UX, export quality, and what you'd need for your real clients.</p>`,
   );
 }
 

@@ -22,6 +22,8 @@
     "email:test": "npx tsx scripts/email-send-test.ts",
     "email:verify-dns": "npx tsx scripts/email-verify-dns.ts",
     "email:set-secrets": "bash scripts/email-set-secrets.sh",
+    "beta:provision-demo": "npx tsx scripts/provision-beta-demo-user.ts",
+    "beta:send-invite": "npx tsx scripts/send-beta-invite.ts",
     "cloudflare:set-secrets": "bash scripts/cloudflare-set-secrets.sh",
     "cloudflare:verify-token": "npx tsx scripts/verify-cloudflare-token.ts",
     "r2:test": "npx tsx scripts/r2-test.ts",

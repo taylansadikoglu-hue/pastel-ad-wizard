@@ -8,7 +8,15 @@ Configure DNS in your domain registrar (or Cloudflare) after adding **revenuad.c
 |------|---------|-----|
 | General | `hello@revenuad.com` | Trial onboarding, feedback |
 | Transactional | `notifications@revenuad.com` | Password reset, magic links, scan ready |
-| Beta | `beta@revenuad.com` | Beta invitations |
+| Beta | `beta@revenuad.com` | Beta invitations + **shared media demo login** |
+
+Media beta testers sign in at https://revenuad.com/auth with `beta@revenuad.com`. Provision the account once:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=... npm run beta:provision-demo
+```
+
+Tester guide: `docs/beta-media-intro.md`. Send invites: `npm run beta:send-invite -- friend@agency.com "Your Name"`.
 
 ## SPF
 

@@ -3,7 +3,13 @@ import { CORE_CATEGORY_ORDER } from "@/lib/categoryCatalog";
 
 export const DEMO_EMAIL = "demo@revenuad.com";
 export const DEMO_PASSWORD = "RevenueAdDemo2026!";
+/** Shared read-only showcase login for media beta testers (CommBank + Woolworths). */
+export const BETA_DEMO_EMAIL = "beta@revenuad.com";
+export const BETA_DEMO_PASSWORD = "RevenueAdBeta2026!";
 export const DEMO_ROLE = "demo";
+
+/** All emails that resolve to the read-only showcase environment. */
+export const DEMO_ACCOUNT_EMAILS = [DEMO_EMAIL, BETA_DEMO_EMAIL] as const;
 
 /** Primary demo workspace — Banking */
 export const DEMO_WORKSPACE_NAME = "CommBank";
@@ -61,7 +67,8 @@ export type DemoUserLike = {
 };
 
 export function isDemoEmail(email: string | null | undefined): boolean {
-  return (email ?? "").trim().toLowerCase() === DEMO_EMAIL;
+  const normalized = (email ?? "").trim().toLowerCase();
+  return DEMO_ACCOUNT_EMAILS.some((e) => e === normalized);
 }
 
 export function isDemoRole(role: string | null | undefined): boolean {
