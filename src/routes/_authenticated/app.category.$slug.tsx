@@ -4,6 +4,11 @@ import { ArrowRight, ArrowUp, ArrowDown, Lock, CheckCircle2 } from "lucide-react
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
 import { supabase } from "@/integrations/supabase/client";
 import { SpendIndex } from "@/components/adpalette/SpendIndex";
+import {
+  CORE_CATEGORY_SEED_BRANDS,
+  CORE_FALLBACKS,
+  resolveCoreCategorySlug,
+} from "@/lib/categoryCatalog";
 import { displayBrand, spendLevel } from "@/utils/brandDisplay";
 
 export const Route = createFileRoute("/_authenticated/app/category/$slug")({
@@ -48,6 +53,8 @@ const SUB_MAP: Record<string, string> = {
   "specialty-retail": "Retail",
   "mobile": "Telecommunications",
   "nbn-internet": "Telecommunications",
+  telco: "Telco",
+  telecommunications: "Telecommunications",
   "electricity": "Energy",
   "gas": "Energy",
   "airlines": "Travel",
@@ -97,12 +104,18 @@ function CategoryDetailPage() {
     return () => { active = false; };
   }, []);
 
-  const { categoryName, domains } = useMemo(() => {
+  const { categoryName, domains, coreSlug, isPreview } = useMemo(() => {
     const allCategories = Array.from(new Set(registry.map((r) => r.category).filter(Boolean) as string[]));
     const matchByCat = allCategories.find((c) => slugify(c) === slug);
-    const resolved = matchByCat ?? parentCategory ?? slug;
-    const list = registry.filter((r) => r.category === resolved).map((r) => normalizeDomain(r.domain));
-    return { categoryName: resolved, domains: list };
+    const core = resolveCoreCategorySlug(slug) ?? resolveCoreCategorySlug(parentCategory ?? "");
+    const resolved = matchByCat ?? parentCategory ?? (core ? CORE_FALLBACKS[core].name : slug);
+    let list = registry.filter((r) => r.category === resolved).map((r) => normalizeDomain(r.domain));
+    let preview = false;
+    if (list.length === 0 && core) {
+      list = CORE_CATEGORY_SEED_BRANDS[core].map((b) => normalizeDomain(b.domain));
+      preview = true;
+    }
+    return { categoryName: resolved, domains: list, coreSlug: core, isPreview: preview };
   }, [registry, slug, parentCategory]);
 
   const brandRows = useMemo(() => {
@@ -113,24 +126,32 @@ function CategoryDetailPage() {
       if (counts.has(dom)) counts.set(dom, (counts.get(dom) ?? 0) + 1);
     }
     const total = Array.from(counts.values()).reduce((a, b) => a + b, 0);
-    const rows = Array.from(counts.entries()).map(([dom, count]) => {
-      const sov = total > 0 ? (count / total) * 100 : 100 / Math.max(1, domains.length);
-      const spend = Math.round(count * 850 + (count === 0 ? 0 : 1500));
+    const seedWeights = coreSlug ? CORE_CATEGORY_SEED_BRANDS[coreSlug] : null;
+    const rows = Array.from(counts.entries()).map(([dom, count], index) => {
+      const seed = seedWeights?.find((b) => normalizeDomain(b.domain) === dom);
+      const sov =
+        total > 0
+          ? (count / total) * 100
+          : seedWeights
+            ? Math.max(8, 32 - index * 5)
+            : 100 / Math.max(1, domains.length);
+      const spend = Math.round(count * 850 + (count === 0 ? (isPreview ? 12000 - index * 1500 : 0) : 1500));
       const dnaRow = dna.find((d) => d.brand && normalizeDomain(d.brand) === dom);
-      const brandLabel = dnaRow?.brand ?? brandFromDomain(dom);
+      const brandLabel = dnaRow?.brand ?? seed?.name ?? brandFromDomain(dom);
       return {
         domain: dom,
         brand: brandLabel,
         sov,
         spend,
         count,
-        theme: dnaRow?.dominant_emotion ?? "Trust",
-        trendUp: (count % 2) === 0,
+        theme: dnaRow?.dominant_emotion ?? (index === 0 ? "Trust" : index === 1 ? "Value" : "Innovation"),
+        trendUp: (count % 2) === 0 || (isPreview && index % 2 === 0),
+        preview: isPreview && count === 0,
       };
     });
     rows.sort((a, b) => b.sov - a.sov);
     return rows;
-  }, [domains, placements, dna]);
+  }, [domains, placements, dna, coreSlug, isPreview]);
 
   const totalAds = brandRows.reduce((a, b) => a + b.count, 0);
   const totalSpend = brandRows.reduce((a, b) => a + b.spend, 0);
@@ -154,12 +175,14 @@ function CategoryDetailPage() {
       subtitle={
         trackedRows.length > 0
           ? `${trackedRows.length} brands with activity · ${totalAds.toLocaleString()} ads tracked · Est. $${totalSpend.toLocaleString()}/mo total`
-          : `${categoryName} category — add brands to your watchlist to start benchmarking`
+          : isPreview
+            ? `${brandRows.length} benchmark brands · category preview until ads are indexed`
+            : `${categoryName} category — add brands to your watchlist to start benchmarking`
       }
     >
       {!loaded ? (
         <div className="card-flat p-8 text-center text-sm text-muted-foreground">Loading category intel…</div>
-      ) : brandRows.length === 0 || totalAds === 0 ? (
+      ) : brandRows.length === 0 ? (
         <div className="card-flat p-12 text-center max-w-lg mx-auto">
           <div className="text-base font-semibold text-foreground mb-2">Category intel builds as you track brands</div>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6">
@@ -174,6 +197,11 @@ function CategoryDetailPage() {
         </div>
       ) : (
         <>
+          {isPreview && (
+            <div className="mb-4 card-flat p-4 bg-amber-50 border-amber-200 text-sm text-amber-950">
+              <strong>Category preview</strong> — benchmark brands for {categoryName}. Share and spend are directional until ads are indexed for this category.
+            </div>
+          )}
           <div className="card-flat overflow-hidden">
             <div className="px-5 py-3 border-b-2 border-ink bg-secondary/40 flex items-center justify-between">
               <div className="font-bold tracking-tight">Share of observed activity</div>
@@ -190,14 +218,14 @@ function CategoryDetailPage() {
                 <div>Trend</div>
                 <div>Top message</div>
               </div>
-              {brandRows.filter((r) => r.count > 0).map((r, i) => {
+              {brandRows.map((r, i) => {
                 const sub = subscribed.has(r.domain);
                 return (
                   <div
                     key={r.domain}
                     className={`grid grid-cols-[60px_2fr_1fr_1fr_80px_1.5fr] gap-3 px-5 py-3 items-center text-sm ${
                       sub ? "hover:bg-secondary/40 cursor-pointer" : ""
-                    }`}
+                    } ${r.preview ? "opacity-90" : ""}`}
                   >
                     <div className="mono font-bold">#{i + 1}</div>
                     <div className="flex items-center gap-2 min-w-0">
@@ -206,7 +234,7 @@ function CategoryDetailPage() {
                           <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="On watchlist" />
                           <Link
                             to="/app/advertiser/$domain"
-                            params={{ domain: r.brand }}
+                            params={{ domain: r.domain }}
                             className="font-semibold hover:underline truncate"
                           >
                             {displayBrand(r.brand)}

@@ -100,11 +100,11 @@ export async function fetchAdlibraryAdvertiserIntel(
   domain: string,
   brand: string,
 ): Promise<AdlibraryAdvertiserIntel> {
-  const [adsRes, enrichRes, winnersRes] = await Promise.all([
+  const [adsRes, enrichRes, winnersRes, enrichPlatformsRes] = await Promise.all([
     safeQuery("ad_placements_adlibrary", () =>
       supabase
         .from("ad_placements")
-        .select("id, channel, channel_platform, ad_type, source_archive_url, creative_url, media_url")
+        .select("id, channel, channel_platform, ad_type, source_archive_url, creative_url, media_url, raw")
         .eq("source_platform", "adlibrary")
         .or(`domain.eq.${domain},advertiser_name.ilike.%${brand}%`)
         .limit(50),
@@ -126,6 +126,14 @@ export async function fetchAdlibraryAdvertiserIntel(
         .order("composite_score", { ascending: false })
         .limit(5),
     ),
+    safeQuery("adlibrary_enrichments_platforms", () =>
+      supabase
+        .from("adlibrary_enrichments")
+        .select("platform")
+        .ilike("advertiser_name", `%${brand}%`)
+        .not("platform", "is", null)
+        .limit(200),
+    ),
   ]);
 
   const optionalAvailable =
@@ -136,7 +144,21 @@ export async function fetchAdlibraryAdvertiserIntel(
   }
 
   const ads = Array.isArray(adsRes.data) ? adsRes.data : [];
-  const channelRows = ads.map((row) => normalisePlacementRow(row as Record<string, unknown>));
+  let channelRows = ads.map((row) => normalisePlacementRow(row as Record<string, unknown>));
+
+  // Fallback: enrichment table stores platform per ad when placement row is sparse
+  if (!channelRows.some((r) => r.channel_platform || r.channel) && enrichPlatformsRes.available) {
+    const platforms = (enrichPlatformsRes.data ?? []) as { platform?: string | null }[];
+    channelRows = platforms
+      .filter((p) => p.platform)
+      .map((p, i) =>
+        normalisePlacementRow({
+          id: `enrich-${i}`,
+          channel_platform: p.platform,
+          channel: p.platform,
+        }),
+      );
+  }
   const sample = ads[0] as
     | { source_archive_url?: string; creative_url?: string; media_url?: string }
     | undefined;

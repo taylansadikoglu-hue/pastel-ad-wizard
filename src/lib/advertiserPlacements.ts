@@ -117,13 +117,20 @@ function isUsableText(value: string | null | undefined): value is string {
 }
 
 export function normalisePlacementRow(row: Record<string, unknown>): AdvertiserPlacementRow {
+  const raw = (row.raw as Record<string, unknown> | null) ?? null;
+  const platformFromRaw = extractPlatformFromRaw(raw);
+  const channelPlatform =
+    (row.channel_platform as string | null) ??
+    (row.channel as string | null) ??
+    platformFromRaw;
+
   return {
     id: (row.id as number | string) ?? crypto.randomUUID(),
     advertiser_name: (row.advertiser_name as string | null) ?? null,
     ad_title: (row.ad_title as string | null) ?? null,
     domain: (row.domain as string | null) ?? null,
-    channel: (row.channel as string | null) ?? null,
-    channel_platform: (row.channel_platform as string | null) ?? null,
+    channel: (row.channel as string | null) ?? platformFromRaw,
+    channel_platform: channelPlatform,
     ad_type: (row.ad_type as string | null) ?? null,
     raw_copy: (row.raw_copy as string | null) ?? null,
     buyer_stage: (row.buyer_stage as string | null) ?? null,
@@ -145,7 +152,7 @@ export function normalisePlacementRow(row: Record<string, unknown>): AdvertiserP
     description: (row.description as string | null) ?? null,
     page_description: (row.page_description as string | null) ?? null,
     normalized_product: (row.normalized_product as string | null) ?? null,
-    raw: (row.raw as Record<string, unknown> | null) ?? null,
+    raw,
     headline: (row.headline as string | null) ?? null,
     description: (row.description as string | null) ?? null,
     first_seen: (row.first_seen as string | null) ?? null,
@@ -158,6 +165,18 @@ export function normalisePlacementRow(row: Record<string, unknown>): AdvertiserP
     landing_url: (row.landing_url as string | null) ?? null,
     source_archive_url: (row.source_archive_url as string | null) ?? null,
   };
+}
+
+function extractPlatformFromRaw(raw: Record<string, unknown> | null): string | null {
+  if (!raw) return null;
+  const direct = raw.platform;
+  if (typeof direct === "string" && direct.trim()) return direct;
+  const payload = raw.payload;
+  if (payload && typeof payload === "object") {
+    const p = (payload as Record<string, unknown>).platform;
+    if (typeof p === "string" && p.trim()) return p;
+  }
+  return null;
 }
 
 /** Channel mix from observed channel_platform counts. */

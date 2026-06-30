@@ -382,56 +382,74 @@ export function buildWhatTheyreMissing(
   return gaps.slice(0, 5);
 }
 
+/** Drop stub strategist lines (e.g. "Protect against Westpac" with no detail). */
+function isSubstantiveMove(text: string): boolean {
+  const s = text.trim();
+  if (!s) return false;
+  if (s.length < 48) return false;
+  if (/^(protect|counter|defend)\s+(against\s+)?[a-z0-9.-]+\.?$/i.test(s)) return false;
+  return s.split(/\s+/).length >= 8;
+}
+
 /** Three concrete advertiser-level recommendations. */
 export function buildAdvertiserRecommendedMoves(
   brand: string,
   war: AdvertiserIntelWar | null | undefined,
   strategist?: AdvertiserStrategistIntel | null,
 ): string[] {
-  if (strategist?.recommendation) {
-    const mix = buildAdvertiserChannelMix(war);
-    const topChannel = mix.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct)[0]?.channel ?? "their lead channel";
-    return [
-      strategist.recommendation,
-      strategist.narrativeGap
-        ? `Close the narrative gap: ${strategist.narrativeGap.split(/[.!?]/)[0]}.`
-        : `Pressure ${topChannel} with a fresher execution than ${brand}'s current portfolio.`,
-      strategist.positioningArchetype
-        ? `Position against their ${strategist.positioningArchetype.toLowerCase()} play — own an adjacent emotional territory.`
-        : `Review channel mix and CTA clarity before the next client meeting.`,
-    ].slice(0, 3);
-  }
-
   const mix = buildAdvertiserChannelMix(war);
-  const byChannel = Object.fromEntries(mix.rows.map((r) => [r.channel, r]));
-  const rows = placements(war);
-  const takeaway = uniqueStrings(rows.map((r) => r.strategist_takeaway), 1)[0];
+  const topChannel = mix.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct)[0]?.channel ?? "Search";
   const gaps = buildWhatTheyreMissing(brand, war);
+  const rows = placements(war);
   const moves: string[] = [];
 
-  if (takeaway) {
-    const trimmed = takeaway.split(/[.!?]/)[0]?.trim();
-    if (trimmed) moves.push(`Act on strategist read: ${trimmed}.`);
+  if (strategist?.recommendation && isSubstantiveMove(strategist.recommendation)) {
+    moves.push(strategist.recommendation);
+  }
+  if (strategist?.narrativeGap) {
+    const clause = strategist.narrativeGap.split(/[.!?]/)[0]?.trim();
+    if (clause && isSubstantiveMove(clause)) {
+      moves.push(`Close the narrative gap: ${clause}.`);
+    }
+  }
+  if (strategist?.positioningArchetype) {
+    moves.push(
+      `Position against their ${strategist.positioningArchetype.toLowerCase()} play — own an adjacent emotional territory with proof-led creative.`,
+    );
   }
 
-  const weakest = ["Search", "Meta", "YouTube", "TikTok", "Display"]
+  const takeaway = uniqueStrings(rows.map((r) => r.strategist_takeaway), 1)[0];
+  if (takeaway) {
+    const trimmed = takeaway.split(/[.!?]/)[0]?.trim();
+    if (trimmed && isSubstantiveMove(trimmed)) {
+      moves.push(`Act on strategist read: ${trimmed}.`);
+    }
+  }
+
+  const byChannel = Object.fromEntries(mix.rows.map((r) => [r.channel, r]));
+  const weakest = ["YouTube", "TikTok", "Search", "Meta", "Display"]
     .map((channel) => ({ channel, row: byChannel[channel] }))
-    .filter(({ row }) => (row?.ads ?? 0) <= 0)
+    .filter(({ row }) => (row?.ads ?? 0) <= 0 && (row?.pct ?? 0) <= 0);
   if (weakest.length) {
-    moves.push(`Test ${weakest[0].channel} while ${brand} under-indexes it — ${gaps[0] ?? "competitors may own that channel"}.`);
+    moves.push(
+      `Test ${weakest[0].channel} while ${brand} under-indexes it — ${gaps[0] ?? "competitors may own that channel"}.`,
+    );
   } else if (gaps[0]) {
     moves.push(`Counter their gap: ${gaps[0].replace(/^Limited |^Low |^No /, "Own ")}`);
   }
 
   const emotional = dominantField(rows, "emotional_driver");
-  const topChannel = mix.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct)[0]?.channel ?? "Meta";
   if (emotional) {
-    moves.push(`Build a challenger ${emotional.toLowerCase()}-led execution on ${topChannel} with a clearer CTA than their current portfolio.`);
+    moves.push(
+      `Build a challenger ${emotional.toLowerCase()}-led execution on ${topChannel} with a clearer CTA than their current portfolio.`,
+    );
   } else {
-    moves.push(`Review ${topChannel} and Search coverage for key competitors before deciding whether to defend or attack those channels.`);
+    moves.push(
+      `Review ${topChannel} and Search coverage for key competitors before deciding whether to defend or attack those channels.`,
+    );
   }
 
-  return moves.slice(0, 3);
+  return [...new Set(moves.filter(isSubstantiveMove))].slice(0, 3);
 }
 
 /** Bullets for tomorrow's client meeting. */
