@@ -303,6 +303,12 @@ export function applyEnrichmentToRow(
     if (v) row[k] = v;
   }
 
+  const enrichmentPlatform = enrichment.platform as string | undefined;
+  if (enrichmentPlatform && !row.channel_platform) {
+    row.channel_platform = enrichmentPlatform;
+    row.channel = row.channel ?? enrichmentPlatform;
+  }
+
   const raw = (row.raw ?? {}) as Record<string, unknown>;
   row.raw = {
     ...raw,
