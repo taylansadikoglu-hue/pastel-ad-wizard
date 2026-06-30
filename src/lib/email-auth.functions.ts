@@ -75,8 +75,7 @@ const BetaInviteSchema = z.object({
 export const sendBetaInvitationEmail = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => BetaInviteSchema.parse(input))
   .handler(async ({ data }) => {
-    const token = crypto.randomUUID();
-    const inviteUrl = `${APP_URL}/auth?beta=${token}&email=${encodeURIComponent(data.email)}`;
+    const inviteUrl = `${APP_URL}/auth?beta=media`;
     const emailService = getEmailService({ supabase: supabaseAdmin });
     const result = await emailService.sendBetaInvitation({
       to: data.email,
