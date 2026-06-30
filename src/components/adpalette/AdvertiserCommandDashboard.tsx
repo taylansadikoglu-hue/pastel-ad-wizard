@@ -1,33 +1,19 @@
-import {
-  ArrowDown,
-  ArrowUp,
-  Crosshair,
-  MapPin,
-  Megaphone,
-  RefreshCw,
-  Sparkles,
-  Target,
-  Zap,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, Zap } from "lucide-react";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { SpendIndex } from "@/components/adpalette/SpendIndex";
+import { AdvertiserVisualScan, VisualMoveCards } from "@/components/adpalette/AdvertiserVisualScan";
+import { MessagingFingerprintPanel } from "@/components/adpalette/MessagingFingerprint";
+import type { MessagingFingerprint } from "@/lib/messagingFingerprint";
 import type { AdvertiserStrategistIntel } from "@/lib/advertiserStrategistIntel";
 import type { CampaignIntelligence } from "@/lib/campaignIntelligence";
-import type { CampaignStory } from "@/lib/campaignStory";
 import type { ChannelMixResult } from "@/lib/channelMix";
-
-type QuickScan = {
-  what: string;
-  where: string;
-  saying: string;
-  changed: string;
-  action: string;
-};
+import type { AdvertiserVisualScan as VisualScanData } from "@/lib/advertiserVisualSignals";
 
 type Props = {
   brand: string;
   category: string;
   updatedAgo: string | null;
+  placementCount: number;
   totalAds: number;
   adsThisWeek: number;
   daysRunning: number;
@@ -36,53 +22,16 @@ type Props = {
   spendSignal?: number;
   spendMonthly?: number;
   spendBandLabel?: string | null;
-  quickScan: QuickScan;
+  visualScan: VisualScanData;
+  messagingFingerprint: MessagingFingerprint;
   channelMix: ChannelMixResult;
   strategistIntel: AdvertiserStrategistIntel | null;
   campaignIntel: CampaignIntelligence | null;
-  campaignStory: CampaignStory | null;
-  topMoves: string[];
   topProducts: string[];
   creativeScore: number;
   creativeTier: "fresh" | "maturing" | "fatigued";
   creativeLabel: string;
 };
-
-const SCAN_TILES: { key: keyof QuickScan; label: string; icon: typeof Target; accent: string }[] = [
-  { key: "what", label: "What", icon: Target, accent: "#C9963A" },
-  { key: "where", label: "Where", icon: MapPin, accent: "#4285F4" },
-  { key: "saying", label: "Saying", icon: Megaphone, accent: "#7C3AED" },
-  { key: "changed", label: "Changed", icon: RefreshCw, accent: "#0D9488" },
-  { key: "action", label: "Your move", icon: Crosshair, accent: "#1C1C1A" },
-];
-
-function clip(text: string, max = 72): string {
-  const t = text.trim();
-  if (t.length <= max) return t;
-  return `${t.slice(0, max - 1)}…`;
-}
-
-function MiniBars({ rows, colour = "#C9963A" }: { rows: { label: string; pct: number }[]; colour?: string }) {
-  const active = rows.filter((r) => r.pct > 0).slice(0, 4);
-  if (!active.length) {
-    return <div style={{ fontSize: 12, color: "#9E9D94" }}>Awaiting indexed placements</div>;
-  }
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {active.map((row) => (
-        <div key={row.label}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
-            <span style={{ color: "#1C1C1A", fontWeight: 500 }}>{row.label}</span>
-            <span style={{ color: "#6B6B62", fontWeight: 600 }}>{row.pct}%</span>
-          </div>
-          <div style={{ height: 5, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ width: `${row.pct}%`, height: "100%", background: colour, borderRadius: 3 }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function KpiTile({
   value,
@@ -105,28 +54,10 @@ function KpiTile({
         minWidth: 0,
       }}
     >
-      <div
-        style={{
-          fontSize: 26,
-          fontWeight: 700,
-          color: "#1C1C1A",
-          letterSpacing: "-0.03em",
-          lineHeight: 1,
-          fontVariantNumeric: "tabular-nums",
-        }}
-      >
+      <div style={{ fontSize: 26, fontWeight: 700, color: "#1C1C1A", letterSpacing: "-0.03em", lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
         {value}
       </div>
-      <div
-        style={{
-          fontSize: 10,
-          fontWeight: 600,
-          color: "#9E9D94",
-          textTransform: "uppercase",
-          letterSpacing: "0.08em",
-          marginTop: 6,
-        }}
-      >
+      <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 6 }}>
         {label}
       </div>
       {sub ? (
@@ -148,10 +79,19 @@ function KpiTile({
   );
 }
 
+function channelPills(channels: string): string[] {
+  return channels
+    .split(/[,·]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
 export function AdvertiserCommandDashboard({
   brand,
   category,
   updatedAgo,
+  placementCount,
   totalAds,
   adsThisWeek,
   daysRunning,
@@ -160,12 +100,11 @@ export function AdvertiserCommandDashboard({
   spendSignal,
   spendMonthly = 0,
   spendBandLabel,
-  quickScan,
+  visualScan,
+  messagingFingerprint,
   channelMix,
   strategistIntel,
   campaignIntel,
-  campaignStory,
-  topMoves,
   topProducts,
   creativeScore,
   creativeTier,
@@ -173,13 +112,8 @@ export function AdvertiserCommandDashboard({
 }: Props) {
   const tierColour = creativeTier === "fresh" ? "#2D7D46" : creativeTier === "maturing" ? "#C9963A" : "#C0392B";
   const campaigns = campaignIntel?.currentCampaigns?.slice(0, 4) ?? [];
-  const channelHeadline =
-    channelMix.rows
-      .filter((r) => r.pct > 0)
-      .sort((a, b) => b.pct - a.pct)
-      .slice(0, 2)
-      .map((r) => `${r.channel} ${r.pct}%`)
-      .join(" · ") || "—";
+  const leadChannel = visualScan.channels[0];
+  const channelHeadline = leadChannel ? `${leadChannel.name} ${leadChannel.pct}%` : "—";
 
   const dnaChips = [
     strategistIntel?.positioningArchetype && { label: "Archetype", value: strategistIntel.positioningArchetype },
@@ -191,22 +125,15 @@ export function AdvertiserCommandDashboard({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* KPI strip */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-          gap: 10,
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 10 }}>
         <KpiTile
           value={totalAds.toLocaleString()}
-          label="Active ads"
-          sub={adsThisWeek > 0 ? `+${adsThisWeek} this week` : "Indexed creatives"}
+          label="Ads"
+          sub={adsThisWeek > 0 ? `+${adsThisWeek} wk` : undefined}
           trendUp={adsThisWeek > 0 ? true : null}
         />
-        <KpiTile value={reachLabel} label="Est. reach" sub="Unique Australians" />
-        <KpiTile value={frequencyLabel} label="Frequency" sub="Avg exposures" />
+        <KpiTile value={reachLabel} label="Reach" />
+        <KpiTile value={frequencyLabel} label="Freq" />
         <div
           style={{
             background: "linear-gradient(180deg, #FFFFFF 0%, #F7F6F3 100%)",
@@ -221,95 +148,24 @@ export function AdvertiserCommandDashboard({
           <SpendIndex level={spendSignal && spendSignal > 0 ? spendSignal : undefined} spend={spendMonthly} />
           {spendBandLabel ? (
             <div style={{ fontSize: 10, color: "#9E9D94", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              {spendBandLabel}
+              {spendBandLabel.replace(/\(.*\)/, "").trim()}
             </div>
           ) : null}
         </div>
-        <KpiTile value={channelHeadline.split(" · ")[0] ?? "—"} label="Lead channel" sub={channelHeadline} />
-        <KpiTile
-          value={daysRunning.toLocaleString()}
-          label="Days active"
-          sub={category}
-        />
+        <KpiTile value={channelHeadline} label="Lead ch." />
+        <KpiTile value={`${daysRunning}d`} label="Active" sub={category} />
       </div>
 
-      {/* 2-second scan */}
-      <div
-        style={{
-          background: "#1C1C1A",
-          borderRadius: 12,
-          padding: "18px 20px",
-          color: "#FFFFFF",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14, gap: 12, flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: "#FBBF24", textTransform: "uppercase", letterSpacing: "0.12em" }}>
-              Signal scan
-            </div>
-            <div style={{ fontSize: 20, fontWeight: 700, marginTop: 4, letterSpacing: "-0.02em" }}>
-              {brand} — who, where, what
-            </div>
-          </div>
-          <div style={{ fontSize: 11, color: "#9E9D94" }}>
-            {category}
-            {updatedAgo ? ` · Updated ${updatedAgo}` : ""}
-            {campaignStory?.rowCount ? ` · ${campaignStory.rowCount} placements` : ""}
-          </div>
-        </div>
+      <AdvertiserVisualScan
+        brand={brand}
+        category={category}
+        updatedAgo={updatedAgo}
+        placementCount={placementCount}
+        scan={visualScan}
+        messagingFingerprint={messagingFingerprint}
+      />
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-            gap: 10,
-          }}
-        >
-          {SCAN_TILES.map(({ key, label, icon: Icon, accent }) => (
-            <div
-              key={key}
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 10,
-                padding: "12px 14px",
-                minHeight: 88,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                <div
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 6,
-                    background: accent,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Icon size={12} color="#FFFFFF" />
-                </div>
-                <span style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#C4C2BA" }}>
-                  {label}
-                </span>
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, color: "#FFFFFF" }}>
-                {clip(quickScan[key], 80)}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {campaignStory?.executiveSummary ? (
-          <div style={{ marginTop: 12, fontSize: 13, color: "#D4D4CE", lineHeight: 1.5, maxWidth: 900 }}>
-            {clip(campaignStory.executiveSummary, 160)}
-          </div>
-        ) : null}
-      </div>
-
-      {/* Data grid: channels + messaging + DNA */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.25fr", gap: 12 }}>
         <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: "16px 18px" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
             Channel mix
@@ -321,36 +177,16 @@ export function AdvertiserCommandDashboard({
             estimationTooltip={channelMix.estimationTooltip}
             available={channelMix.available}
             variant="light"
-            emptyMessage="Channels appear once creatives are tagged."
+            emptyMessage="—"
           />
         </div>
-
-        <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: "16px 18px" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-            Messaging
-          </div>
-          <MiniBars
-            rows={(campaignIntel?.messagingBreakdown ?? []).map((r) => ({ label: r.label, pct: r.pct }))}
-            colour="#7C3AED"
-          />
-        </div>
-
-        <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: "16px 18px" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-            CTA mix
-          </div>
-          <MiniBars
-            rows={(campaignIntel?.ctaBreakdown ?? []).map((r) => ({ label: r.label, pct: r.pct }))}
-            colour="#4285F4"
-          />
-        </div>
+        <MessagingFingerprintPanel fingerprint={messagingFingerprint} />
       </div>
 
-      {/* DNA ribbon + products */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 120px", gap: 12, alignItems: "stretch" }}>
         <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderLeft: "4px solid #1C1C1A", borderRadius: 10, padding: "14px 18px" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "#1C1C1A", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-            Strategist DNA
+            DNA tags
           </div>
           {dnaChips.length ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -359,32 +195,26 @@ export function AdvertiserCommandDashboard({
                   key={chip.label}
                   style={{
                     fontSize: 12,
-                    fontWeight: 500,
+                    fontWeight: 700,
                     background: "#F7F6F3",
                     border: "1px solid #EBE9E4",
                     borderRadius: 20,
                     padding: "6px 12px",
-                    color: "#1C1C1A",
                   }}
                 >
-                  <span style={{ color: "#9E9D94", fontWeight: 600, marginRight: 6 }}>{chip.label}</span>
+                  <span style={{ color: "#9E9D94", marginRight: 6 }}>{chip.label}</span>
                   {chip.value}
                 </span>
               ))}
             </div>
           ) : (
-            <div style={{ fontSize: 12, color: "#9E9D94" }}>DNA tags populate from indexed placements.</div>
+            <div style={{ fontSize: 12, color: "#9E9D94" }}>—</div>
           )}
-          {strategistIntel?.strategistSummary ? (
-            <p style={{ fontSize: 12, color: "#6B6B62", margin: "10px 0 0", lineHeight: 1.45 }}>
-              {clip(strategistIntel.strategistSummary, 140)}
-            </p>
-          ) : null}
         </div>
 
         <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: "14px 18px" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-            Products live
+            Products
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {(topProducts.length ? topProducts : ["—"]).slice(0, 5).map((p) => (
@@ -392,7 +222,7 @@ export function AdvertiserCommandDashboard({
                 key={p}
                 style={{
                   fontSize: 11,
-                  fontWeight: 600,
+                  fontWeight: 700,
                   background: "#FDF6E8",
                   border: "1px solid #E8D5A0",
                   borderRadius: 6,
@@ -405,151 +235,85 @@ export function AdvertiserCommandDashboard({
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Campaign clusters */}
-      {campaigns.length > 0 ? (
-        <div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-            Active campaigns
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${Math.min(campaigns.length, 4)}, minmax(0, 1fr))`,
-              gap: 10,
-            }}
-          >
-            {campaigns.map((c) => (
-              <div
-                key={c.name}
-                style={{
-                  background: "#FFFFFF",
-                  border: "1px solid #EBE9E4",
-                  borderRadius: 10,
-                  padding: "14px 16px",
-                  minWidth: 0,
-                }}
-              >
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#1C1C1A", marginBottom: 4 }}>{c.name}</div>
-                <div style={{ fontSize: 11, color: "#9E9D94", marginBottom: 8 }}>
-                  {c.creativeCount} creative{c.creativeCount === 1 ? "" : "s"} · {c.channels}
-                </div>
-                <div style={{ fontSize: 12, color: "#6B6B62", lineHeight: 1.45 }}>{clip(c.summary ?? "—", 90)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Bottom row: creative health + moves */}
-      <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: 12 }}>
         <div
           style={{
             background: "#FFFFFF",
             border: "1px solid #EBE9E4",
             borderRadius: 10,
-            padding: "16px",
+            padding: "12px",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            gap: 8,
+            justifyContent: "center",
+            gap: 4,
           }}
         >
-          <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            Creative health
-          </div>
+          <div style={{ fontSize: 9, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase" }}>Health</div>
           <div
             style={{
-              width: 72,
-              height: 72,
+              width: 56,
+              height: 56,
               borderRadius: "50%",
-              border: `4px solid ${tierColour}`,
+              border: `3px solid ${tierColour}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 24,
-              fontWeight: 700,
-              color: "#1C1C1A",
+              fontSize: 18,
+              fontWeight: 800,
             }}
           >
             {creativeScore}
           </div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: tierColour }}>{creativeLabel}</div>
-        </div>
-
-        <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderLeft: "4px solid #C9963A", borderRadius: 10, padding: "16px 18px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <Zap size={14} color="#C9963A" />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#A07830", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              Recommended moves
-            </span>
-          </div>
-          {topMoves.length ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
-              {topMoves.slice(0, 3).map((move, i) => (
-                <div
-                  key={move}
-                  style={{
-                    background: "#FDF6E8",
-                    border: "1px solid #E8D5A0",
-                    borderRadius: 8,
-                    padding: "10px 12px",
-                    fontSize: 12,
-                    color: "#1C1C1A",
-                    lineHeight: 1.45,
-                  }}
-                >
-                  <span style={{ fontWeight: 700, color: "#A07830", marginRight: 6 }}>#{i + 1}</span>
-                  {clip(move, 100)}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ fontSize: 12, color: "#9E9D94" }}>Moves surface once placement intel is indexed.</div>
-          )}
+          <div style={{ fontSize: 10, fontWeight: 700, color: tierColour }}>{creativeLabel}</div>
         </div>
       </div>
 
-      {/* Channel gaps — visual only */}
-      {campaignIntel?.channelOwnership?.some((c) => c.status === "gap") ? (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            background: "#F0F9F4",
-            border: "1px solid #A7D9B8",
-            borderRadius: 8,
-            padding: "10px 14px",
-            fontSize: 12,
-            color: "#1B7F4A",
-          }}
-        >
-          <Sparkles size={14} />
-          <span>
-            <strong>Whitespace:</strong>{" "}
-            {campaignIntel.channelOwnership
-              .filter((c) => c.status === "gap")
-              .map((c) => c.channel)
-              .join(", ")}{" "}
-            — no indexed activity yet.
-          </span>
+      {campaigns.length > 0 ? (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
+            Campaign lines
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(campaigns.length, 4)}, minmax(0, 1fr))`, gap: 10 }}>
+            {campaigns.map((c) => {
+              const share = visualScan.campaigns.find((x) => x.name === c.name)?.sharePct ?? 0;
+              return (
+                <div key={c.name} style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: "14px 16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#1C1C1A" }}>{c.name}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#C9963A" }}>{c.creativeCount}</div>
+                  </div>
+                  <div style={{ height: 4, background: "#F0EDE8", borderRadius: 2, margin: "8px 0", overflow: "hidden" }}>
+                    <div style={{ width: `${Math.max(share, 6)}%`, height: "100%", background: "#C9963A", borderRadius: 2 }} />
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {channelPills(c.channels).map((ch) => (
+                      <span key={ch} style={{ fontSize: 10, fontWeight: 600, background: "#F0EDE8", borderRadius: 4, padding: "2px 6px", color: "#6B6B62" }}>
+                        {ch}
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 10, color: "#9E9D94", marginTop: 6 }}>
+                    {c.firstSeen} → {c.lastSeen}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {visualScan.moves.length > 0 ? (
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <Zap size={14} color="#C9963A" />
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#A07830", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              Play angles
+            </span>
+          </div>
+          <VisualMoveCards moves={visualScan.moves} />
         </div>
       ) : null}
     </div>
   );
-}
-
-export function buildQuickScan(
-  story: CampaignStory | null,
-  moves: string[],
-): QuickScan {
-  return {
-    what: story?.quickAnswers.whatDoing ?? "Indexing campaigns",
-    where: story?.quickAnswers.whereSpending ?? "—",
-    saying: story?.quickAnswers.whatSaying ?? "—",
-    changed: story?.quickAnswers.whatChanged ?? "—",
-    action: moves[0] ?? story?.quickAnswers.clientShouldDo ?? "—",
-  };
 }

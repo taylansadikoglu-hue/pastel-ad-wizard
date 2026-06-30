@@ -36,8 +36,11 @@ import { CampaignStoryBlock } from "@/components/adpalette/CampaignStoryBlock";
 import { AdvertiserStrategistIntelBlock } from "@/components/adpalette/AdvertiserStrategistIntelBlock";
 import {
   AdvertiserCommandDashboard,
-  buildQuickScan,
 } from "@/components/adpalette/AdvertiserCommandDashboard";
+import { buildAdvertiserVisualScan } from "@/lib/advertiserVisualSignals";
+import { buildMessagingFingerprint } from "@/lib/messagingFingerprint";
+import { MessagingFingerprintPanel } from "@/components/adpalette/MessagingFingerprint";
+import { AdvertiserAnalystDepth } from "@/components/adpalette/AdvertiserAnalystDepth";
 import { QueryStatusCard } from "@/components/adpalette/QueryStatusCard";
 import {
   buildAdvertiserChannelMix,
@@ -520,9 +523,26 @@ function AdvertiserPage() {
     creativeFatigue.label ??
     (creativeTier === "fresh" ? "Fresh" : creativeTier === "maturing" ? "Maturing" : "Fatigued");
 
-  const quickScan = useMemo(
-    () => buildQuickScan(campaignStory, advertiserBrief?.moves ?? []),
-    [campaignStory, advertiserBrief?.moves],
+  const messagingFingerprint = useMemo(
+    () =>
+      buildMessagingFingerprint(
+        campaignIntel,
+        strategistIntel,
+        advertiserBrief?.saying,
+      ),
+    [campaignIntel, strategistIntel, advertiserBrief?.saying],
+  );
+
+  const visualScan = useMemo(
+    () =>
+      buildAdvertiserVisualScan(
+        intelWar,
+        advertiserBrief?.channelMix ?? { rows: [], overallConfidence: "Low", available: false, source: "baseline", sourceLabel: "", estimationTooltip: "" },
+        campaignIntel,
+        strategistIntel,
+        adsThisWeek,
+      ),
+    [intelWar, advertiserBrief?.channelMix, campaignIntel, strategistIntel, adsThisWeek],
   );
 
   const handleExport = async () => {
@@ -729,6 +749,7 @@ function AdvertiserPage() {
               brand={brand}
               category={category}
               updatedAgo={updatedAgo}
+              placementCount={campaignStory?.rowCount ?? placementRowCount}
               totalAds={totalAds}
               adsThisWeek={adsThisWeek}
               daysRunning={daysRunning}
@@ -745,12 +766,11 @@ function AdvertiserPage() {
               }
               spendMonthly={spend?.estimated_monthly_spend ?? 0}
               spendBandLabel={advertiserBrief.spend.label || null}
-              quickScan={quickScan}
+              visualScan={visualScan}
+              messagingFingerprint={messagingFingerprint}
               channelMix={advertiserBrief.channelMix}
               strategistIntel={strategistIntel}
               campaignIntel={campaignIntel}
-              campaignStory={campaignStory}
-              topMoves={advertiserBrief.moves}
               topProducts={advertiserBrief.products}
               creativeScore={creativeScore}
               creativeTier={creativeTier}
@@ -758,89 +778,59 @@ function AdvertiserPage() {
             />
           ) : null}
 
-          <CampaignStoryBlock
-            brand={brand}
-            loading={loading}
-            placementIntelUnavailable={placementIntelUnavailable}
-            story={campaignStory}
-          />
-
-          {strategistIntel && !strategistIntel.available ? (
-            <AdvertiserStrategistIntelBlock
-              brand={brand}
-              loading={loading}
-              intel={strategistIntel}
-              unavailableReason={loadStatus.strategist.ok ? undefined : loadStatus.strategist.reason}
-            />
-          ) : null}
-
-          <AdlibraryAdvertiserPanel
-            intel={adlibraryIntel}
-            unavailableReason={loadStatus.adlibrary.ok ? undefined : loadStatus.adlibrary.reason}
-          />
-
-          {advertiserBrief ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <AdvertiserViewBar state={insightView} onChange={setInsightView} className="mb-2" />
-
-              {/* Recent ads — visual feed near top */}
-              <Card title="Live creative feed">
-                <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
-                  {[
-                    { k: "all", l: "All" },
-                    { k: "YouTube", l: "YouTube" },
-                    { k: "Search", l: "Search" },
-                    { k: "Display", l: "Display" },
-                    { k: "Meta", l: "Meta" },
-                    { k: "TikTok", l: "TikTok" },
-                  ].map((t) => {
-                    const active = channelFilter === t.k;
-                    return (
-                      <button
-                        key={t.k}
-                        onClick={() => setChannelFilter(t.k)}
-                        style={{
-                          padding: "4px 12px",
-                          borderRadius: 4,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          border: "none",
-                          cursor: "pointer",
-                          background: active ? "#1C1C1A" : "transparent",
-                          color: active ? "#FFFFFF" : "#6B6B62",
-                        }}
-                      >
-                        {t.l}
-                      </button>
-                    );
-                  })}
-                </div>
-                {filteredAds.length ? (
-                  <div
+          <Card title="Live creatives">
+            <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
+              {[
+                { k: "all", l: "All" },
+                { k: "YouTube", l: "YouTube" },
+                { k: "Search", l: "Search" },
+                { k: "Display", l: "Display" },
+                { k: "Meta", l: "Meta" },
+                { k: "TikTok", l: "TikTok" },
+              ].map((t) => {
+                const active = channelFilter === t.k;
+                return (
+                  <button
+                    key={t.k}
+                    onClick={() => setChannelFilter(t.k)}
                     style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                      gap: 12,
+                      padding: "4px 12px",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      border: "none",
+                      cursor: "pointer",
+                      background: active ? "#1C1C1A" : "transparent",
+                      color: active ? "#FFFFFF" : "#6B6B62",
                     }}
                   >
-                    {filteredAds.slice(0, 8).map((ad, i) => (
-                      <RecentAdRow key={ad.id ?? i} ad={ad} brand={brand} variant="card" />
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 13, color: "#9E9D94" }}>No ads match this filter.</div>
-                )}
-              </Card>
-
-              <div style={{ paddingTop: 4, borderTop: "1px solid #EBE9E4" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                  Pitch depth
-                </div>
-                <p style={{ fontSize: 12, color: "#6B6B62", margin: "6px 0 0", lineHeight: 1.5 }}>
-                  Toggle blocks for meeting prep — core dashboard stays above.
-                </p>
+                    {t.l}
+                  </button>
+                );
+              })}
+            </div>
+            {filteredAds.length ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                  gap: 12,
+                }}
+              >
+                {filteredAds.slice(0, 4).map((ad, i) => (
+                  <RecentAdRow key={ad.id ?? i} ad={ad} brand={brand} variant="card" />
+                ))}
               </div>
+            ) : (
+              <div style={{ fontSize: 13, color: "#9E9D94" }}>No indexed creatives yet.</div>
+            )}
+          </Card>
 
+          <AdvertiserAnalystDepth>
+            <AdvertiserViewBar state={insightView} onChange={setInsightView} />
+
+            {advertiserBrief ? (
+              <>
               {showInsight("marketingRead") && (
               <InsightSection title="Marketing read" accent>
                 <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.55, margin: 0 }}>
@@ -891,27 +881,7 @@ function AdvertiserPage() {
               )}
 
               {showInsight("messaging") && (
-              <InsightSection title="What they're saying">
-                {placementIntelUnavailable ? (
-                  <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>{PLACEMENT_INTEL_UNAVAILABLE}</p>
-                ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                    <BriefList label="Emotional driver" items={advertiserBrief.saying.emotionalDrivers} />
-                    <BriefList label="Buyer stage" items={advertiserBrief.saying.buyerStages} />
-                    <BriefList label="Offer type" items={advertiserBrief.saying.offerTypes} />
-                    <BriefList label="CTAs" items={advertiserBrief.saying.ctas} />
-                    <BriefList label="Hooks" items={advertiserBrief.saying.hooks} />
-                    <BriefList label="Offer themes" items={advertiserBrief.saying.offerThemes} />
-                    <BriefList label="Offer signals" items={advertiserBrief.saying.offerSignals} />
-                    <BriefList label="Market signals" items={advertiserBrief.saying.marketSignals} />
-                  </div>
-                )}
-                {!placementIntelUnavailable && advertiserBrief.saying.copySnippets.length > 0 && (
-                  <div style={{ marginTop: 16 }}>
-                    <BriefList label="Ad copy" items={advertiserBrief.saying.copySnippets} />
-                  </div>
-                )}
-              </InsightSection>
+              <MessagingFingerprintPanel fingerprint={messagingFingerprint} />
               )}
 
               {showInsight("audiences") && (
@@ -960,23 +930,17 @@ function AdvertiserPage() {
               </InsightSection>
               )}
 
-              {showInsight("nextMoves") && (
-              <InsightSection title="Recommended next moves" accentDark>
-                <ol style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
-                  {advertiserBrief.moves.map((move, i) => (
-                    <li key={move} style={{ display: "flex", gap: 12, fontSize: 14, color: "#1C1C1A", lineHeight: 1.55 }}>
-                      <span style={{
-                        flexShrink: 0, width: 24, height: 24, borderRadius: "50%",
-                        background: "#FDF6E8", border: "1px solid #E8D5A0",
-                        color: "#A07830", fontSize: 12, fontWeight: 600,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
-                        {i + 1}
-                      </span>
-                      <span>{move}</span>
-                    </li>
+              {showInsight("nextMoves") && visualScan.moves.length > 0 && (
+              <InsightSection title="Play angles" accentDark>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                  {visualScan.moves.map((move) => (
+                    <div key={`${move.kind}-${move.label}`} style={{ textAlign: "center", padding: 12, background: "#F7F6F3", borderRadius: 8 }}>
+                      <div style={{ fontSize: 20, fontWeight: 800 }}>{move.value}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4 }}>{move.label}</div>
+                      <div style={{ fontSize: 10, color: "#9E9D94", marginTop: 2 }}>{move.hint}</div>
+                    </div>
                   ))}
-                </ol>
+                </div>
               </InsightSection>
               )}
 
@@ -989,25 +953,45 @@ function AdvertiserPage() {
                 </ul>
               </InsightSection>
               )}
-            </div>
-          ) : (
-            <QueryStatusCard
-              title="Supporting evidence"
-              reason="Advertiser brief could not be built from the current placement and warroom data."
-              optional
+              </>
+            ) : (
+              <QueryStatusCard
+                title="Supporting evidence"
+                reason="Advertiser brief could not be built from the current placement and warroom data."
+                optional
+              />
+            )}
+
+            <CampaignStoryBlock
+              brand={brand}
+              loading={loading}
+              placementIntelUnavailable={placementIntelUnavailable}
+              story={campaignStory}
             />
-          )}
 
-          <CampaignIntelligenceBlock
-            brand={brand}
-            loading={loading}
-            placementIntelUnavailable={placementIntelUnavailable}
-            intel={campaignIntel}
-          />
+            {strategistIntel && !strategistIntel.available ? (
+              <AdvertiserStrategistIntelBlock
+                brand={brand}
+                loading={loading}
+                intel={strategistIntel}
+                unavailableReason={loadStatus.strategist.ok ? undefined : loadStatus.strategist.reason}
+              />
+            ) : null}
 
-          <div style={{ marginBottom: 4 }}>
+            <AdlibraryAdvertiserPanel
+              intel={adlibraryIntel}
+              unavailableReason={loadStatus.adlibrary.ok ? undefined : loadStatus.adlibrary.reason}
+            />
+
+            <CampaignIntelligenceBlock
+              brand={brand}
+              loading={loading}
+              placementIntelUnavailable={placementIntelUnavailable}
+              intel={campaignIntel}
+            />
+
             <DataFeedPanel domain={domain} brandLabel={brand} />
-          </div>
+          </AdvertiserAnalystDepth>
         </div>
 
         {/* RIGHT — News panel */}
@@ -1144,25 +1128,6 @@ function InsightSection({
         {meta && <div style={{ fontSize: 11, color: "#9E9D94" }}>{meta}</div>}
       </div>
       {children}
-    </div>
-  );
-}
-
-function BriefList({ label, items }: { label: string; items: string[] }) {
-  return (
-    <div>
-      <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-        {label}
-      </div>
-      {items.length ? (
-        <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 6 }}>
-          {items.map((item) => (
-            <li key={item} style={{ fontSize: 13, color: "#1C1C1A", lineHeight: 1.45 }}>{item}</li>
-          ))}
-        </ul>
-      ) : (
-        <div style={{ fontSize: 13, color: "#9E9D94" }}>—</div>
-      )}
     </div>
   );
 }

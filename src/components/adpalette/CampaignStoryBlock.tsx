@@ -79,12 +79,11 @@ export function CampaignStoryBlock({ brand, loading, placementIntelUnavailable, 
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
             <thead>
               <tr>
-                <th style={th}>Campaign</th>
+                <th style={th}>Line</th>
                 <th style={th}>Product</th>
                 <th style={th}>Channels</th>
                 <th style={th}>Message</th>
-                <th style={th}>CTA</th>
-                <th style={{ ...th, textAlign: "center" }}>Ads</th>
+                <th style={{ ...th, textAlign: "center" }}>#</th>
               </tr>
             </thead>
             <tbody>
@@ -93,9 +92,12 @@ export function CampaignStoryBlock({ brand, loading, placementIntelUnavailable, 
                   <td style={{ ...td, fontWeight: 600 }}>{row.campaign}</td>
                   <td style={td}>{row.product}</td>
                   <td style={td}>{row.channels}</td>
-                  <td style={{ ...td, maxWidth: 200 }}>{clip(row.message)}</td>
-                  <td style={td}>{row.cta}</td>
-                  <td style={{ ...td, textAlign: "center" }}>{row.creatives}</td>
+                  <td style={td}>
+                    <span style={{ fontSize: 11, fontWeight: 600, background: "#F7F6F3", borderRadius: 4, padding: "2px 8px" }}>
+                      {row.message}
+                    </span>
+                  </td>
+                  <td style={{ ...td, textAlign: "center", fontWeight: 700 }}>{row.creatives}</td>
                 </tr>
               ))}
             </tbody>
