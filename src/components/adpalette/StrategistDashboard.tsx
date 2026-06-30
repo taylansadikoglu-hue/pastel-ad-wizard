@@ -361,13 +361,15 @@ export function StrategistDashboard() {
         marketIntel?.risks[0]?.competitorDomain ??
         brief?.strongest_threat ??
         threats[0]?.competitor_domain,
-    ) || "Westpac";
+    ) || null;
 
   const channelBite = useMemo(() => {
     const active = channelMixResult.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct);
-    if (active.length >= 2) return radChannelBite(active[0].channel, active[1].channel);
-    return "Search dominates while video remains under-invested across Banking.";
-  }, [channelMixResult.rows]);
+    if (!channelMixResult.available || active.length < 2) {
+      return "Channel mix pending — index creatives with platform tags to see where spend is landing.";
+    }
+    return radChannelBite(active[0].channel, active[1].channel);
+  }, [channelMixResult.rows, channelMixResult.available]);
 
   const hardDataPayload = {
     threats,

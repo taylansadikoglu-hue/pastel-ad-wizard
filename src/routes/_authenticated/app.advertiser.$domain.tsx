@@ -31,6 +31,7 @@ import { normalizeClientDomain } from "@/lib/clientWorkspace";
 import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
+import { displayBrand } from "@/utils/brandDisplay";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { CampaignIntelligenceBlock } from "@/components/adpalette/CampaignIntelligenceBlock";
 import { CampaignStoryBlock } from "@/components/adpalette/CampaignStoryBlock";
@@ -793,7 +794,9 @@ function AdvertiserPage() {
                   overallConfidence={advertiserBrief.channelMix.overallConfidence}
                   sourceLabel={advertiserBrief.channelMix.sourceLabel}
                   estimationTooltip={advertiserBrief.channelMix.estimationTooltip}
+                  available={advertiserBrief.channelMix.available}
                   variant="light"
+                  emptyMessage="Channel mix appears once creatives are indexed with platform tags (Meta, YouTube, Search, etc.)."
                 />
               </InsightSection>
               )}

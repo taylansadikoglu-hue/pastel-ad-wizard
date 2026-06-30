@@ -35,7 +35,8 @@ export type ChannelMixRow = {
 export type ChannelMixResult = {
   rows: ChannelMixRow[];
   overallConfidence: ChannelConfidence;
-  available: true;
+  /** False when no real channel attribution exists (do not show fake even splits). */
+  available: boolean;
   source: ChannelMixSource;
   sourceLabel: string;
   estimationTooltip: string;
@@ -46,7 +47,7 @@ const SOURCE_LABELS: Record<ChannelMixSource, string> = {
   adlibrary: "AdLibrary indexed creatives",
   warroom: "Engine warroom channels",
   estimated: "Estimated from indexed placements",
-  baseline: "Category baseline estimate",
+  baseline: "Awaiting channel attribution",
 };
 
 const SOURCE_TOOLTIPS: Record<ChannelMixSource, string> = {
@@ -59,8 +60,23 @@ const SOURCE_TOOLTIPS: Record<ChannelMixSource, string> = {
   estimated:
     "Placements exist but lack channel tags — share is inferred from ad type and row signals.",
   baseline:
-    "No channel attribution yet — showing an even baseline until placements are indexed.",
+    "Creatives are indexed but lack platform/channel tags — run ingest or wait for AdLibrary enrichment.",
 };
+
+function emptyChannelMixResult(): ChannelMixResult {
+  const map = new Map<string, { pct: number; ads: number }>();
+  for (const channel of DISPLAY_CHANNELS) {
+    map.set(channel, { pct: 0, ads: 0 });
+  }
+  return {
+    rows: buildRows(map, "Low"),
+    overallConfidence: "Low",
+    available: false,
+    source: "baseline",
+    sourceLabel: SOURCE_LABELS.baseline,
+    estimationTooltip: SOURCE_TOOLTIPS.baseline,
+  };
+}
 
 function channelsToMap(entries: PlacementChannelEntry[]): Map<string, { pct: number; ads: number }> {
   const map = new Map<string, { pct: number; ads: number }>();
@@ -121,23 +137,8 @@ function estimateFromPlacements(rows: AdvertiserPlacementRow[]): Map<string, { p
     return map;
   }
 
-  // Even split across primary channels when rows exist but lack attribution
-  const perChannel = Math.round((100 / DISPLAY_CHANNELS.length) * 10) / 10;
-  const adsEach = Math.max(1, Math.floor(rows.length / DISPLAY_CHANNELS.length));
-  const map = new Map<string, { pct: number; ads: number }>();
-  for (const channel of DISPLAY_CHANNELS) {
-    map.set(channel, { pct: perChannel, ads: adsEach });
-  }
-  return map;
-}
-
-function baselineMap(): Map<string, { pct: number; ads: number }> {
-  const perChannel = Math.round((100 / DISPLAY_CHANNELS.length) * 10) / 10;
-  const map = new Map<string, { pct: number; ads: number }>();
-  for (const channel of DISPLAY_CHANNELS) {
-    map.set(channel, { pct: perChannel, ads: 0 });
-  }
-  return map;
+  // No synthetic even split — return null so UI shows empty state instead of fake 14% bars.
+  return null;
 }
 
 function confidenceForSource(
@@ -204,8 +205,7 @@ export function buildChannelMix(input: BuildChannelMixInput): ChannelMixResult {
   }
 
   if (!map) {
-    map = baselineMap();
-    source = "baseline";
+    return emptyChannelMixResult();
   }
 
   const totalAds =

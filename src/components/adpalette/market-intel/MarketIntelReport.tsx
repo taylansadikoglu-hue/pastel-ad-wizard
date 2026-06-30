@@ -166,6 +166,16 @@ function KpiTile({
   );
 }
 
+function isActionQuality(text: string): boolean {
+  const s = text.trim();
+  if (s.length < 48) return false;
+  if (/^(protect|counter|defend)\s+(against\s+)?[a-z0-9.-]+\.?$/i.test(s)) return false;
+  if (/^(n\/a|na|none|—|tbd|todo)$/i.test(s)) return false;
+  if (/valueless/i.test(s)) return false;
+  const words = s.split(/\s+/).filter(Boolean);
+  return words.length >= 8;
+}
+
 function curateRecommendedActions(input: {
   recommendedActions: string[];
   topChannel: string;
@@ -177,9 +187,7 @@ function curateRecommendedActions(input: {
   const cleaned = (input.recommendedActions ?? [])
     .map((s) => (s ?? "").trim())
     .filter(Boolean)
-    .filter((s) => s.length >= 18)
-    .filter((s) => !/^(n\/a|na|none|—)$/i.test(s))
-    .filter((s) => !/valueless|tbd|todo/i.test(s));
+    .filter(isActionQuality);
 
   if (cleaned.length >= 2) return cleaned.slice(0, 3);
 
@@ -462,6 +470,7 @@ export function MarketIntelReport({
             overallConfidence={channelMix.overallConfidence}
             sourceLabel={channelMix.sourceLabel}
             estimationTooltip={channelMix.estimationTooltip}
+            available={channelMix.available}
             variant="light"
             animate
             emptyMessage="Channel mix will appear once creatives are indexed with platform/channel tags."

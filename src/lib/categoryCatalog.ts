@@ -115,7 +115,7 @@ export function buildUnlockedPackCategories(): CategoryIntel[] {
   });
 }
 
-const CORE_FALLBACKS: Record<CoreCategorySlug, Omit<CategoryIntel, "slug">> = {
+export const CORE_FALLBACKS: Record<CoreCategorySlug, Omit<CategoryIntel, "slug">> = {
   banking: {
     name: "General Banking",
     brandCount: 29,
@@ -160,6 +160,44 @@ export function categorySlug(name: string): string {
 
 function normalizeSlug(raw: string): string {
   return raw.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+export const CORE_CATEGORY_SEED_BRANDS: Record<
+  CoreCategorySlug,
+  { name: string; domain: string }[]
+> = {
+  banking: [
+    { name: "CommBank", domain: "commbank.com.au" },
+    { name: "Westpac", domain: "westpac.com.au" },
+    { name: "NAB", domain: "nab.com.au" },
+    { name: "ANZ", domain: "anz.com.au" },
+    { name: "ING", domain: "ing.com.au" },
+  ],
+  insurance: [
+    { name: "Medibank", domain: "medibank.com.au" },
+    { name: "Bupa", domain: "bupa.com.au" },
+    { name: "NIB", domain: "nib.com.au" },
+    { name: "HCF", domain: "hcf.com.au" },
+    { name: "AIA", domain: "aia.com.au" },
+  ],
+  telco: [
+    { name: "Telstra", domain: "telstra.com.au" },
+    { name: "Optus", domain: "optus.com.au" },
+    { name: "Vodafone", domain: "vodafone.com.au" },
+    { name: "TPG", domain: "tpg.com.au" },
+    { name: "Belong", domain: "belong.com.au" },
+  ],
+  retail: [
+    { name: "Woolworths", domain: "woolworths.com.au" },
+    { name: "Coles", domain: "coles.com.au" },
+    { name: "Aldi", domain: "aldi.com.au" },
+    { name: "Bunnings", domain: "bunnings.com.au" },
+    { name: "Kmart", domain: "kmart.com.au" },
+  ],
+};
+
+export function resolveCoreCategorySlug(raw: string): CoreCategorySlug | null {
+  return matchCoreSlug(raw);
 }
 
 function matchCoreSlug(raw: string): CoreCategorySlug | null {
