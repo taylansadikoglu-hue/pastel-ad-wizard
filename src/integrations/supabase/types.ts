@@ -959,6 +959,60 @@ export type Database = {
         }
         Relationships: []
       }
+      email_events: {
+        Row: {
+          created_at: string
+          email: string | null
+          event_type: string
+          id: number
+          payload: Json | null
+          provider_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          event_type: string
+          id?: never
+          payload?: Json | null
+          provider_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json | null
+          provider_id?: string | null
+        }
+        Relationships: []
+      }
+      email_suppressions: {
+        Row: {
+          created_at: string
+          email: string
+          metadata: Json
+          provider_event_id: string | null
+          reason: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          metadata?: Json
+          provider_event_id?: string | null
+          reason: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          metadata?: Json
+          provider_event_id?: string | null
+          reason?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       integrations: {
         Row: {
           apify_token: string | null

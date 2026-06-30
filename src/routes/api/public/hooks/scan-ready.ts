@@ -6,12 +6,12 @@ import { enrichDomainScanWithMarketSignals } from '@/lib/feeds/enrich-domain-sca
 import { formatPct, formatVisits } from '@/lib/feeds/normalize-domain'
 import { supabaseAdmin } from '@/integrations/supabase/client.server'
 import ScanReadyEmail from '@/lib/email-templates/scan-ready'
+import { getEmailService } from '@/lib/email'
 
 const BodySchema = z.object({
   scan_id: z.union([z.number(), z.string()]).transform((v) => Number(v)),
 })
 
-const FROM_ADDRESS = 'RevenuAD Signal <scans@mail.revenuad.com>'
 const DASHBOARD_BASE = 'https://revenuad.com/app/advertisers'
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -139,44 +139,23 @@ export const Route = createFileRoute('/api/public/hooks/scan-ready')({
 
         const subject = `Your competitor scan for ${scan.domain} is ready`
 
-        const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY
-        const RESEND_API_KEY = process.env.RESEND_API_KEY
-        if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
-          console.error('scan-ready: missing gateway secrets')
-          return new Response('Server misconfigured', { status: 500 })
-        }
+        const emailService = getEmailService({ supabase: supabaseAdmin })
+        const sendResult = await emailService.send({
+          type: 'scan_ready',
+          to: email,
+          subject,
+          html,
+          fromRole: 'notifications',
+          headers: { 'X-Entity-Ref-ID': `scan-ready-${scan.id}` },
+        })
 
-        const sendRes = await fetch(
-          'https://connector-gateway.lovable.dev/resend/emails',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              'X-Connection-Api-Key': RESEND_API_KEY,
-            },
-            body: JSON.stringify({
-              from: FROM_ADDRESS,
-              to: [email],
-              subject,
-              html,
-              headers: { 'X-Entity-Ref-ID': `scan-ready-${scan.id}` },
-            }),
-          },
-        )
-
-        const sendBody = await sendRes.text()
-        if (!sendRes.ok) {
-          console.error('scan-ready: resend failed', sendRes.status, sendBody)
-          // Roll back claim so we can retry
+        if (!sendResult.ok) {
+          console.error('scan-ready: resend failed', sendResult.error)
           await supabaseAdmin.from('scan_email_log').delete().eq('scan_id', scan.id)
-          return new Response(`Send failed: ${sendBody}`, { status: 502 })
+          return new Response(`Send failed: ${sendResult.error}`, { status: 502 })
         }
 
-        let providerId: string | null = null
-        try {
-          providerId = JSON.parse(sendBody)?.id ?? null
-        } catch {}
+        const providerId = sendResult.id ?? null
 
         await supabaseAdmin
           .from('scan_email_log')
