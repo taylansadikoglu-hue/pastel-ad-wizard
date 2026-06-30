@@ -36,8 +36,8 @@ import { CampaignStoryBlock } from "@/components/adpalette/CampaignStoryBlock";
 import { AdvertiserStrategistIntelBlock } from "@/components/adpalette/AdvertiserStrategistIntelBlock";
 import {
   AdvertiserCommandDashboard,
-  buildQuickScan,
 } from "@/components/adpalette/AdvertiserCommandDashboard";
+import { buildAdvertiserVisualScan } from "@/lib/advertiserVisualSignals";
 import { AdvertiserAnalystDepth } from "@/components/adpalette/AdvertiserAnalystDepth";
 import { QueryStatusCard } from "@/components/adpalette/QueryStatusCard";
 import {
@@ -521,9 +521,16 @@ function AdvertiserPage() {
     creativeFatigue.label ??
     (creativeTier === "fresh" ? "Fresh" : creativeTier === "maturing" ? "Maturing" : "Fatigued");
 
-  const quickScan = useMemo(
-    () => buildQuickScan(campaignStory, advertiserBrief?.moves ?? []),
-    [campaignStory, advertiserBrief?.moves],
+  const visualScan = useMemo(
+    () =>
+      buildAdvertiserVisualScan(
+        intelWar,
+        advertiserBrief?.channelMix ?? { rows: [], overallConfidence: "Low", available: false, source: "baseline", sourceLabel: "", estimationTooltip: "" },
+        campaignIntel,
+        strategistIntel,
+        adsThisWeek,
+      ),
+    [intelWar, advertiserBrief?.channelMix, campaignIntel, strategistIntel, adsThisWeek],
   );
 
   const handleExport = async () => {
@@ -730,6 +737,7 @@ function AdvertiserPage() {
               brand={brand}
               category={category}
               updatedAgo={updatedAgo}
+              placementCount={campaignStory?.rowCount ?? placementRowCount}
               totalAds={totalAds}
               adsThisWeek={adsThisWeek}
               daysRunning={daysRunning}
@@ -746,12 +754,10 @@ function AdvertiserPage() {
               }
               spendMonthly={spend?.estimated_monthly_spend ?? 0}
               spendBandLabel={advertiserBrief.spend.label || null}
-              quickScan={quickScan}
+              visualScan={visualScan}
               channelMix={advertiserBrief.channelMix}
               strategistIntel={strategistIntel}
               campaignIntel={campaignIntel}
-              campaignStory={campaignStory}
-              topMoves={advertiserBrief.moves}
               topProducts={advertiserBrief.products}
               creativeScore={creativeScore}
               creativeTier={creativeTier}
@@ -866,20 +872,13 @@ function AdvertiserPage() {
                 {placementIntelUnavailable ? (
                   <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>{PLACEMENT_INTEL_UNAVAILABLE}</p>
                 ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                    <BriefList label="Emotional driver" items={advertiserBrief.saying.emotionalDrivers} />
-                    <BriefList label="Buyer stage" items={advertiserBrief.saying.buyerStages} />
-                    <BriefList label="Offer type" items={advertiserBrief.saying.offerTypes} />
-                    <BriefList label="CTAs" items={advertiserBrief.saying.ctas} />
-                    <BriefList label="Hooks" items={advertiserBrief.saying.hooks} />
-                    <BriefList label="Offer themes" items={advertiserBrief.saying.offerThemes} />
-                    <BriefList label="Offer signals" items={advertiserBrief.saying.offerSignals} />
-                    <BriefList label="Market signals" items={advertiserBrief.saying.marketSignals} />
-                  </div>
-                )}
-                {!placementIntelUnavailable && advertiserBrief.saying.copySnippets.length > 0 && (
-                  <div style={{ marginTop: 16 }}>
-                    <BriefList label="Ad copy" items={advertiserBrief.saying.copySnippets} />
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <TagBars label="Emotion" items={advertiserBrief.saying.emotionalDrivers} />
+                    <TagBars label="Stage" items={advertiserBrief.saying.buyerStages} />
+                    <TagBars label="Offer" items={advertiserBrief.saying.offerTypes} />
+                    <TagBars label="CTA" items={advertiserBrief.saying.ctas} />
+                    <TagBars label="Hooks" items={advertiserBrief.saying.hooks} />
+                    <TagBars label="Themes" items={advertiserBrief.saying.offerThemes} />
                   </div>
                 )}
               </InsightSection>
@@ -931,23 +930,17 @@ function AdvertiserPage() {
               </InsightSection>
               )}
 
-              {showInsight("nextMoves") && (
-              <InsightSection title="Recommended next moves" accentDark>
-                <ol style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
-                  {advertiserBrief.moves.map((move, i) => (
-                    <li key={move} style={{ display: "flex", gap: 12, fontSize: 14, color: "#1C1C1A", lineHeight: 1.55 }}>
-                      <span style={{
-                        flexShrink: 0, width: 24, height: 24, borderRadius: "50%",
-                        background: "#FDF6E8", border: "1px solid #E8D5A0",
-                        color: "#A07830", fontSize: 12, fontWeight: 600,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
-                        {i + 1}
-                      </span>
-                      <span>{move}</span>
-                    </li>
+              {showInsight("nextMoves") && visualScan.moves.length > 0 && (
+              <InsightSection title="Play angles" accentDark>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                  {visualScan.moves.map((move) => (
+                    <div key={`${move.kind}-${move.label}`} style={{ textAlign: "center", padding: 12, background: "#F7F6F3", borderRadius: 8 }}>
+                      <div style={{ fontSize: 20, fontWeight: 800 }}>{move.value}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4 }}>{move.label}</div>
+                      <div style={{ fontSize: 10, color: "#9E9D94", marginTop: 2 }}>{move.hint}</div>
+                    </div>
                   ))}
-                </ol>
+                </div>
               </InsightSection>
               )}
 
@@ -1139,21 +1132,31 @@ function InsightSection({
   );
 }
 
-function BriefList({ label, items }: { label: string; items: string[] }) {
+function TagBars({ label, items }: { label: string; items: string[] }) {
+  if (!items.length) return null;
   return (
     <div>
       <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
         {label}
       </div>
-      {items.length ? (
-        <ul style={{ margin: 0, paddingLeft: 16, display: "flex", flexDirection: "column", gap: 6 }}>
-          {items.map((item) => (
-            <li key={item} style={{ fontSize: 13, color: "#1C1C1A", lineHeight: 1.45 }}>{item}</li>
-          ))}
-        </ul>
-      ) : (
-        <div style={{ fontSize: 13, color: "#9E9D94" }}>—</div>
-      )}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {items.map((item) => (
+          <span
+            key={item}
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: "#1C1C1A",
+              background: "#F7F6F3",
+              border: "1px solid #EBE9E4",
+              borderRadius: 6,
+              padding: "5px 10px",
+            }}
+          >
+            {item}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
