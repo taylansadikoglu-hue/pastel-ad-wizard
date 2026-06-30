@@ -7,8 +7,8 @@
 import { AdLibraryClient } from "./lib/adlibraryClient.ts";
 import { CreditTracker } from "./lib/adlibraryCredits.ts";
 import {
+  applyEnrichmentToRow,
   mergePlacementRow,
-  parseEnrichmentTags,
 } from "./lib/adlibraryPlacementUpsert.ts";
 import { getSupabaseAdmin } from "./lib/supabaseAdmin.ts";
 import { argBool, argNumber, argString, parseArgs } from "./lib/parseArgs.ts";
@@ -92,7 +92,8 @@ async function main() {
     processed += 1;
 
     try {
-      const enrichment = await client.enrichAd({ ad: raw.payload ?? raw });
+      const payload = (raw.payload ?? raw) as Record<string, unknown>;
+      const enrichment = await client.enrichAd({ ad: payload });
       stats.enrichmentCalls += 1;
       if (enrichment.cached) stats.cacheHits += 1;
 
@@ -117,8 +118,11 @@ async function main() {
       if (supabase && !dryRun) {
         await supabase.from("adlibrary_enrichments").upsert(enrichmentRow);
 
-        const tags = parseEnrichmentTags(enrichment);
-        const patch = mergePlacementRow(row as Record<string, unknown>, tags);
+        const patchRow: Record<string, unknown> = {
+          raw: row.raw ?? {},
+        };
+        applyEnrichmentToRow(patchRow, enrichment);
+        const patch = mergePlacementRow(row as Record<string, unknown>, patchRow);
         if (Object.keys(patch).length) {
           await supabase.from("ad_placements").update(patch).eq("id", row.id);
           stats.rowsUpdated += 1;

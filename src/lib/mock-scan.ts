@@ -74,7 +74,7 @@ const MOCK_PLACEMENTS = [
     emotional_driver: "Authority",
     offer_type: "Thought leadership",
     buyer_stage: "Consideration",
-    primary_cta: "Learn more",
+    primary_cta: "Compare home loan rates",
   },
 ] as const;
 
