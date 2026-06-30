@@ -371,7 +371,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
               textAlign: "center",
             }}
           >
-            TikTok, LinkedIn and CTV signal arriving Q3 2026.
+            Meta, YouTube, Search, Display, TikTok, and LinkedIn — indexed from your ad library pipeline.
           </div>
         </div>
       </section>

@@ -47,6 +47,19 @@ const MOCK_PLACEMENTS = [
     days_running: 6,
     source_platform: "apify",
   },
+  {
+    channel: "LinkedIn",
+    channel_platform: "LinkedIn",
+    ad_type: "Sponsored",
+    hook: "Reach decision-makers with B2B creative that converts.",
+    headline: "Lead with trust in professional channels",
+    days_running: 18,
+    source_platform: "adlibrary",
+    emotional_driver: "Authority",
+    offer_type: "Thought leadership",
+    buyer_stage: "Consideration",
+    primary_cta: "Learn more",
+  },
 ];
 
 function parseArgs(argv) {
@@ -126,8 +139,17 @@ async function seedMockScanSuccess(supabase, input) {
     first_seen: now,
     last_seen: now,
     times_seen: 120 + i * 37,
+    emotional_driver: p.emotional_driver ?? null,
+    offer_type: p.offer_type ?? null,
+    buyer_stage: p.buyer_stage ?? null,
+    primary_cta: p.primary_cta ?? null,
     ai_tags: {
-      platform: p.source_platform === "apify" ? "meta" : "google",
+      platform:
+        p.source_platform === "adlibrary" && p.channel_platform === "LinkedIn"
+          ? "linkedin"
+          : p.source_platform === "apify"
+            ? "meta"
+            : "google",
       themes: ["trust", "value", "growth"].slice(0, 2 + (i % 2)),
       sentiment: i % 2 === 0 ? "positive" : "urgency",
       call_to_action: "Learn more",

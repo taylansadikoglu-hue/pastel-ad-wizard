@@ -172,6 +172,7 @@ function slugDomain(name: string): string {
 }
 
 function platformChannel(platform: string): string {
+  if (platform.includes("linkedin")) return "LinkedIn";
   if (platform.includes("tiktok")) return "TikTok";
   if (platform.includes("insta")) return "Meta";
   if (platform.includes("face")) return "Meta";
@@ -179,8 +180,11 @@ function platformChannel(platform: string): string {
 }
 
 function capitalizePlatform(platform: string): string {
+  if (platform.includes("linkedin")) return "LinkedIn";
   if (platform.includes("tiktok")) return "TikTok";
   if (platform.includes("insta")) return "Instagram";
   if (platform.includes("face")) return "Facebook";
+  if (platform.includes("google") && platform.includes("search")) return "Google Search";
+  if (platform.includes("youtube")) return "YouTube";
   return platform.charAt(0).toUpperCase() + platform.slice(1);
 }

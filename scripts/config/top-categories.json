@@ -4,7 +4,7 @@
       "name": "Banking",
       "appType": "3",
       "geo": "AUS",
-      "platforms": ["facebook", "instagram", "tiktok"],
+      "platforms": ["facebook", "instagram", "tiktok", "linkedin"],
       "searchKeywords": [
         "CommBank",
         "NAB",
@@ -26,7 +26,7 @@
       "name": "Insurance",
       "appType": "3",
       "geo": "AUS",
-      "platforms": ["facebook", "instagram", "tiktok"],
+      "platforms": ["facebook", "instagram", "tiktok", "linkedin"],
       "searchKeywords": [
         "NRMA",
         "AAMI",
@@ -47,7 +47,7 @@
       "name": "Superannuation",
       "appType": "3",
       "geo": "AUS",
-      "platforms": ["facebook", "instagram", "tiktok"],
+      "platforms": ["facebook", "instagram", "tiktok", "linkedin"],
       "searchKeywords": [
         "AustralianSuper",
         "REST Super",
@@ -68,7 +68,7 @@
       "name": "Telco",
       "appType": "3",
       "geo": "AUS",
-      "platforms": ["facebook", "instagram", "tiktok"],
+      "platforms": ["facebook", "instagram", "tiktok", "linkedin"],
       "searchKeywords": [
         "Telstra",
         "Optus",
@@ -89,7 +89,7 @@
       "name": "Automotive",
       "appType": "3",
       "geo": "AUS",
-      "platforms": ["facebook", "instagram", "tiktok"],
+      "platforms": ["facebook", "instagram", "tiktok", "linkedin"],
       "searchKeywords": [
         "Toyota Australia",
         "Mazda Australia",
@@ -110,7 +110,7 @@
       "name": "Retail",
       "appType": "3",
       "geo": "AUS",
-      "platforms": ["facebook", "instagram", "tiktok"],
+      "platforms": ["facebook", "instagram", "tiktok", "linkedin"],
       "searchKeywords": [
         "Woolworths",
         "Coles",
@@ -131,7 +131,7 @@
       "name": "Travel",
       "appType": "3",
       "geo": "AUS",
-      "platforms": ["facebook", "instagram", "tiktok"],
+      "platforms": ["facebook", "instagram", "tiktok", "linkedin"],
       "searchKeywords": [
         "Qantas",
         "Jetstar",
@@ -152,7 +152,7 @@
       "name": "Food Delivery",
       "appType": "3",
       "geo": "AUS",
-      "platforms": ["facebook", "instagram", "tiktok"],
+      "platforms": ["facebook", "instagram", "tiktok", "linkedin"],
       "searchKeywords": [
         "Uber Eats",
         "DoorDash",
@@ -172,7 +172,7 @@
       "name": "Health Insurance",
       "appType": "3",
       "geo": "AUS",
-      "platforms": ["facebook", "instagram", "tiktok"],
+      "platforms": ["facebook", "instagram", "tiktok", "linkedin"],
       "searchKeywords": [
         "Bupa",
         "Medibank",
@@ -193,7 +193,7 @@
       "name": "Real Estate",
       "appType": "3",
       "geo": "AUS",
-      "platforms": ["facebook", "instagram", "tiktok"],
+      "platforms": ["facebook", "instagram", "tiktok", "linkedin"],
       "searchKeywords": [
         "realestate.com.au",
         "Domain",

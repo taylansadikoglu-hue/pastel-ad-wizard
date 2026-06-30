@@ -5,6 +5,9 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { bucketChannel, normaliseChannelBadge } from "@/lib/channels";
+
+export { normaliseChannelBadge } from "@/lib/channels";
 
 export const PLACEMENT_INTEL_SELECT = [
   "id",
@@ -96,19 +99,6 @@ function normaliseDomain(domain: string): string {
   return domain.toLowerCase().replace(/^www\./, "");
 }
 
-/** Map channel_platform / channel to display bucket used in channel mix bars. */
-export function normaliseChannelBadge(raw: string | null | undefined): string | null {
-  const r = String(raw ?? "").toLowerCase();
-  if (!r) return null;
-  if (r.includes("youtube")) return "YouTube";
-  if (r.includes("search") || r === "google") return "Search";
-  if (r.includes("display") || r.includes("programmatic")) return "Display";
-  if (r.includes("meta") || r.includes("facebook") || r.includes("instagram")) return "Meta";
-  if (r.includes("tiktok")) return "TikTok";
-  if (r.includes("linkedin")) return "Other";
-  return "Other";
-}
-
 function isUsableText(value: string | null | undefined): value is string {
   if (!value?.trim()) return false;
   const v = value.trim();
@@ -166,7 +156,8 @@ export function buildChannelsFromPlacements(
   for (const row of placements) {
     const badge = normaliseChannelBadge(row.channel_platform ?? row.channel);
     if (!badge) continue;
-    counts.set(badge, (counts.get(badge) ?? 0) + 1);
+    const bucket = bucketChannel(badge);
+    counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
   }
   const total = [...counts.values()].reduce((a, b) => a + b, 0);
   if (!total) return [];

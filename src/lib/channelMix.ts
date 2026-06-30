@@ -14,6 +14,7 @@ import {
   normaliseChannelBadge,
   placementCount,
 } from "@/lib/advertiserPlacements";
+import { DISPLAY_CHANNELS, bucketChannel } from "@/lib/channels";
 
 export type ChannelConfidence = "High" | "Medium" | "Low";
 
@@ -40,8 +41,6 @@ export type ChannelMixResult = {
   estimationTooltip: string;
 };
 
-const DISPLAY_CHANNELS = ["Display", "YouTube", "Search", "Meta", "TikTok", "Other"] as const;
-
 const SOURCE_LABELS: Record<ChannelMixSource, string> = {
   placements: "Indexed placement channels",
   adlibrary: "AdLibrary indexed creatives",
@@ -54,7 +53,7 @@ const SOURCE_TOOLTIPS: Record<ChannelMixSource, string> = {
   placements:
     "Share is calculated from channel_platform on placement rows stored in Supabase.",
   adlibrary:
-    "Share is calculated from AdLibrary-sourced placement rows (typically Meta-heavy).",
+    "Share is calculated from AdLibrary-sourced placement rows (Meta, TikTok, LinkedIn, and more).",
   warroom:
     "Share comes from the engine warroom API channel split for this advertiser.",
   estimated:
@@ -67,7 +66,7 @@ function channelsToMap(entries: PlacementChannelEntry[]): Map<string, { pct: num
   const map = new Map<string, { pct: number; ads: number }>();
   for (const entry of entries) {
     const badge = normaliseChannelBadge(entry.channel) ?? "Other";
-    const bucket = DISPLAY_CHANNELS.includes(badge as (typeof DISPLAY_CHANNELS)[number]) ? badge : "Other";
+    const bucket = bucketChannel(badge);
     const ads = Number(entry.ad_count ?? 0);
     const pct = Number(entry.pct ?? 0);
     const existing = map.get(bucket);
@@ -109,7 +108,7 @@ function estimateFromPlacements(rows: AdvertiserPlacementRow[]): Map<string, { p
     const total = [...counts.values()].reduce((a, b) => a + b, 0);
     const map = new Map<string, { pct: number; ads: number }>();
     for (const [channel, ads] of counts) {
-      const bucket = DISPLAY_CHANNELS.includes(channel as (typeof DISPLAY_CHANNELS)[number]) ? channel : "Other";
+      const bucket = bucketChannel(channel);
       const pct = Math.round((ads / total) * 1000) / 10;
       const existing = map.get(bucket);
       if (existing) {

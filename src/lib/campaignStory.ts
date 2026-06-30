@@ -136,7 +136,7 @@ export function buildCampaignStory(
 
   const newCreatives = rows.filter((r) => isRecent(r.first_seen)).length;
   const refreshed = groups.filter((g) => g.firstSeen && !isRecent(g.firstSeen) && isRecent(g.lastSeen)).length;
-  const gapChannels = ["Display", "YouTube", "Search", "Meta", "TikTok", "Other"].filter(
+  const gapChannels = ["Display", "YouTube", "Search", "Meta", "TikTok", "LinkedIn", "Other"].filter(
     (ch) => !channels.some((c) => c.channel === ch),
   );
 

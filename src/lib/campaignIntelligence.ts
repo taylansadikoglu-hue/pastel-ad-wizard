@@ -362,7 +362,7 @@ export function buildCampaignIntelligence(
     channelCounts.set(ch, (channelCounts.get(ch) ?? 0) + 1);
   }
   const total = placements.length;
-  const ALL_CHANNELS = ["Display", "YouTube", "Search", "Meta", "TikTok", "Other"];
+  const ALL_CHANNELS = ["Display", "YouTube", "Search", "Meta", "TikTok", "LinkedIn", "Other"];
   const channelOwnership: ChannelOwnershipRow[] = ALL_CHANNELS.map((channel) => {
     const count = channelCounts.get(channel) ?? 0;
     const pct = total ? Math.round((count / total) * 1000) / 10 : 0;

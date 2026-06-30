@@ -3,6 +3,7 @@ import {
   Facebook,
   Image as ImageIcon,
   Info,
+  Linkedin,
   Music2,
   Search as SearchIcon,
   Youtube,
@@ -29,6 +30,7 @@ const CHANNEL_VISUAL: ChannelVisual[] = [
   { label: "Search", colour: "#4285F4", Icon: SearchIcon },
   { label: "Meta", colour: "#1877F2", Icon: Facebook },
   { label: "TikTok", colour: "#25F4EE", Icon: Music2 },
+  { label: "LinkedIn", colour: "#0A66C2", Icon: Linkedin },
   { label: "Other", colour: "#6B6B62", Icon: ImageIcon },
 ];
 
