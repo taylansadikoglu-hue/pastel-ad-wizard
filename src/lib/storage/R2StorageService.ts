@@ -1,4 +1,14 @@
-import { getR2Config, isR2Configured, r2PublicUrl, type R2Config } from "./r2Config";
+import { getR2Config, isR2Configured, isR2S3ReadConfigured, r2PublicUrl, type R2Config } from "./r2Config";
+import { getR2S3Client, r2S3ObjectUrl } from "./r2S3Client";
+
+export type R2GetResult = {
+  ok: boolean;
+  key?: string;
+  body?: ArrayBuffer;
+  contentType?: string;
+  etag?: string;
+  error?: string;
+};
 
 export type R2PutResult = {
   ok: boolean;
@@ -80,6 +90,41 @@ export class R2StorageService {
       publicUrl: this.publicUrl(key),
       etag,
     };
+  }
+
+  /** Read object via S3-compatible API (read-only worker token). */
+  async get(key: string): Promise<R2GetResult> {
+    if (!isR2S3ReadConfigured(this.config)) {
+      return {
+        ok: false,
+        error: "R2 S3 read not configured (missing R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY)",
+      };
+    }
+
+    const client = getR2S3Client(this.config);
+    if (!client) {
+      return { ok: false, error: "R2 S3 client unavailable" };
+    }
+
+    const normalized = key.replace(/^\/+/, "");
+    const url = r2S3ObjectUrl(normalized, this.config);
+
+    try {
+      const res = await client.fetch(url);
+      if (!res.ok) {
+        return { ok: false, error: `R2 GET ${res.status}: ${await res.text()}` };
+      }
+
+      return {
+        ok: true,
+        key: normalized,
+        body: await res.arrayBuffer(),
+        contentType: res.headers.get("content-type") ?? undefined,
+        etag: res.headers.get("etag") ?? undefined,
+      };
+    } catch (e) {
+      return { ok: false, error: String(e) };
+    }
   }
 
   async putFromUrl(sourceUrl: string, key: string): Promise<R2PutResult> {

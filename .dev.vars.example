@@ -5,7 +5,13 @@ RESEND_API_KEY=re_your_sending_key
 RESEND_WEBHOOK_SECRET=whsec_your_webhook_secret
 APP_URL=http://localhost:3000
 
+# REST API — uploads (Cloudflare R2 → Edit)
 CLOUDFLARE_API_TOKEN=cfat_your_token
 CLOUDFLARE_ACCOUNT_ID=7169638abf93eba4c8a9644d870c35fa
 R2_BUCKET_NAME=revenuead-creative-vault
 R2_PUBLIC_URL=https://pub-cf328a68c22840b998bf5b84a553b21c.r2.dev
+
+# S3-compatible API — reads (Workers R2 Storage Bucket Item Read)
+R2_ACCESS_KEY_ID=your_access_key_id
+R2_SECRET_ACCESS_KEY=cfk_your_secret
+R2_S3_ENDPOINT=https://7169638abf93eba4c8a9644d870c35fa.r2.cloudflarestorage.com
