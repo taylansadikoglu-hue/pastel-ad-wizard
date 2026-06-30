@@ -25,5 +25,10 @@ CREATE INDEX IF NOT EXISTS email_events_created_idx ON public.email_events (crea
 ALTER TABLE public.email_suppressions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.email_events ENABLE ROW LEVEL SECURITY;
 
+-- Webhook + server functions use service_role (bypasses RLS)
+GRANT ALL ON public.email_suppressions TO service_role;
+GRANT ALL ON public.email_events TO service_role;
+GRANT USAGE, SELECT ON SEQUENCE public.email_events_id_seq TO service_role;
+
 COMMENT ON TABLE public.email_suppressions IS 'Emails blocked from all outbound sends (bounce, complaint, manual).';
 COMMENT ON TABLE public.email_events IS 'Inbound Resend webhook events for audit and suppression.';

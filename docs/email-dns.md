@@ -48,6 +48,8 @@ In Resend → Webhooks, create an endpoint:
 
 Bounces and complaints are written to `email_suppressions` and block future sends.
 
+Requires migration `20260630120000_email_suppressions` — run `supabase db push` (see `docs/supabase-migrations.md`).
+
 ## Click tracking subdomain (`rad.mail.revenuad.com`)
 
 Configured in Resend → Domains → revenuad.com → **Enable tracking metrics**:
