@@ -1,0 +1,8 @@
+# Cloudflare Worker local secrets (wrangler dev)
+# Copy to .dev.vars (gitignored) for local server routes that send email.
+#
+#   cp .dev.vars.example .dev.vars
+
+RESEND_API_KEY=re_your_sending_key
+RESEND_WEBHOOK_SECRET=whsec_your_webhook_secret
+APP_URL=http://localhost:3000

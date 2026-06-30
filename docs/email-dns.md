@@ -48,12 +48,41 @@ In Resend → Webhooks, create an endpoint:
 
 Bounces and complaints are written to `email_suppressions` and block future sends.
 
+## Click tracking subdomain (`rad.mail.revenuad.com`)
+
+Configured in Resend → Domains → revenuad.com → **Enable tracking metrics**:
+
+| Setting | Value |
+|---------|--------|
+| Tracking subdomain | `rad.mail` (produces `rad.mail.revenuad.com`) |
+| Region | Tokyo |
+| Click tracking | On |
+
+Resend will show a **CNAME** for `rad.mail.revenuad.com`. Add it in Cloudflare/DNS — tracking only works after verification.
+
+All links in outbound HTML emails are rewritten to pass through `rad.mail.revenuad.com` before the destination URL. No code change required once DNS is verified.
+
+## Production secrets (Cloudflare Worker)
+
+The sending API key is **restricted to send only** — correct for the app. Set via Wrangler:
+
+```bash
+export RESEND_API_KEY=re_MiSC5zSS_...   # Sending access key from Resend
+export RESEND_WEBHOOK_SECRET=whsec_...  # From Resend → Webhooks
+./scripts/email-set-secrets.sh
+```
+
+Worker name: `taylansadikoglu-hue-pastel-ad-wizard` (override with `CLOUDFLARE_WORKER_NAME`).
+
+Local dev: copy `.dev.vars.example` → `.dev.vars` for `wrangler dev`.
+
 ## Environment variables
 
 ```bash
 RESEND_API_KEY=re_...
 RESEND_WEBHOOK_SECRET=whsec_...
 APP_URL=https://revenuad.com
+RESEND_TRACKING_SUBDOMAIN=rad.mail.revenuad.com
 ```
 
 ## Verify
