@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { requestPasswordResetEmail } from "@/lib/email-auth.functions";
 import { ThemeProvider } from "@/components/adpalette/theme";
 
 export const Route = createFileRoute("/forgot-password")({
@@ -25,10 +26,7 @@ function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
+      await requestPasswordResetEmail({ data: { email } });
       setSent(true);
       toast.success("Reset link sent. Check your inbox.");
     } catch (err: unknown) {

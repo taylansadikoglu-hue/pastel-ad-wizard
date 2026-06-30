@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ClientWorkspaceEmptyState } from "@/components/adpalette/ClientWorkspaceEmptyState";
+import { DashboardViewBar } from "@/components/adpalette/DashboardViewBar";
 import { MarketIntelReport } from "@/components/adpalette/market-intel/MarketIntelReport";
 import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
 import { WorkspaceShell } from "./WorkspaceShell";
@@ -12,6 +13,12 @@ import {
 } from "@/lib/api-gateway";
 import { getAgencyContext, type AgencyContext } from "@/lib/agency-watchlist";
 import { generatePitchDeck } from "@/lib/export-pptx";
+import {
+  loadViewState,
+  saveViewState,
+  sectionsToPptxModules,
+  type DashboardViewState,
+} from "@/lib/dashboardViewPrefs";
 import { buildMarketChannelMix } from "@/lib/channelMix";
 import { fetchAdlibraryCoverage, EMPTY_COVERAGE, type AdlibraryCoverage } from "@/lib/adlibraryCoverage";
 import { safeOptional } from "@/lib/safeQuery";
@@ -106,6 +113,16 @@ export function StrategistDashboard() {
   const [marketIntel, setMarketIntel] = useState<MarketStrategistIntel | null>(null);
   const [adlibraryCoverage, setAdlibraryCoverage] = useState<AdlibraryCoverage | null>(null);
   const [panelFocus, setPanelFocus] = useState<PanelFocus | null>(null);
+  const [viewState, setViewState] = useState<DashboardViewState>(() => loadViewState());
+
+  useEffect(() => {
+    saveViewState(viewState);
+  }, [viewState]);
+
+  const pptxModuleCount = useMemo(
+    () => sectionsToPptxModules(viewState.sections).length,
+    [viewState.sections],
+  );
 
   const openPanel = (moduleId: DataModuleId, rowIndex?: number, rowLabel?: string) => {
     setPanelFocus({ moduleId, rowIndex, rowLabel });
@@ -113,8 +130,9 @@ export function StrategistDashboard() {
 
   const handleExportPitch = useCallback(async () => {
     if (!intelBundle) return;
-    await generatePitchDeck(intelBundle, { agencyContext: agencyCtx });
-  }, [intelBundle, agencyCtx]);
+    const modules = sectionsToPptxModules(viewState.sections);
+    await generatePitchDeck(intelBundle, { agencyContext: agencyCtx, modules });
+  }, [intelBundle, agencyCtx, viewState.sections]);
 
   useEffect(() => {
     if (workspaceLoading || demoLoading) return;
@@ -399,6 +417,13 @@ export function StrategistDashboard() {
       onExportPitch={canExport ? handleExportPitch : undefined}
       exportPitchDisabled={!canExport || !intelBundle}
     >
+      <div className="mb-5">
+        <DashboardViewBar
+          state={viewState}
+          onChange={setViewState}
+          pptxModuleCount={pptxModuleCount}
+        />
+      </div>
       <MarketIntelReport
         clientName={clientName}
         category={category}
@@ -421,6 +446,7 @@ export function StrategistDashboard() {
         marketIntel={marketIntel}
         adlibraryCoverage={adlibraryCoverage}
         onEvidence={openPanel}
+        visibleSections={viewState.sections}
       />
 
       <HardDataPanel focus={panelFocus} onClose={() => setPanelFocus(null)} data={hardDataPayload} />

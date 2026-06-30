@@ -30,6 +30,7 @@ import {
 } from "@/lib/radReportVoice";
 import { displayBrand } from "@/utils/brandDisplay";
 import type { DataModuleId } from "@/components/adpalette/strategist/data-module-types";
+import type { MarketIntelSectionId } from "@/lib/dashboardViewPrefs";
 
 const LINEN_CARD: React.CSSProperties = {
   background: "#FFFFFF",
@@ -220,6 +221,7 @@ type Props = {
   marketIntel: MarketStrategistIntel | null;
   adlibraryCoverage: AdlibraryCoverage | null;
   onEvidence: (moduleId: DataModuleId, rowIndex?: number, rowLabel?: string) => void;
+  visibleSections?: MarketIntelSectionId[];
 };
 
 export function MarketIntelReport({
@@ -244,8 +246,11 @@ export function MarketIntelReport({
   marketIntel,
   adlibraryCoverage,
   onEvidence,
+  visibleSections,
 }: Props) {
   const [deepOpen, setDeepOpen] = useState(false);
+  const show = (id: MarketIntelSectionId) =>
+    !visibleSections || visibleSections.includes(id);
   const displayTitle = /bank/i.test(category) ? "Banking Pulse" : `${category} Pulse`;
 
   const topChannels = useMemo(() => {
@@ -277,7 +282,7 @@ export function MarketIntelReport({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Masthead — compact story layer */}
+      {show("masthead") ? (
       <div
         style={{
           background: "linear-gradient(135deg, #FDF6E8 0%, #FFFFFF 55%)",
@@ -302,8 +307,9 @@ export function MarketIntelReport({
         </div>
         <RadBite>{radGreeting(category)}</RadBite>
       </div>
+      ) : null}
 
-      {competitorDomains.length > 0 && (
+      {show("watchlist") && competitorDomains.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.05em" }}>
             Watchlist
@@ -330,7 +336,7 @@ export function MarketIntelReport({
         </div>
       )}
 
-      {/* KPI strip — primary 80% data layer */}
+      {show("kpis") ? (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
         <KpiTile
           label="Brands tracked"
@@ -356,8 +362,9 @@ export function MarketIntelReport({
           suffix={confidence.ads != null ? ` · ${confidence.ads.toLocaleString()} ads` : undefined}
         />
       </div>
+      ) : null}
 
-      {/* Hero signal cards — numbers + deltas */}
+      {show("heroSignals") ? (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
         <HeroCard
           emoji="🔥"
@@ -379,9 +386,11 @@ export function MarketIntelReport({
           highlight
         />
       </div>
+      ) : null}
 
+      {(show("weeklyChanges") || show("competitors") || show("channelMix") || show("productThemes")) ? (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 14 }}>
-        {/* Weekly changes */}
+        {show("weeklyChanges") ? (
         <div style={{ ...LINEN_CARD, gridColumn: "span 12 / span 12" }}>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("changes")} />}>What changed this week</SectionLabel>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
@@ -410,8 +419,9 @@ export function MarketIntelReport({
           </div>
           <RadBite>{weeklyBite}</RadBite>
         </div>
+        ) : null}
 
-        {/* Competitor movements */}
+        {show("competitors") ? (
         <div style={{ ...LINEN_CARD, gridColumn: "span 12 / span 12" }}>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("competitors")} />}>
             Competitor share-of-voice (index)
@@ -439,8 +449,9 @@ export function MarketIntelReport({
           </div>
           <RadBite>{competitorBite}</RadBite>
         </div>
+        ) : null}
 
-        {/* Channel mix */}
+        {show("channelMix") ? (
         <div style={{ ...LINEN_CARD, gridColumn: "span 12 / span 12" }}>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("channelMix")} />}>Channel mix</SectionLabel>
           <p style={{ margin: "0 0 10px", fontSize: 12, color: "#6B6B62", lineHeight: 1.45 }}>
@@ -457,8 +468,9 @@ export function MarketIntelReport({
           />
           <RadBite>{channelBite || `${topChannels.first} leads; ${topChannels.second} under-weighted.`}</RadBite>
         </div>
+        ) : null}
 
-        {/* Product themes */}
+        {show("productThemes") ? (
         <div style={{ ...LINEN_CARD, gridColumn: "span 12 / span 12" }}>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("challengers")} />}>
             What they&apos;re advertising — by product & theme
@@ -527,9 +539,11 @@ export function MarketIntelReport({
           </div>
           <RadBite>{productBite}</RadBite>
         </div>
+        ) : null}
       </div>
+      ) : null}
 
-      {whitespaceCards.length > 0 && (
+      {show("whitespace") && whitespaceCards.length > 0 && (
         <div>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("whitespace")} />}>White space opportunities</SectionLabel>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
@@ -557,7 +571,7 @@ export function MarketIntelReport({
         </div>
       )}
 
-      {curatedActions.length > 0 && (
+      {show("recommendedActions") && curatedActions.length > 0 && (
         <div>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("strategicActions")} />}>Recommended actions</SectionLabel>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -596,6 +610,7 @@ export function MarketIntelReport({
         </div>
       )}
 
+      {show("deepEvidence") ? (
       <div style={{ ...LINEN_CARD, padding: 0, overflow: "hidden" }}>
         <button
           type="button"
@@ -628,6 +643,7 @@ export function MarketIntelReport({
           </div>
         )}
       </div>
+      ) : null}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { requestMagicLinkEmail } from "@/lib/email-auth.functions";
 
 import { ThemeProvider } from "@/components/adpalette/theme";
 import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/demo-account";
@@ -23,6 +24,24 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [magicSent, setMagicSent] = useState(false);
+
+  const sendMagicLink = async () => {
+    if (!email.trim()) {
+      toast.error("Enter your email first");
+      return;
+    }
+    setLoading(true);
+    try {
+      await requestMagicLinkEmail({ data: { email } });
+      setMagicSent(true);
+      toast.success("Magic link sent — check your inbox.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Could not send magic link");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -138,9 +157,19 @@ function AuthPage() {
           </form>
 
           {mode === "signin" && (
-            <Link to="/forgot-password" className="text-xs underline underline-offset-2 text-muted-foreground mx-auto block text-center">
-              Forgot your password?
-            </Link>
+            <div className="flex flex-col gap-2 items-center">
+              <Link to="/forgot-password" className="text-xs underline underline-offset-2 text-muted-foreground">
+                Forgot your password?
+              </Link>
+              <button
+                type="button"
+                onClick={sendMagicLink}
+                disabled={loading}
+                className="text-xs underline underline-offset-2 text-muted-foreground"
+              >
+                {magicSent ? "Magic link sent" : "Email me a sign-in link instead"}
+              </button>
+            </div>
           )}
 
           <button

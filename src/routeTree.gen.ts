@@ -26,6 +26,7 @@ import { Route as AuthenticatedAppBenchmarksRouteImport } from './routes/_authen
 import { Route as AuthenticatedAppAdvisorRouteImport } from './routes/_authenticated/app.advisor'
 import { Route as AuthenticatedAppAdvertisersRouteImport } from './routes/_authenticated/app.advertisers'
 import { Route as ApiPublicHooksScanReadyRouteImport } from './routes/api/public/hooks/scan-ready'
+import { Route as ApiPublicHooksResendRouteImport } from './routes/api/public/hooks/resend'
 import { Route as AuthenticatedAppCategorySlugRouteImport } from './routes/_authenticated/app.category.$slug'
 import { Route as AuthenticatedAppAdvertiserDomainRouteImport } from './routes/_authenticated/app.advertiser.$domain'
 
@@ -120,6 +121,11 @@ const ApiPublicHooksScanReadyRoute = ApiPublicHooksScanReadyRouteImport.update({
   path: '/api/public/hooks/scan-ready',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksResendRoute = ApiPublicHooksResendRouteImport.update({
+  id: '/api/public/hooks/resend',
+  path: '/api/public/hooks/resend',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAppCategorySlugRoute =
   AuthenticatedAppCategorySlugRouteImport.update({
     id: '/category/$slug',
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
   '/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
+  '/api/public/hooks/resend': typeof ApiPublicHooksResendRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
 }
 export interface FileRoutesByTo {
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
   '/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
+  '/api/public/hooks/resend': typeof ApiPublicHooksResendRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
 }
 export interface FileRoutesById {
@@ -193,6 +201,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
   '/_authenticated/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
+  '/api/public/hooks/resend': typeof ApiPublicHooksResendRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
 }
 export interface FileRouteTypes {
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/advertiser/$domain'
     | '/app/category/$slug'
+    | '/api/public/hooks/resend'
     | '/api/public/hooks/scan-ready'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/advertiser/$domain'
     | '/app/category/$slug'
+    | '/api/public/hooks/resend'
     | '/api/public/hooks/scan-ready'
   id:
     | '__root__'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/advertiser/$domain'
     | '/_authenticated/app/category/$slug'
+    | '/api/public/hooks/resend'
     | '/api/public/hooks/scan-ready'
   fileRoutesById: FileRoutesById
 }
@@ -265,6 +277,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicHooksResendRoute: typeof ApiPublicHooksResendRoute
   ApiPublicHooksScanReadyRoute: typeof ApiPublicHooksScanReadyRoute
 }
 
@@ -389,6 +402,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksScanReadyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/resend': {
+      id: '/api/public/hooks/resend'
+      path: '/api/public/hooks/resend'
+      fullPath: '/api/public/hooks/resend'
+      preLoaderRoute: typeof ApiPublicHooksResendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app/category/$slug': {
       id: '/_authenticated/app/category/$slug'
       path: '/category/$slug'
@@ -456,6 +476,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicHooksResendRoute: ApiPublicHooksResendRoute,
   ApiPublicHooksScanReadyRoute: ApiPublicHooksScanReadyRoute,
 }
 export const routeTree = rootRouteImport

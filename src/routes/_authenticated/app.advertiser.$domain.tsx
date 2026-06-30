@@ -14,8 +14,13 @@ import {
   Linkedin,
 } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
+import { AdvertiserViewBar, showAdvertiserSection } from "@/components/adpalette/AdvertiserViewBar";
 import { SpendIndex, SpendLegend } from "@/components/adpalette/SpendIndex";
-import { displayBrand } from "@/utils/brandDisplay";
+import {
+  loadAdvertiserViewState,
+  saveAdvertiserViewState,
+  type AdvertiserViewState,
+} from "@/lib/dashboardViewPrefs";
 import {
   domainInWatchlist,
   getAgencyContext,
@@ -261,6 +266,14 @@ function AdvertiserPage() {
   const [adlibraryIntel, setAdlibraryIntel] = useState<AdlibraryAdvertiserIntel | null>(null);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>(defaultLoadStatus);
   const { activeWorkspace } = useClientWorkspace();
+  const [insightView, setInsightView] = useState<AdvertiserViewState>(() => loadAdvertiserViewState());
+
+  useEffect(() => {
+    saveAdvertiserViewState(insightView);
+  }, [insightView]);
+
+  const showInsight = (id: Parameters<typeof showAdvertiserSection>[1]) =>
+    showAdvertiserSection(insightView, id);
 
   useEffect(() => {
     let alive = true;
@@ -749,6 +762,7 @@ function AdvertiserPage() {
 
           {advertiserBrief ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <AdvertiserViewBar state={insightView} onChange={setInsightView} className="mb-2" />
               <div
                 style={{
                   paddingTop: 8,
@@ -764,12 +778,15 @@ function AdvertiserPage() {
                 </p>
               </div>
 
+              {showInsight("marketingRead") && (
               <InsightSection title="Current marketing read" accent>
                 <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.65, margin: 0 }}>
                   {advertiserBrief.marketingRead}
                 </p>
               </InsightSection>
+              )}
 
+              {showInsight("channelMix") && (
               <InsightSection title="Channel mix">
                 <ChannelMixBars
                   rows={advertiserBrief.channelMix.rows}
@@ -779,7 +796,9 @@ function AdvertiserPage() {
                   variant="light"
                 />
               </InsightSection>
+              )}
 
+              {showInsight("spend") && (
               <InsightSection title="Estimated spend range">
                 {advertiserBrief.spend.label ? (
                   <>
@@ -794,7 +813,9 @@ function AdvertiserPage() {
                   <p style={{ fontSize: 13, color: "#6B6B62", margin: 0 }}>Spend estimate unavailable for this advertiser.</p>
                 )}
               </InsightSection>
+              )}
 
+              {showInsight("products") && (
               <InsightSection title="Products being promoted">
                 {advertiserBrief.products.length ? (
                   <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -822,7 +843,9 @@ function AdvertiserPage() {
                   </p>
                 )}
               </InsightSection>
+              )}
 
+              {showInsight("messaging") && (
               <InsightSection title="What they're saying">
                 {placementIntelUnavailable ? (
                   <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>{PLACEMENT_INTEL_UNAVAILABLE}</p>
@@ -844,7 +867,9 @@ function AdvertiserPage() {
                   </div>
                 )}
               </InsightSection>
+              )}
 
+              {showInsight("audiences") && (
               <InsightSection title="Audiences / personas">
                 {advertiserBrief.audiences.length ? (
                   <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -878,7 +903,9 @@ function AdvertiserPage() {
                   </p>
                 )}
               </InsightSection>
+              )}
 
+              {showInsight("gaps") && (
               <InsightSection title="What they're missing">
                 <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 8 }}>
                   {advertiserBrief.missing.map((item) => (
@@ -886,7 +913,9 @@ function AdvertiserPage() {
                   ))}
                 </ul>
               </InsightSection>
+              )}
 
+              {showInsight("nextMoves") && (
               <InsightSection title="Recommended next moves" accentDark>
                 <ol style={{ margin: 0, paddingLeft: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
                   {advertiserBrief.moves.map((move, i) => (
@@ -904,7 +933,9 @@ function AdvertiserPage() {
                   ))}
                 </ol>
               </InsightSection>
+              )}
 
+              {showInsight("talkingPoints") && (
               <InsightSection title="Meeting talking points">
                 <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 10 }}>
                   {advertiserBrief.talkingPoints.map((point) => (
@@ -912,6 +943,7 @@ function AdvertiserPage() {
                   ))}
                 </ul>
               </InsightSection>
+              )}
             </div>
           ) : (
             <QueryStatusCard
