@@ -10,7 +10,7 @@ import {
 } from "@/lib/dashboardViewPrefs";
 
 const PRESET_META: Record<AdvertiserViewPreset, { label: string; description: string; icon: string }> = {
-  essentials: { label: "Essentials", description: "Quick war-room scan", icon: "⚡" },
+  essentials: { label: "Scan only", description: "Dashboard + 4 creatives", icon: "⚡" },
   pitch: { label: "Pitch prep", description: "Deck-ready narrative", icon: "📽" },
   full: { label: "Full depth", description: "Every insight block", icon: "📊" },
   custom: { label: "Custom", description: "Your own mix", icon: "✦" },

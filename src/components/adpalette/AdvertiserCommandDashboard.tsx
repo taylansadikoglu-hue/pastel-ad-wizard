@@ -295,17 +295,11 @@ export function AdvertiserCommandDashboard({
                 </span>
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, color: "#FFFFFF" }}>
-                {clip(quickScan[key], 80)}
+                {clip(quickScan[key], 48)}
               </div>
             </div>
           ))}
         </div>
-
-        {campaignStory?.executiveSummary ? (
-          <div style={{ marginTop: 12, fontSize: 13, color: "#D4D4CE", lineHeight: 1.5, maxWidth: 900 }}>
-            {clip(campaignStory.executiveSummary, 160)}
-          </div>
-        ) : null}
       </div>
 
       {/* Data grid: channels + messaging + DNA */}
@@ -375,11 +369,6 @@ export function AdvertiserCommandDashboard({
           ) : (
             <div style={{ fontSize: 12, color: "#9E9D94" }}>DNA tags populate from indexed placements.</div>
           )}
-          {strategistIntel?.strategistSummary ? (
-            <p style={{ fontSize: 12, color: "#6B6B62", margin: "10px 0 0", lineHeight: 1.45 }}>
-              {clip(strategistIntel.strategistSummary, 140)}
-            </p>
-          ) : null}
         </div>
 
         <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: "14px 18px" }}>

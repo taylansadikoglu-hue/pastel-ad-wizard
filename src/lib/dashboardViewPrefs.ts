@@ -200,7 +200,7 @@ export const ADVERTISER_INSIGHT_SECTIONS: { id: AdvertiserInsightSectionId; labe
 export type AdvertiserViewPreset = "essentials" | "pitch" | "full" | "custom";
 
 const ADVERTISER_PRESETS: Record<Exclude<AdvertiserViewPreset, "custom">, AdvertiserInsightSectionId[]> = {
-  essentials: ["products", "messaging", "nextMoves"],
+  essentials: [],
   pitch: ["marketingRead", "spend", "messaging", "audiences", "nextMoves", "talkingPoints"],
   full: ADVERTISER_INSIGHT_SECTIONS.map((s) => s.id),
 };
@@ -210,7 +210,7 @@ export type AdvertiserViewState = {
   sections: AdvertiserInsightSectionId[];
 };
 
-const ADV_STORAGE_KEY = "rad-advertiser-view";
+const ADV_STORAGE_KEY = "rad-advertiser-view-v2";
 
 export function defaultAdvertiserViewState(): AdvertiserViewState {
   return { preset: "essentials", sections: ADVERTISER_PRESETS.essentials };

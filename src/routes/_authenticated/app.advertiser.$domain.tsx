@@ -38,6 +38,7 @@ import {
   AdvertiserCommandDashboard,
   buildQuickScan,
 } from "@/components/adpalette/AdvertiserCommandDashboard";
+import { AdvertiserAnalystDepth } from "@/components/adpalette/AdvertiserAnalystDepth";
 import { QueryStatusCard } from "@/components/adpalette/QueryStatusCard";
 import {
   buildAdvertiserChannelMix,
@@ -758,89 +759,59 @@ function AdvertiserPage() {
             />
           ) : null}
 
-          <CampaignStoryBlock
-            brand={brand}
-            loading={loading}
-            placementIntelUnavailable={placementIntelUnavailable}
-            story={campaignStory}
-          />
-
-          {strategistIntel && !strategistIntel.available ? (
-            <AdvertiserStrategistIntelBlock
-              brand={brand}
-              loading={loading}
-              intel={strategistIntel}
-              unavailableReason={loadStatus.strategist.ok ? undefined : loadStatus.strategist.reason}
-            />
-          ) : null}
-
-          <AdlibraryAdvertiserPanel
-            intel={adlibraryIntel}
-            unavailableReason={loadStatus.adlibrary.ok ? undefined : loadStatus.adlibrary.reason}
-          />
-
-          {advertiserBrief ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <AdvertiserViewBar state={insightView} onChange={setInsightView} className="mb-2" />
-
-              {/* Recent ads — visual feed near top */}
-              <Card title="Live creative feed">
-                <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
-                  {[
-                    { k: "all", l: "All" },
-                    { k: "YouTube", l: "YouTube" },
-                    { k: "Search", l: "Search" },
-                    { k: "Display", l: "Display" },
-                    { k: "Meta", l: "Meta" },
-                    { k: "TikTok", l: "TikTok" },
-                  ].map((t) => {
-                    const active = channelFilter === t.k;
-                    return (
-                      <button
-                        key={t.k}
-                        onClick={() => setChannelFilter(t.k)}
-                        style={{
-                          padding: "4px 12px",
-                          borderRadius: 4,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          border: "none",
-                          cursor: "pointer",
-                          background: active ? "#1C1C1A" : "transparent",
-                          color: active ? "#FFFFFF" : "#6B6B62",
-                        }}
-                      >
-                        {t.l}
-                      </button>
-                    );
-                  })}
-                </div>
-                {filteredAds.length ? (
-                  <div
+          <Card title="Live creatives">
+            <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
+              {[
+                { k: "all", l: "All" },
+                { k: "YouTube", l: "YouTube" },
+                { k: "Search", l: "Search" },
+                { k: "Display", l: "Display" },
+                { k: "Meta", l: "Meta" },
+                { k: "TikTok", l: "TikTok" },
+              ].map((t) => {
+                const active = channelFilter === t.k;
+                return (
+                  <button
+                    key={t.k}
+                    onClick={() => setChannelFilter(t.k)}
                     style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                      gap: 12,
+                      padding: "4px 12px",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      border: "none",
+                      cursor: "pointer",
+                      background: active ? "#1C1C1A" : "transparent",
+                      color: active ? "#FFFFFF" : "#6B6B62",
                     }}
                   >
-                    {filteredAds.slice(0, 8).map((ad, i) => (
-                      <RecentAdRow key={ad.id ?? i} ad={ad} brand={brand} variant="card" />
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: 13, color: "#9E9D94" }}>No ads match this filter.</div>
-                )}
-              </Card>
-
-              <div style={{ paddingTop: 4, borderTop: "1px solid #EBE9E4" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                  Pitch depth
-                </div>
-                <p style={{ fontSize: 12, color: "#6B6B62", margin: "6px 0 0", lineHeight: 1.5 }}>
-                  Toggle blocks for meeting prep — core dashboard stays above.
-                </p>
+                    {t.l}
+                  </button>
+                );
+              })}
+            </div>
+            {filteredAds.length ? (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                  gap: 12,
+                }}
+              >
+                {filteredAds.slice(0, 4).map((ad, i) => (
+                  <RecentAdRow key={ad.id ?? i} ad={ad} brand={brand} variant="card" />
+                ))}
               </div>
+            ) : (
+              <div style={{ fontSize: 13, color: "#9E9D94" }}>No indexed creatives yet.</div>
+            )}
+          </Card>
 
+          <AdvertiserAnalystDepth>
+            <AdvertiserViewBar state={insightView} onChange={setInsightView} />
+
+            {advertiserBrief ? (
+              <>
               {showInsight("marketingRead") && (
               <InsightSection title="Marketing read" accent>
                 <p style={{ fontSize: 14, color: "#1C1C1A", lineHeight: 1.55, margin: 0 }}>
@@ -989,25 +960,45 @@ function AdvertiserPage() {
                 </ul>
               </InsightSection>
               )}
-            </div>
-          ) : (
-            <QueryStatusCard
-              title="Supporting evidence"
-              reason="Advertiser brief could not be built from the current placement and warroom data."
-              optional
+              </>
+            ) : (
+              <QueryStatusCard
+                title="Supporting evidence"
+                reason="Advertiser brief could not be built from the current placement and warroom data."
+                optional
+              />
+            )}
+
+            <CampaignStoryBlock
+              brand={brand}
+              loading={loading}
+              placementIntelUnavailable={placementIntelUnavailable}
+              story={campaignStory}
             />
-          )}
 
-          <CampaignIntelligenceBlock
-            brand={brand}
-            loading={loading}
-            placementIntelUnavailable={placementIntelUnavailable}
-            intel={campaignIntel}
-          />
+            {strategistIntel && !strategistIntel.available ? (
+              <AdvertiserStrategistIntelBlock
+                brand={brand}
+                loading={loading}
+                intel={strategistIntel}
+                unavailableReason={loadStatus.strategist.ok ? undefined : loadStatus.strategist.reason}
+              />
+            ) : null}
 
-          <div style={{ marginBottom: 4 }}>
+            <AdlibraryAdvertiserPanel
+              intel={adlibraryIntel}
+              unavailableReason={loadStatus.adlibrary.ok ? undefined : loadStatus.adlibrary.reason}
+            />
+
+            <CampaignIntelligenceBlock
+              brand={brand}
+              loading={loading}
+              placementIntelUnavailable={placementIntelUnavailable}
+              intel={campaignIntel}
+            />
+
             <DataFeedPanel domain={domain} brandLabel={brand} />
-          </div>
+          </AdvertiserAnalystDepth>
         </div>
 
         {/* RIGHT — News panel */}
