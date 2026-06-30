@@ -38,6 +38,8 @@ import {
   AdvertiserCommandDashboard,
 } from "@/components/adpalette/AdvertiserCommandDashboard";
 import { buildAdvertiserVisualScan } from "@/lib/advertiserVisualSignals";
+import { buildMessagingFingerprint } from "@/lib/messagingFingerprint";
+import { MessagingFingerprintPanel } from "@/components/adpalette/MessagingFingerprint";
 import { AdvertiserAnalystDepth } from "@/components/adpalette/AdvertiserAnalystDepth";
 import { QueryStatusCard } from "@/components/adpalette/QueryStatusCard";
 import {
@@ -521,6 +523,16 @@ function AdvertiserPage() {
     creativeFatigue.label ??
     (creativeTier === "fresh" ? "Fresh" : creativeTier === "maturing" ? "Maturing" : "Fatigued");
 
+  const messagingFingerprint = useMemo(
+    () =>
+      buildMessagingFingerprint(
+        campaignIntel,
+        strategistIntel,
+        advertiserBrief?.saying,
+      ),
+    [campaignIntel, strategistIntel, advertiserBrief?.saying],
+  );
+
   const visualScan = useMemo(
     () =>
       buildAdvertiserVisualScan(
@@ -755,6 +767,7 @@ function AdvertiserPage() {
               spendMonthly={spend?.estimated_monthly_spend ?? 0}
               spendBandLabel={advertiserBrief.spend.label || null}
               visualScan={visualScan}
+              messagingFingerprint={messagingFingerprint}
               channelMix={advertiserBrief.channelMix}
               strategistIntel={strategistIntel}
               campaignIntel={campaignIntel}
@@ -868,20 +881,7 @@ function AdvertiserPage() {
               )}
 
               {showInsight("messaging") && (
-              <InsightSection title="What they're saying">
-                {placementIntelUnavailable ? (
-                  <p style={{ fontSize: 13, color: "#9E9D94", margin: 0 }}>{PLACEMENT_INTEL_UNAVAILABLE}</p>
-                ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                    <TagBars label="Emotion" items={advertiserBrief.saying.emotionalDrivers} />
-                    <TagBars label="Stage" items={advertiserBrief.saying.buyerStages} />
-                    <TagBars label="Offer" items={advertiserBrief.saying.offerTypes} />
-                    <TagBars label="CTA" items={advertiserBrief.saying.ctas} />
-                    <TagBars label="Hooks" items={advertiserBrief.saying.hooks} />
-                    <TagBars label="Themes" items={advertiserBrief.saying.offerThemes} />
-                  </div>
-                )}
-              </InsightSection>
+              <MessagingFingerprintPanel fingerprint={messagingFingerprint} />
               )}
 
               {showInsight("audiences") && (
@@ -1128,35 +1128,6 @@ function InsightSection({
         {meta && <div style={{ fontSize: 11, color: "#9E9D94" }}>{meta}</div>}
       </div>
       {children}
-    </div>
-  );
-}
-
-function TagBars({ label, items }: { label: string; items: string[] }) {
-  if (!items.length) return null;
-  return (
-    <div>
-      <div style={{ fontSize: 10, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-        {label}
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-        {items.map((item) => (
-          <span
-            key={item}
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#1C1C1A",
-              background: "#F7F6F3",
-              border: "1px solid #EBE9E4",
-              borderRadius: 6,
-              padding: "5px 10px",
-            }}
-          >
-            {item}
-          </span>
-        ))}
-      </div>
     </div>
   );
 }

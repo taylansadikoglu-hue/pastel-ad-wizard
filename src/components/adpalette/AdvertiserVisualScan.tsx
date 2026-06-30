@@ -7,6 +7,8 @@ import {
   Target,
 } from "lucide-react";
 import type { AdvertiserVisualScan } from "@/lib/advertiserVisualSignals";
+import type { MessagingFingerprint } from "@/lib/messagingFingerprint";
+import { MessagingFingerprintPanel } from "@/components/adpalette/MessagingFingerprint";
 
 const PANELS = [
   { key: "what", label: "Running", icon: Target, accent: "#C9963A" },
@@ -71,9 +73,10 @@ type Props = {
   updatedAgo: string | null;
   placementCount: number;
   scan: AdvertiserVisualScan;
+  messagingFingerprint?: MessagingFingerprint;
 };
 
-export function AdvertiserVisualScan({ brand, category, updatedAgo, placementCount, scan }: Props) {
+export function AdvertiserVisualScan({ brand, category, updatedAgo, placementCount, scan, messagingFingerprint }: Props) {
   return (
     <div
       style={{
@@ -145,25 +148,11 @@ export function AdvertiserVisualScan({ brand, category, updatedAgo, placementCou
             ) : null}
 
             {key === "saying" ? (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                {scan.topMessage ? (
-                  <>
-                    <div style={{ fontSize: 28, fontWeight: 800, lineHeight: 1, color: "#FFFFFF" }}>
-                      {scan.topMessage.pct > 0 ? `${scan.topMessage.pct}%` : "—"}
-                    </div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: accent, marginTop: 4, textTransform: "capitalize" }}>
-                      {scan.topMessage.label}
-                    </div>
-                    {scan.topCta && scan.topCta.label !== "Unspecified" ? (
-                      <div style={{ marginTop: 8 }}>
-                        <Pill colour="rgba(66,133,244,0.25)">{scan.topCta.label} {scan.topCta.pct > 0 ? `${scan.topCta.pct}%` : ""}</Pill>
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  <span style={{ fontSize: 11, color: "#9E9D94" }}>—</span>
-                )}
-              </div>
+              <MessagingFingerprintPanel
+                fingerprint={messagingFingerprint ?? { tones: scan.topMessage ? [{ label: scan.topMessage.label, shortLabel: scan.topMessage.label, pct: scan.topMessage.pct }] : [], ctas: scan.topCta ? [{ label: scan.topCta.label, shortLabel: scan.topCta.label, pct: scan.topCta.pct }] : [], stage: null, archetype: null, headline: null }}
+                variant="dark"
+                compact
+              />
             ) : null}
 
             {key === "changed" ? (

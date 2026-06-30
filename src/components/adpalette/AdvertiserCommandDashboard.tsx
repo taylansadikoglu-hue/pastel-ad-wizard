@@ -2,6 +2,8 @@ import { ArrowDown, ArrowUp, Zap } from "lucide-react";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { SpendIndex } from "@/components/adpalette/SpendIndex";
 import { AdvertiserVisualScan, VisualMoveCards } from "@/components/adpalette/AdvertiserVisualScan";
+import { MessagingFingerprintPanel } from "@/components/adpalette/MessagingFingerprint";
+import type { MessagingFingerprint } from "@/lib/messagingFingerprint";
 import type { AdvertiserStrategistIntel } from "@/lib/advertiserStrategistIntel";
 import type { CampaignIntelligence } from "@/lib/campaignIntelligence";
 import type { ChannelMixResult } from "@/lib/channelMix";
@@ -21,6 +23,7 @@ type Props = {
   spendMonthly?: number;
   spendBandLabel?: string | null;
   visualScan: VisualScanData;
+  messagingFingerprint: MessagingFingerprint;
   channelMix: ChannelMixResult;
   strategistIntel: AdvertiserStrategistIntel | null;
   campaignIntel: CampaignIntelligence | null;
@@ -29,28 +32,6 @@ type Props = {
   creativeTier: "fresh" | "maturing" | "fatigued";
   creativeLabel: string;
 };
-
-function MiniBars({ rows, colour = "#C9963A" }: { rows: { label: string; pct: number }[]; colour?: string }) {
-  const active = rows.filter((r) => r.pct > 0).slice(0, 4);
-  if (!active.length) {
-    return <div style={{ fontSize: 12, color: "#9E9D94" }}>—</div>;
-  }
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {active.map((row) => (
-        <div key={row.label}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 3 }}>
-            <span style={{ color: "#1C1C1A", fontWeight: 500 }}>{row.label}</span>
-            <span style={{ color: "#6B6B62", fontWeight: 600 }}>{row.pct}%</span>
-          </div>
-          <div style={{ height: 5, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ width: `${row.pct}%`, height: "100%", background: colour, borderRadius: 3 }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function KpiTile({
   value,
@@ -120,6 +101,7 @@ export function AdvertiserCommandDashboard({
   spendMonthly = 0,
   spendBandLabel,
   visualScan,
+  messagingFingerprint,
   channelMix,
   strategistIntel,
   campaignIntel,
@@ -180,9 +162,10 @@ export function AdvertiserCommandDashboard({
         updatedAgo={updatedAgo}
         placementCount={placementCount}
         scan={visualScan}
+        messagingFingerprint={messagingFingerprint}
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.25fr", gap: 12 }}>
         <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: "16px 18px" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
             Channel mix
@@ -197,18 +180,7 @@ export function AdvertiserCommandDashboard({
             emptyMessage="—"
           />
         </div>
-        <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: "16px 18px" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-            Messaging %
-          </div>
-          <MiniBars rows={(campaignIntel?.messagingBreakdown ?? []).map((r) => ({ label: r.label, pct: r.pct }))} colour="#7C3AED" />
-        </div>
-        <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderRadius: 10, padding: "16px 18px" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#9E9D94", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-            CTA %
-          </div>
-          <MiniBars rows={(campaignIntel?.ctaBreakdown ?? []).map((r) => ({ label: r.label, pct: r.pct }))} colour="#4285F4" />
-        </div>
+        <MessagingFingerprintPanel fingerprint={messagingFingerprint} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 120px", gap: 12, alignItems: "stretch" }}>
