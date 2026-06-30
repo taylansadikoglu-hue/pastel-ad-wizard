@@ -1,14 +1,26 @@
 #!/usr/bin/env bash
 # Push Cloudflare + Resend secrets to production Worker.
 #
-# Usage:
+# Usage (split tokens — recommended):
+#   export CLOUDFLARE_API_TOKEN=cfat_...        # R2 read/write
+#   export CLOUDFLARE_WORKERS_API_TOKEN=cfat_... # Workers Scripts edit
+#   ./scripts/cloudflare-set-secrets.sh
+#
+# Or one token with both permission groups:
 #   export CLOUDFLARE_API_TOKEN=cfat_...
-#   export RESEND_API_KEY=re_...
 #   ./scripts/cloudflare-set-secrets.sh
 
 set -euo pipefail
 
 WORKER_NAME="${CLOUDFLARE_WORKER_NAME:-taylansadikoglu-hue-pastel-ad-wizard}"
+
+R2_TOKEN="${CLOUDFLARE_API_TOKEN_R2:-${CLOUDFLARE_API_TOKEN:-}}"
+WRANGLER_TOKEN="${CLOUDFLARE_WORKERS_API_TOKEN:-${CLOUDFLARE_API_TOKEN:-}}"
+
+if [[ -z "$WRANGLER_TOKEN" ]]; then
+  echo "Set CLOUDFLARE_WORKERS_API_TOKEN or CLOUDFLARE_API_TOKEN (Workers Scripts Edit)"
+  exit 1
+fi
 
 put_secret() {
   local name="$1"
@@ -18,10 +30,11 @@ put_secret() {
     return
   fi
   echo "Setting worker secret: $name"
-  printf '%s' "$value" | npx wrangler secret put "$name" --name "$WORKER_NAME"
+  printf '%s' "$value" | CLOUDFLARE_API_TOKEN="$WRANGLER_TOKEN" npx wrangler secret put "$name" --name "$WORKER_NAME"
 }
 
-put_secret CLOUDFLARE_API_TOKEN "${CLOUDFLARE_API_TOKEN:-}"
+# Runtime worker uses R2-capable token
+put_secret CLOUDFLARE_API_TOKEN "$R2_TOKEN"
 put_secret CLOUDFLARE_ACCOUNT_ID "${CLOUDFLARE_ACCOUNT_ID:-7169638abf93eba4c8a9644d870c35fa}"
 put_secret R2_BUCKET_NAME "${R2_BUCKET_NAME:-revenuead-creative-vault}"
 put_secret R2_PUBLIC_URL "${R2_PUBLIC_URL:-https://pub-cf328a68c22840b998bf5b84a553b21c.r2.dev}"

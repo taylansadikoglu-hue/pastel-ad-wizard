@@ -15,6 +15,23 @@ In **Cloudflare → R2 → revenuead-creative-vault → Settings → Public acce
 
 Uploads via API succeed before public access is wired; the public URL returns 404 until the bucket is linked.
 
+## API tokens
+
+Use **one token with both permission groups**, or split across two:
+
+| Permission | Used for |
+|------------|----------|
+| **Cloudflare R2 → Edit** | Upload creatives (`npm run r2:test`, cache-creative API) |
+| **Workers Scripts → Edit** | `npm run cloudflare:set-secrets`, deploy |
+
+Verify any token:
+
+```bash
+CLOUDFLARE_API_TOKEN=cfat_... npm run cloudflare:verify-token
+```
+
+Token `revenuadCursor` — if verify passes but R2/Workers fail, edit the token in [API Tokens](https://dash.cloudflare.com/7169638abf93eba4c8a9644d870c35fa/api-tokens) and add the permissions above.
+
 ## Environment variables
 
 ```bash

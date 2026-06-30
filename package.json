@@ -23,6 +23,7 @@
     "email:verify-dns": "npx tsx scripts/email-verify-dns.ts",
     "email:set-secrets": "bash scripts/email-set-secrets.sh",
     "cloudflare:set-secrets": "bash scripts/cloudflare-set-secrets.sh",
+    "cloudflare:verify-token": "npx tsx scripts/verify-cloudflare-token.ts",
     "r2:test": "npx tsx scripts/r2-test.ts"
   },
   "dependencies": {
