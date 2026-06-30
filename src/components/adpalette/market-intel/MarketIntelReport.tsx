@@ -165,6 +165,39 @@ function KpiTile({
   );
 }
 
+function curateRecommendedActions(input: {
+  recommendedActions: string[];
+  topChannel: string;
+  underWeightedChannel: string;
+  topProduct: string | null;
+  biggestThreat: string | null;
+  whitespace: { title: string; action: string }[];
+}): string[] {
+  const cleaned = (input.recommendedActions ?? [])
+    .map((s) => (s ?? "").trim())
+    .filter(Boolean)
+    .filter((s) => s.length >= 18)
+    .filter((s) => !/^(n\/a|na|none|—)$/i.test(s))
+    .filter((s) => !/valueless|tbd|todo/i.test(s));
+
+  if (cleaned.length >= 2) return cleaned.slice(0, 3);
+
+  const ideas: string[] = [];
+  if (input.whitespace[0]?.title && input.whitespace[0]?.action) {
+    ideas.push(`${input.whitespace[0].action} (${input.whitespace[0].title}).`);
+  }
+  if (input.biggestThreat) {
+    ideas.push(
+      `Counter ${input.biggestThreat} by mirroring their best-performing offer framing, then differentiating on proof + speed.`,
+    );
+  }
+  ideas.push(
+    `Re-balance into ${input.underWeightedChannel}: ship 3–5 new creatives around ${input.topProduct ?? "your top product line"} and keep rotation weekly.`,
+  );
+
+  return [...new Set([...cleaned, ...ideas])].slice(0, 3);
+}
+
 type Props = {
   clientName: string;
   category: string;
@@ -229,6 +262,18 @@ export function MarketIntelReport({
     competitorRisers[0]?.deltas.wow ?? null,
   );
   const whitespaceBite = radWhitespaceBite(whitespaceCards[0]?.title ?? biggestOpportunity);
+  const curatedActions = useMemo(
+    () =>
+      curateRecommendedActions({
+        recommendedActions,
+        topChannel: topChannels.first,
+        underWeightedChannel: topChannels.second,
+        topProduct: productThemes[0]?.label ?? null,
+        biggestThreat,
+        whitespace: whitespaceCards.map((w) => ({ title: w.title, action: w.action })),
+      }),
+    [recommendedActions, topChannels.first, topChannels.second, productThemes, biggestThreat, whitespaceCards],
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -368,7 +413,12 @@ export function MarketIntelReport({
 
         {/* Competitor movements */}
         <div style={{ ...LINEN_CARD, gridColumn: "span 12 / span 12" }}>
-          <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("competitors")} />}>Competitor movements</SectionLabel>
+          <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("competitors")} />}>
+            Competitor share-of-voice (index)
+          </SectionLabel>
+          <p style={{ margin: "0 0 10px", fontSize: 12, color: "#6B6B62", lineHeight: 1.45 }}>
+            The index is relative within your watchlist: 100 = loudest competitor observed; 50 = roughly half as present.
+          </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {competitorRisers.slice(0, 5).map((row) => (
               <div key={row.brand} style={{ display: "grid", gridTemplateColumns: "100px 1fr auto auto", gap: 10, alignItems: "center" }}>
@@ -376,7 +426,9 @@ export function MarketIntelReport({
                 <MiniBar pct={row.threatScore} color={row.threatScore >= 70 ? "#C0392B" : "#C9963A"} />
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, minWidth: 88 }}>
                   <span style={{ fontSize: 11, color: "#9E9D94" }}>{row.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#1C1C1A", fontVariantNumeric: "tabular-nums" }}>{row.threatScore}%</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#1C1C1A", fontVariantNumeric: "tabular-nums" }}>
+                    {Math.round(row.threatScore)}
+                  </span>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
                   <DeltaChip label="WoW" value={row.deltas.wow} compact />
@@ -391,6 +443,9 @@ export function MarketIntelReport({
         {/* Channel mix */}
         <div style={{ ...LINEN_CARD, gridColumn: "span 12 / span 12" }}>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("channelMix")} />}>Channel mix</SectionLabel>
+          <p style={{ margin: "0 0 10px", fontSize: 12, color: "#6B6B62", lineHeight: 1.45 }}>
+            Confidence: High = direct channel tags; Medium = mixed sources; Low = inferred from incomplete tagging.
+          </p>
           <ChannelMixBars
             rows={channelMix.rows}
             overallConfidence={channelMix.overallConfidence}
@@ -398,6 +453,7 @@ export function MarketIntelReport({
             estimationTooltip={channelMix.estimationTooltip}
             variant="light"
             animate
+            emptyMessage="Channel mix will appear once creatives are indexed with platform/channel tags."
           />
           <RadBite>{channelBite || `${topChannels.first} leads; ${topChannels.second} under-weighted.`}</RadBite>
         </div>
@@ -419,10 +475,15 @@ export function MarketIntelReport({
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: "#1C1C1A" }}>
-                  {seasonalTheme.emoji} {seasonalTheme.label}
+                  {seasonalTheme.emoji} Seasonal watch · {seasonalTheme.label}
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#C9963A" }}>{seasonalTheme.activeBrands.length} brands active</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#C9963A" }}>
+                  {seasonalTheme.activeBrands.length} brands spotted
+                </span>
               </div>
+              <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6B6B62", lineHeight: 1.45 }}>
+                {seasonalTheme.note}
+              </p>
               <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {seasonalTheme.activeBrands.map((b) => (
                   <span key={b} style={{ fontSize: 11, fontWeight: 600, background: "#FFFFFF", border: "1px solid #E8D5A0", borderRadius: 999, padding: "3px 10px" }}>
@@ -486,6 +547,9 @@ export function MarketIntelReport({
                     <span style={{ fontSize: 12, fontWeight: 600, color: "#9E9D94", marginLeft: 4 }}>score</span>
                   </div>
                 )}
+                <p style={{ margin: "8px 0 0", fontSize: 12, color: "#6B6B62", lineHeight: 1.45 }}>
+                  {card.action}
+                </p>
               </button>
             ))}
           </div>
@@ -493,11 +557,11 @@ export function MarketIntelReport({
         </div>
       )}
 
-      {recommendedActions.length > 0 && (
+      {curatedActions.length > 0 && (
         <div>
           <SectionLabel action={<EvidenceBtn onClick={() => onEvidence("strategicActions")} />}>Recommended actions</SectionLabel>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {recommendedActions.slice(0, 3).map((action, i) => (
+            {curatedActions.slice(0, 3).map((action, i) => (
               <div
                 key={i}
                 style={{

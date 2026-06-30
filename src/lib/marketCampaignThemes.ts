@@ -38,7 +38,7 @@ const PRODUCT_PATTERNS: { pattern: RegExp; label: string }[] = [
 ];
 
 const SEASONAL_PATTERNS: { pattern: RegExp; label: string; emoji: string }[] = [
-  { pattern: /christmas|xmas|festive|holiday|santa|gift/i, label: "Christmas campaigns", emoji: "🎄" },
+  { pattern: /christmas|xmas|festive|holiday|santa|gift/i, label: "Festive season watch", emoji: "🎄" },
   { pattern: /eofy|end\s*of\s*financial|tax/i, label: "EOFY push", emoji: "📊" },
   { pattern: /back\s*to\s*school|uni|student/i, label: "Back-to-school", emoji: "🎒" },
   { pattern: /footy|afl|sport|grand\s*final/i, label: "Sports sponsorship", emoji: "🏉" },
@@ -77,14 +77,14 @@ function bankingFallbackProducts(): ProductThemeRow[] {
   ];
 }
 
-function bankingFallbackSeasonal(): SeasonalTheme {
-  return {
-    id: "christmas",
-    label: "Christmas campaigns",
-    emoji: "🎄",
-    activeBrands: ["CommBank", "Westpac", "NAB"],
-    note: "Festive home-loan and rewards-card creative is scaling into peak season.",
-  };
+function inSeasonWindow(label: string): boolean {
+  const m = new Date().getMonth() + 1;
+  const v = label.toLowerCase();
+  if (v.includes("festive")) return m >= 10 || m <= 1;
+  if (v.includes("eofy")) return m >= 4 && m <= 7;
+  if (v.includes("back-to-school")) return m === 1 || m === 2;
+  if (v.includes("sports")) return m >= 8 && m <= 10;
+  return true;
 }
 
 export function buildProductThemes(
@@ -140,19 +140,19 @@ export function detectSeasonalTheme(
     }
   }
 
-  if (hit && brandSet.size > 0) {
+  if (hit && brandSet.size > 0 && inSeasonWindow(hit.label)) {
     return {
       id: hit.label.toLowerCase().replace(/\s+/g, "-"),
       label: hit.label,
       emoji: hit.emoji,
       activeBrands: [...brandSet].slice(0, 5),
-      note: `${hit.label} creative detected across ${brandSet.size} tracked brands.`,
+      note: `${hit.label} messaging detected across ${brandSet.size} tracked brands.`,
     };
   }
 
-  if (/bank/i.test(category)) {
-    return bankingFallbackSeasonal();
-  }
+  // Avoid false positives: only surface a seasonal watch when we actually detect it.
+  // (Demo fallbacks previously implied "Christmas campaigns active" even when not observed.)
+  void category;
 
   return null;
 }
