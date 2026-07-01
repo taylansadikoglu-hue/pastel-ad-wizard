@@ -19,6 +19,8 @@ import {
   type ChannelConfidence,
   type ChannelMixResult,
 } from "@/lib/channelMix";
+import { ctaFromPlacement, dedupeProductLabels, isBrandLikeLabel, isMeaningfulCta } from "@/lib/placementCta";
+import { isGenericCta, isSkipTagValue, isSoWhatWorthy } from "@/lib/soWhatQuality";
 
 export type { ChannelConfidence } from "@/lib/channelMix";
 
@@ -164,29 +166,41 @@ export function buildAdvertiserSpendBand(war: AdvertiserIntelWar | null | undefi
   band: SpendBand | null;
   label: string | null;
   disclaimer: string;
+  channelBreakdown: string | null;
 } {
-  const disclaimer = "Estimated from observed activity and should be treated as directional.";
+  const disclaimer =
+    "Directional estimate from indexed activity — not invoiced media spend. Split below is share of observed placements by channel.";
   const monthly = Number(war?.spend?.est_monthly_aud ?? 0);
+  const mix = buildAdvertiserChannelMix(war);
+  const activeChannels = mix.rows
+    .filter((r) => r.pct > 0)
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 3);
+  const channelBreakdown = activeChannels.length
+    ? activeChannels.map((r) => `${r.channel} ${Math.round(r.pct)}%`).join(" · ")
+    : null;
+
   if (!Number.isFinite(monthly) || monthly <= 0) {
-    return { band: null, label: null, disclaimer };
+    return { band: null, label: null, disclaimer, channelBreakdown };
   }
   const match = SPEND_BANDS.find((b) => monthly >= b.min && monthly < b.max) ?? SPEND_BANDS[SPEND_BANDS.length - 1];
-  return { band: match.band, label: match.label, disclaimer };
+  return { band: match.band, label: match.label, disclaimer, channelBreakdown };
 }
 
 /** Products and services surfaced in indexed placements. */
-export function buildProductsPromoted(war: AdvertiserIntelWar | null | undefined): string[] {
+export function buildProductsPromoted(
+  war: AdvertiserIntelWar | null | undefined,
+  brand?: string | null,
+): string[] {
   const rows = placements(war);
   const candidates: string[] = [];
   for (const row of rows) {
-    for (const field of [row.normalized_product, row.product_type, row.product_category, row.page_title]) {
+    for (const field of [row.campaign_cluster, row.normalized_product, row.product_type, row.product_category]) {
       if (!isUsableText(field)) continue;
-      const key = field.trim().toLowerCase();
-      if (key === "other" || key === "unknown" || key === "unclassified") continue;
       candidates.push(field.trim());
     }
   }
-  return uniqueStrings(candidates, 6);
+  return dedupeProductLabels(candidates, brand ?? war?.advertiser ?? war?.name, 4);
 }
 
 export type AudienceLabel = {
@@ -247,8 +261,9 @@ export function buildAudiencesPersonas(war: AdvertiserIntelWar | null | undefine
 
 export function buildCtAs(war: AdvertiserIntelWar | null | undefined): string[] {
   const rows = placements(war);
+  const brand = war?.advertiser ?? war?.name;
   return uniqueStrings(
-    rows.flatMap((row) => [row.primary_cta, row.detected_cta]).concat(war?.top_cta ?? null),
+    rows.map((row) => ctaFromPlacement(row, brand)).filter((c): c is string => Boolean(c)),
     4,
   );
 }
@@ -460,51 +475,57 @@ export function buildMeetingTalkingPoints(
 ): string[] {
   const points: string[] = [];
 
-  if (strategist?.strategistSummary) {
-    points.push(strategist.strategistSummary);
+  const pushIfUsable = (raw: string | null | undefined) => {
+    const t = (raw ?? "").trim();
+    if (!t || t.length < 24) return;
+    if (isSkipTagValue(t) || /unknown/i.test(t)) return;
+    if (isBrandLikeLabel(t, brand)) return;
+    if (/^cta pattern:/i.test(t) && isGenericCta(t.replace(/^cta pattern:\s*/i, ""))) return;
+    if (strategist?.strategistSummary && t === strategist.strategistSummary && !isSoWhatWorthy(t)) return;
+    if (!points.some((p) => p.toLowerCase() === t.toLowerCase())) points.push(t);
+  };
+
+  if (strategist?.strategistSummary && isSoWhatWorthy(strategist.strategistSummary)) {
+    pushIfUsable(strategist.strategistSummary);
   }
-  if (strategist?.marketDna && strategist.marketDna !== strategist.strategistSummary) {
-    points.push(strategist.marketDna);
-  }
-  if (strategist?.narrativeGap) {
-    points.push(`Narrative gap (${strategist.narrativeGapRisk ?? "watch"}): ${strategist.narrativeGap}`);
+  if (strategist?.narrativeGap && !/unknown/i.test(strategist.narrativeGap)) {
+    pushIfUsable(`Narrative gap: ${strategist.narrativeGap}`);
   }
 
   const mix = buildAdvertiserChannelMix(war);
   const saying = buildWhatTheyreSaying(war);
-  const products = buildProductsPromoted(war);
+  const products = buildProductsPromoted(war, brand);
   const rows = placements(war);
   const takeaway = uniqueStrings(rows.map((r) => r.strategist_takeaway), 1)[0];
 
   const topChannels = mix.rows.filter((r) => r.pct > 0).sort((a, b) => b.pct - a.pct).slice(0, 2);
   if (topChannels.length) {
-    points.push(
-      `${brand} indexed activity splits ${topChannels.map((c) => `${c.channel} (${Math.round(c.pct)}%)`).join(" and ")}.`,
+    pushIfUsable(
+      `${brand} indexed activity splits ${topChannels.map((c) => `${c.channel} (${Math.round(c.pct)}%)`).join(" and ")} across ${placementCount(war)} deduped creatives.`,
     );
   }
 
   if (products.length) {
-    points.push(`Products in market: ${products.slice(0, 2).join(" · ")}.`);
+    pushIfUsable(`Lead products in market: ${products.slice(0, 3).join(", ")}.`);
   }
 
-  if (saying.emotionalDrivers.length) {
-    points.push(`Emotional driver across creatives: ${saying.emotionalDrivers[0]}.`);
+  const meaningfulCtas = saying.ctas.filter((c) => isMeaningfulCta(c, brand));
+  if (meaningfulCtas.length) {
+    pushIfUsable(`Action prompts on ads: ${meaningfulCtas.slice(0, 2).join(" · ")}.`);
+  } else if (saying.emotionalDrivers.length) {
+    pushIfUsable(`Dominant message theme: ${saying.emotionalDrivers[0]} — CTAs are mostly soft/generic in indexed copy.`);
   }
 
-  if (saying.ctas.length) {
-    points.push(`CTA pattern: ${saying.ctas.slice(0, 2).join(" · ")}.`);
-  } else if (saying.offerTypes.length) {
-    points.push(`Offer type in play: ${saying.offerTypes[0]}.`);
-  }
-
-  if (takeaway) {
-    points.push(takeaway.split(/[.!?]/)[0] + ".");
-  } else if (saying.hooks[0]) {
-    points.push(saying.hooks[0]);
+  if (takeaway && isSoWhatWorthy(takeaway)) {
+    pushIfUsable(takeaway.split(/[.!?]/)[0] + ".");
+  } else if (saying.hooks[0] && !isBrandLikeLabel(saying.hooks[0], brand)) {
+    pushIfUsable(saying.hooks[0]);
   }
 
   if (!points.length && hasPlacementIntel(war)) {
-    points.push(`${brand} has ${placementCount(war)} indexed placements — use channel mix and product fields to open the conversation.`);
+    points.push(
+      `${brand}: ${placementCount(war)} creatives indexed — open with channel mix and product focus before recommending new channels.`,
+    );
   }
 
   return points.slice(0, 5);

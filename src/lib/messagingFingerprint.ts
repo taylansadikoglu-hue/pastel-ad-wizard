@@ -2,6 +2,8 @@ import type { CampaignIntelligence } from "@/lib/campaignIntelligence";
 import type { AdvertiserStrategistIntel } from "@/lib/advertiserStrategistIntel";
 import type { SayingSection } from "@/lib/radAdvertiserBrief";
 import { isUsableHeadline, normalizeCtaLabel } from "@/lib/dataTrust";
+import { isBrandLikeLabel, isMeaningfulCta } from "@/lib/placementCta";
+import { isGenericCta } from "@/lib/soWhatQuality";
 
 export type MessagingSlice = {
   label: string;
@@ -59,15 +61,15 @@ function mapSlices(
     }));
 }
 
-function pickHeadline(saying: SayingSection | null | undefined): string | null {
+function pickHeadline(saying: SayingSection | null | undefined, brand?: string | null): string | null {
   if (!saying) return null;
   for (const raw of saying.copySnippets) {
     const usable = isUsableHeadline(raw);
-    if (usable) return usable;
+    if (usable && !isBrandLikeLabel(usable, brand)) return usable;
   }
   for (const raw of saying.hooks) {
     const usable = isUsableHeadline(raw);
-    if (usable) return usable;
+    if (usable && !isBrandLikeLabel(usable, brand)) return usable;
   }
   return null;
 }
@@ -76,6 +78,7 @@ export function buildMessagingFingerprint(
   campaignIntel: CampaignIntelligence | null,
   strategistIntel: AdvertiserStrategistIntel | null,
   saying: SayingSection | null | undefined,
+  brand?: string | null,
 ): MessagingFingerprint {
   const tones = mapSlices(
     (campaignIntel?.messagingBreakdown ?? []).map((r) => ({ label: r.label, pct: r.pct })),
@@ -95,16 +98,23 @@ export function buildMessagingFingerprint(
       pct: r.pct,
     })),
     4,
-    (label) => normalizeCtaLabel(label) ?? label,
+    (label) => {
+      const n = normalizeCtaLabel(label) ?? label;
+      if (!n || isBrandLikeLabel(n, brand)) return null;
+      if (!isMeaningfulCta(n, brand) && isGenericCta(n)) return null;
+      return n;
+    },
   );
 
   if (!ctas.length && strategistIntel?.topCta) {
     const cta = normalizeCtaLabel(strategistIntel.topCta) ?? strategistIntel.topCta;
-    ctas.push({
-      label: cta,
-      shortLabel: shortMessagingLabel(cta),
-      pct: 100,
-    });
+    if (isMeaningfulCta(cta, brand)) {
+      ctas.push({
+        label: cta,
+        shortLabel: shortMessagingLabel(cta),
+        pct: 100,
+      });
+    }
   }
 
   const stage =
@@ -119,7 +129,7 @@ export function buildMessagingFingerprint(
     ctas,
     stage,
     archetype,
-    headline: pickHeadline(saying),
+    headline: pickHeadline(saying, brand),
   };
 }
 

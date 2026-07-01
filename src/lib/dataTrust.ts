@@ -81,9 +81,11 @@ export function previewSovWeights(brandCount: number): number[] {
   return rounded;
 }
 
-export function isUsableHeadline(raw: string | null | undefined): string | null {
+export function isUsableHeadline(raw: string | null | undefined, brand?: string | null): string | null {
   const t = (raw ?? "").trim();
   if (!t || t.length < 12) return null;
+  if (/^(commonwealth bank|commbank)/i.test(t) && t.length < 64) return null;
+  if (brand && new RegExp(`^${brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i").test(t) && t.length < 48) return null;
   if (!/[.!?]$/.test(t) && t.length > 48) return null;
   if (/^(the focus on|aims to|this ad|creative)/i.test(t) && !t.includes(".")) return null;
   if (t.length > 56) return `${t.slice(0, 55).trim()}…`;

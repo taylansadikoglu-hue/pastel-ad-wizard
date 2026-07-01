@@ -3,6 +3,7 @@ import { placementCount } from "@/lib/advertiserPlacements";
 import type { AdvertiserStrategistIntel } from "@/lib/advertiserStrategistIntel";
 import type { CampaignIntelligence } from "@/lib/campaignIntelligence";
 import type { ChannelMixResult } from "@/lib/channelMix";
+import { isMeaningfulCta } from "@/lib/placementCta";
 
 export type CampaignShare = { name: string; creatives: number; sharePct: number };
 export type ChannelShare = { name: string; pct: number; ads: number };
@@ -46,6 +47,7 @@ export function buildAdvertiserVisualScan(
   campaignIntel: CampaignIntelligence | null,
   strategistIntel: AdvertiserStrategistIntel | null,
   adsThisWeek: number,
+  brand?: string | null,
 ): AdvertiserVisualScan {
   const rows = war?.placements ?? war?.recent_ads ?? [];
   const totalCreatives = Math.max(placementCount(war), rows.length, 1);
@@ -69,11 +71,9 @@ export function buildAdvertiserVisualScan(
     : strategistIntel?.topEmotion
       ? { label: strategistIntel.topEmotion, pct: 0 }
       : null;
-  const topCta = topCtaRaw
+  const topCta = topCtaRaw && isMeaningfulCta(topCtaRaw.label, brand)
     ? { label: topCtaRaw.label, pct: topCtaRaw.pct }
-    : strategistIntel?.topCta
-      ? { label: strategistIntel.topCta, pct: 0 }
-      : null;
+    : null;
 
   const newCreatives = rows.filter((r) => isRecent(r.first_seen)).length;
   const refreshed =
@@ -85,46 +85,38 @@ export function buildAdvertiserVisualScan(
 
   const moves: VisualMove[] = [];
 
-  if (gapChannels[0]) {
+  const leadGap = gapChannels.find((ch) => (channelMix.rows.find((r) => r.channel === ch)?.ads ?? 0) === 0);
+  if (leadGap) {
     moves.push({
       kind: "channel",
-      label: gapChannels[0],
-      value: "—",
-      hint: "No data",
+      label: leadGap,
+      value: "Whitespace",
+      hint: `No ${leadGap} ads in our indexed set — pitch there before they do`,
     });
   }
 
-  if (topMessage && topMessage.label !== "Unspecified") {
+  if (topMessage && topMessage.label !== "Unspecified" && topMessage.pct >= 15) {
     moves.push({
       kind: "message",
       label: topMessage.label,
-      value: topMessage.pct > 0 ? `${topMessage.pct}%` : "Lead",
-      hint: "Their theme",
+      value: `${topMessage.pct}%`,
+      hint: "Their lead message theme — counter or mirror in your deck",
     });
   }
 
-  if (campaigns[0]) {
+  if (campaigns[0] && campaigns[0].creatives >= 2) {
     moves.push({
       kind: "campaign",
       label: campaigns[0].name,
-      value: `${campaigns[0].creatives}`,
-      hint: "Lead line",
+      value: `${campaigns[0].creatives} ads`,
+      hint: "Heaviest campaign line in indexed creatives",
     });
-  } else if (topCta && topCta.label !== "Unspecified") {
+  } else if (topCta) {
     moves.push({
       kind: "cta",
       label: topCta.label,
-      value: topCta.pct > 0 ? `${topCta.pct}%` : "Lead",
-      hint: "Top CTA",
-    });
-  }
-
-  if (moves.length < 3 && gapChannels[1]) {
-    moves.push({
-      kind: "channel",
-      label: gapChannels[1],
-      value: "—",
-      hint: "No data",
+      value: `${topCta.pct}%`,
+      hint: "Most common action on ads",
     });
   }
 
