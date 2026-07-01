@@ -16,6 +16,8 @@ type Props = {
   category: string;
   updatedAgo: string | null;
   placementCount: number;
+  /** Engine / AdLibrary total — may exceed analyzed placement rows */
+  libraryAdCount?: number;
   totalAds: number;
   adsThisWeek: number;
   daysRunning: number;
@@ -95,6 +97,7 @@ export function AdvertiserCommandDashboard({
   category,
   updatedAgo,
   placementCount,
+  libraryAdCount,
   totalAds,
   adsThisWeek,
   daysRunning,
@@ -121,6 +124,10 @@ export function AdvertiserCommandDashboard({
   const showReach = reachLabel !== "—";
   const showFreq = frequencyLabel !== "—";
   const kpiCount = 4 + (showReach ? 1 : 0) + (showFreq ? 1 : 0);
+  const analyzedCount = placementCount > 0 ? placementCount : totalAds;
+  const libraryCount = libraryAdCount ?? totalAds;
+  const showLibraryNote = libraryCount > analyzedCount && analyzedCount > 0;
+  const showHealth = creativeScore > 0;
 
   const dnaChips = [
     strategistIntel?.positioningArchetype && { label: "Archetype", value: strategistIntel.positioningArchetype },
@@ -135,9 +142,15 @@ export function AdvertiserCommandDashboard({
       {provenance ? <DataProvenanceBar provenance={provenance} /> : null}
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${kpiCount}, minmax(0, 1fr))`, gap: 10 }}>
         <KpiTile
-          value={totalAds.toLocaleString()}
-          label="Ads"
-          sub={adsThisWeek > 0 ? `+${adsThisWeek} wk` : undefined}
+          value={analyzedCount.toLocaleString()}
+          label={placementCount > 0 ? "Creatives analyzed" : "Ads"}
+          sub={
+            showLibraryNote
+              ? `${libraryCount.toLocaleString()} in library`
+              : adsThisWeek > 0
+                ? `+${adsThisWeek} wk`
+                : undefined
+          }
           trendUp={adsThisWeek > 0 ? true : null}
         />
         {showReach ? <KpiTile value={reachLabel} label="Reach" /> : null}
@@ -191,7 +204,7 @@ export function AdvertiserCommandDashboard({
         <MessagingFingerprintPanel fingerprint={messagingFingerprint} />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 120px", gap: 12, alignItems: "stretch" }}>
+      <div style={{ display: "grid", gridTemplateColumns: showHealth ? "2fr 1fr 120px" : "2fr 1fr", gap: 12, alignItems: "stretch" }}>
         <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderLeft: "4px solid #1C1C1A", borderRadius: 10, padding: "14px 18px" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "#1C1C1A", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
             DNA tags
@@ -244,6 +257,7 @@ export function AdvertiserCommandDashboard({
           </div>
         </div>
 
+        {showHealth ? (
         <div
           style={{
             background: "#FFFFFF",
@@ -275,6 +289,7 @@ export function AdvertiserCommandDashboard({
           </div>
           <div style={{ fontSize: 10, fontWeight: 700, color: tierColour }}>{creativeLabel}</div>
         </div>
+        ) : null}
       </div>
 
       {campaigns.length > 0 ? (

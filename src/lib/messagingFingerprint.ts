@@ -28,12 +28,29 @@ export function shortMessagingLabel(raw: string, maxWords = 3): string {
   return t.split(/\s+/).slice(0, maxWords).join(" ");
 }
 
+function mergeSlicesByLabel(
+  rows: { label: string; pct: number }[],
+  normalizer?: (label: string) => string | null,
+): { label: string; pct: number }[] {
+  const merged = new Map<string, { label: string; pct: number }>();
+  for (const row of rows) {
+    const label = normalizer?.(row.label) ?? row.label;
+    if (!label || !shortMessagingLabel(label)) continue;
+    const key = label.toLowerCase();
+    const existing = merged.get(key);
+    if (existing) existing.pct = Math.round((existing.pct + row.pct) * 10) / 10;
+    else merged.set(key, { label, pct: row.pct });
+  }
+  return [...merged.values()].sort((a, b) => b.pct - a.pct);
+}
+
 function mapSlices(
   rows: { label: string; pct: number }[],
   limit = 4,
+  normalizer?: (label: string) => string | null,
 ): MessagingSlice[] {
-  return rows
-    .filter((r) => r.pct > 0 && shortMessagingLabel(r.label))
+  return mergeSlicesByLabel(rows, normalizer)
+    .filter((r) => r.pct > 0)
     .slice(0, limit)
     .map((r) => ({
       label: r.label,
@@ -77,6 +94,8 @@ export function buildMessagingFingerprint(
       label: normalizeCtaLabel(r.label) ?? r.label,
       pct: r.pct,
     })),
+    4,
+    (label) => normalizeCtaLabel(label) ?? label,
   );
 
   if (!ctas.length && strategistIntel?.topCta) {

@@ -89,8 +89,8 @@ export function buildAdvertiserVisualScan(
     moves.push({
       kind: "channel",
       label: gapChannels[0],
-      value: "0%",
-      hint: "Whitespace",
+      value: "—",
+      hint: "No data",
     });
   }
 
@@ -123,8 +123,8 @@ export function buildAdvertiserVisualScan(
     moves.push({
       kind: "channel",
       label: gapChannels[1],
-      value: "0%",
-      hint: "Whitespace",
+      value: "—",
+      hint: "No data",
     });
   }
 
