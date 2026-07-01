@@ -63,6 +63,7 @@ export type Database = {
           advertiser_name: string | null
           buyer_stage: string | null
           campaign_cluster: string | null
+          canonical_fingerprint: string | null
           category: string | null
           channel: string | null
           channel_platform: string | null
@@ -108,6 +109,7 @@ export type Database = {
           advertiser_name?: string | null
           buyer_stage?: string | null
           campaign_cluster?: string | null
+          canonical_fingerprint?: string | null
           category?: string | null
           channel?: string | null
           channel_platform?: string | null
@@ -153,6 +155,7 @@ export type Database = {
           advertiser_name?: string | null
           buyer_stage?: string | null
           campaign_cluster?: string | null
+          canonical_fingerprint?: string | null
           category?: string | null
           channel?: string | null
           channel_platform?: string | null
@@ -231,6 +234,222 @@ export type Database = {
           },
         ]
       }
+      adlibrary_advertiser_candidates: {
+        Row: {
+          ad_count: number
+          advertiser_name: string
+          category: string
+          confidence: number | null
+          created_at: string
+          domain: string | null
+          estimated_impressions: number
+          first_seen: string | null
+          id: number
+          last_seen: string | null
+          platform_ids: Json | null
+          platforms: Json | null
+          sample_ads: Json | null
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          ad_count?: number
+          advertiser_name: string
+          category: string
+          confidence?: number | null
+          created_at?: string
+          domain?: string | null
+          estimated_impressions?: number
+          first_seen?: string | null
+          id?: number
+          last_seen?: string | null
+          platform_ids?: Json | null
+          platforms?: Json | null
+          sample_ads?: Json | null
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          ad_count?: number
+          advertiser_name?: string
+          category?: string
+          confidence?: number | null
+          created_at?: string
+          domain?: string | null
+          estimated_impressions?: number
+          first_seen?: string | null
+          id?: number
+          last_seen?: string | null
+          platform_ids?: Json | null
+          platforms?: Json | null
+          sample_ads?: Json | null
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      adlibrary_enrichments: {
+        Row: {
+          ad_key: string
+          advertiser_name: string | null
+          analysis: string | null
+          cached: boolean
+          created_at: string
+          enriched_at: string | null
+          expires_at: string | null
+          markdown: string | null
+          platform: string | null
+          raw_json: Json | null
+          source: string | null
+          summary: string | null
+          transcription: string | null
+          ugc_script: string | null
+          updated_at: string
+        }
+        Insert: {
+          ad_key: string
+          advertiser_name?: string | null
+          analysis?: string | null
+          cached?: boolean
+          created_at?: string
+          enriched_at?: string | null
+          expires_at?: string | null
+          markdown?: string | null
+          platform?: string | null
+          raw_json?: Json | null
+          source?: string | null
+          summary?: string | null
+          transcription?: string | null
+          ugc_script?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ad_key?: string
+          advertiser_name?: string | null
+          analysis?: string | null
+          cached?: boolean
+          created_at?: string
+          enriched_at?: string | null
+          expires_at?: string | null
+          markdown?: string | null
+          platform?: string | null
+          raw_json?: Json | null
+          source?: string | null
+          summary?: string | null
+          transcription?: string | null
+          ugc_script?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      adlibrary_pipeline_runs: {
+        Row: {
+          ads_found: number
+          ads_inserted: number
+          ads_updated: number
+          advertisers_scanned: number
+          cache_hits: number
+          categories_scanned: number
+          credits_remaining: number | null
+          credits_used: number
+          duration_ms: number | null
+          enrichments_requested: number
+          errors: Json
+          finished_at: string | null
+          run_id: string
+          started_at: string
+          status: string
+          winners_scanned: number
+        }
+        Insert: {
+          ads_found?: number
+          ads_inserted?: number
+          ads_updated?: number
+          advertisers_scanned?: number
+          cache_hits?: number
+          categories_scanned?: number
+          credits_remaining?: number | null
+          credits_used?: number
+          duration_ms?: number | null
+          enrichments_requested?: number
+          errors?: Json
+          finished_at?: string | null
+          run_id?: string
+          started_at: string
+          status?: string
+          winners_scanned?: number
+        }
+        Update: {
+          ads_found?: number
+          ads_inserted?: number
+          ads_updated?: number
+          advertisers_scanned?: number
+          cache_hits?: number
+          categories_scanned?: number
+          credits_remaining?: number | null
+          credits_used?: number
+          duration_ms?: number | null
+          enrichments_requested?: number
+          errors?: Json
+          finished_at?: string | null
+          run_id?: string
+          started_at?: string
+          status?: string
+          winners_scanned?: number
+        }
+        Relationships: []
+      }
+      adlibrary_winning_concepts: {
+        Row: {
+          ad_key: string | null
+          advertiser_name: string
+          category: string | null
+          composite_score: number | null
+          dna_diff: Json | null
+          id: number
+          page_id: string
+          raw_json: Json | null
+          reasons: Json | null
+          scanned_at: string
+          tags: Json | null
+          tier: string | null
+          variant_count: number | null
+          variants: Json | null
+        }
+        Insert: {
+          ad_key?: string | null
+          advertiser_name: string
+          category?: string | null
+          composite_score?: number | null
+          dna_diff?: Json | null
+          id?: number
+          page_id: string
+          raw_json?: Json | null
+          reasons?: Json | null
+          scanned_at?: string
+          tags?: Json | null
+          tier?: string | null
+          variant_count?: number | null
+          variants?: Json | null
+        }
+        Update: {
+          ad_key?: string | null
+          advertiser_name?: string
+          category?: string | null
+          composite_score?: number | null
+          dna_diff?: Json | null
+          id?: number
+          page_id?: string
+          raw_json?: Json | null
+          reasons?: Json | null
+          scanned_at?: string
+          tags?: Json | null
+          tier?: string | null
+          variant_count?: number | null
+          variants?: Json | null
+        }
+        Relationships: []
+      }
       ads: {
         Row: {
           ai_analysis_summary: string | null
@@ -306,222 +525,6 @@ export type Database = {
           id?: number
           review_decision?: string | null
           source?: string | null
-        }
-        Relationships: []
-      }
-      adlibrary_advertiser_candidates: {
-        Row: {
-          id: number
-          category: string
-          advertiser_name: string
-          domain: string | null
-          platform_ids: Json | null
-          ad_count: number
-          estimated_impressions: number
-          platforms: Json | null
-          sample_ads: Json | null
-          confidence: number | null
-          source: string
-          first_seen: string | null
-          last_seen: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: number
-          category: string
-          advertiser_name: string
-          domain?: string | null
-          platform_ids?: Json | null
-          ad_count?: number
-          estimated_impressions?: number
-          platforms?: Json | null
-          sample_ads?: Json | null
-          confidence?: number | null
-          source?: string
-          first_seen?: string | null
-          last_seen?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: number
-          category?: string
-          advertiser_name?: string
-          domain?: string | null
-          platform_ids?: Json | null
-          ad_count?: number
-          estimated_impressions?: number
-          platforms?: Json | null
-          sample_ads?: Json | null
-          confidence?: number | null
-          source?: string
-          first_seen?: string | null
-          last_seen?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      adlibrary_enrichments: {
-        Row: {
-          ad_key: string
-          advertiser_name: string | null
-          platform: string | null
-          summary: string | null
-          transcription: string | null
-          analysis: string | null
-          ugc_script: string | null
-          markdown: string | null
-          source: string | null
-          cached: boolean
-          raw_json: Json | null
-          enriched_at: string | null
-          expires_at: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          ad_key: string
-          advertiser_name?: string | null
-          platform?: string | null
-          summary?: string | null
-          transcription?: string | null
-          analysis?: string | null
-          ugc_script?: string | null
-          markdown?: string | null
-          source?: string | null
-          cached?: boolean
-          raw_json?: Json | null
-          enriched_at?: string | null
-          expires_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          ad_key?: string
-          advertiser_name?: string | null
-          platform?: string | null
-          summary?: string | null
-          transcription?: string | null
-          analysis?: string | null
-          ugc_script?: string | null
-          markdown?: string | null
-          source?: string | null
-          cached?: boolean
-          raw_json?: Json | null
-          enriched_at?: string | null
-          expires_at?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      adlibrary_pipeline_runs: {
-        Row: {
-          run_id: string
-          started_at: string
-          finished_at: string | null
-          duration_ms: number | null
-          categories_scanned: number
-          advertisers_scanned: number
-          ads_found: number
-          ads_inserted: number
-          ads_updated: number
-          enrichments_requested: number
-          cache_hits: number
-          winners_scanned: number
-          credits_used: number
-          credits_remaining: number | null
-          errors: Json
-          status: string
-        }
-        Insert: {
-          run_id?: string
-          started_at: string
-          finished_at?: string | null
-          duration_ms?: number | null
-          categories_scanned?: number
-          advertisers_scanned?: number
-          ads_found?: number
-          ads_inserted?: number
-          ads_updated?: number
-          enrichments_requested?: number
-          cache_hits?: number
-          winners_scanned?: number
-          credits_used?: number
-          credits_remaining?: number | null
-          errors?: Json
-          status?: string
-        }
-        Update: {
-          run_id?: string
-          started_at?: string
-          finished_at?: string | null
-          duration_ms?: number | null
-          categories_scanned?: number
-          advertisers_scanned?: number
-          ads_found?: number
-          ads_inserted?: number
-          ads_updated?: number
-          enrichments_requested?: number
-          cache_hits?: number
-          winners_scanned?: number
-          credits_used?: number
-          credits_remaining?: number | null
-          errors?: Json
-          status?: string
-        }
-        Relationships: []
-      }
-      adlibrary_winning_concepts: {
-        Row: {
-          id: number
-          advertiser_name: string
-          page_id: string
-          category: string | null
-          ad_key: string | null
-          tier: string | null
-          composite_score: number | null
-          reasons: Json | null
-          variant_count: number | null
-          variants: Json | null
-          dna_diff: Json | null
-          tags: Json | null
-          raw_json: Json | null
-          scanned_at: string
-        }
-        Insert: {
-          id?: number
-          advertiser_name: string
-          page_id: string
-          category?: string | null
-          ad_key?: string | null
-          tier?: string | null
-          composite_score?: number | null
-          reasons?: Json | null
-          variant_count?: number | null
-          variants?: Json | null
-          dna_diff?: Json | null
-          tags?: Json | null
-          raw_json?: Json | null
-          scanned_at?: string
-        }
-        Update: {
-          id?: number
-          advertiser_name?: string
-          page_id?: string
-          category?: string | null
-          ad_key?: string | null
-          tier?: string | null
-          composite_score?: number | null
-          reasons?: Json | null
-          variant_count?: number | null
-          variants?: Json | null
-          dna_diff?: Json | null
-          tags?: Json | null
-          raw_json?: Json | null
-          scanned_at?: string
         }
         Relationships: []
       }
@@ -702,54 +705,6 @@ export type Database = {
         }
         Relationships: []
       }
-      client_workspaces: {
-        Row: {
-          id: number
-          agency_id: string | null
-          client_name: string
-          client_domain: string
-          category: string
-          competitor_domains: string[]
-          audience: string | null
-          tone: string | null
-          objective: string | null
-          excluded_channels: string[]
-          status: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: number
-          agency_id?: string | null
-          client_name: string
-          client_domain: string
-          category: string
-          competitor_domains?: string[]
-          audience?: string | null
-          tone?: string | null
-          objective?: string | null
-          excluded_channels?: string[]
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: number
-          agency_id?: string | null
-          client_name?: string
-          client_domain?: string
-          category?: string
-          competitor_domains?: string[]
-          audience?: string | null
-          tone?: string | null
-          objective?: string | null
-          excluded_channels?: string[]
-          status?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       agency_watchlist: {
         Row: {
           agency_id: string
@@ -875,6 +830,54 @@ export type Database = {
         }
         Relationships: []
       }
+      client_workspaces: {
+        Row: {
+          agency_id: string | null
+          audience: string | null
+          category: string | null
+          client_domain: string | null
+          client_name: string
+          competitor_domains: Json | null
+          created_at: string | null
+          excluded_channels: Json | null
+          id: number
+          objective: string | null
+          status: string | null
+          tone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agency_id?: string | null
+          audience?: string | null
+          category?: string | null
+          client_domain?: string | null
+          client_name: string
+          competitor_domains?: Json | null
+          created_at?: string | null
+          excluded_channels?: Json | null
+          id?: number
+          objective?: string | null
+          status?: string | null
+          tone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agency_id?: string | null
+          audience?: string | null
+          category?: string | null
+          client_domain?: string | null
+          client_name?: string
+          competitor_domains?: Json | null
+          created_at?: string | null
+          excluded_channels?: Json | null
+          id?: number
+          objective?: string | null
+          status?: string | null
+          tone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       customer_voice_items: {
         Row: {
           author_handle: string | null
@@ -920,6 +923,48 @@ export type Database = {
           replies?: number | null
           source_url?: string | null
           text?: string | null
+        }
+        Relationships: []
+      }
+      data_quality_runs: {
+        Row: {
+          domains_checked: number
+          duplicate_groups: number
+          errors: number
+          finished_at: string | null
+          pass_count: number
+          placements_checked: number
+          report: Json
+          run_id: string
+          started_at: string
+          status: string
+          warnings: number
+        }
+        Insert: {
+          domains_checked?: number
+          duplicate_groups?: number
+          errors?: number
+          finished_at?: string | null
+          pass_count?: number
+          placements_checked?: number
+          report?: Json
+          run_id?: string
+          started_at?: string
+          status?: string
+          warnings?: number
+        }
+        Update: {
+          domains_checked?: number
+          duplicate_groups?: number
+          errors?: number
+          finished_at?: string | null
+          pass_count?: number
+          placements_checked?: number
+          report?: Json
+          run_id?: string
+          started_at?: string
+          status?: string
+          warnings?: number
         }
         Relationships: []
       }
@@ -1088,6 +1133,66 @@ export type Database = {
         }
         Relationships: []
       }
+      placement_sources: {
+        Row: {
+          id: number
+          ingested_at: string
+          placement_id: number
+          source_native_id: string
+          source_platform: string
+        }
+        Insert: {
+          id?: number
+          ingested_at?: string
+          placement_id: number
+          source_native_id: string
+          source_platform: string
+        }
+        Update: {
+          id?: number
+          ingested_at?: string
+          placement_id?: number
+          source_native_id?: string
+          source_platform?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_sources_placement_id_fkey"
+            columns: ["placement_id"]
+            isOneToOne: false
+            referencedRelation: "ad_placements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_sources_placement_id_fkey"
+            columns: ["placement_id"]
+            isOneToOne: false
+            referencedRelation: "normalized_ad_placements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_sources_placement_id_fkey"
+            columns: ["placement_id"]
+            isOneToOne: false
+            referencedRelation: "normalized_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_sources_placement_id_fkey"
+            columns: ["placement_id"]
+            isOneToOne: false
+            referencedRelation: "placement_quality"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_sources_placement_id_fkey"
+            columns: ["placement_id"]
+            isOneToOne: false
+            referencedRelation: "ra_product_normalization"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           agency_domain: string | null
@@ -1116,7 +1221,15 @@ export type Database = {
           stripe_status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reddit_brand_sentiment: {
         Row: {
@@ -1800,15 +1913,6 @@ export type Database = {
         }
         Relationships: []
       }
-      market_category_leaders: {
-        Row: {
-          domain: string | null
-          market_rank: number | null
-          normalized_product: string | null
-          placements: number | null
-        }
-        Relationships: []
-      }
       market_dna: {
         Row: {
           buyer_stage: string | null
@@ -1901,6 +2005,7 @@ export type Database = {
           advertiser_name: string | null
           buyer_stage: string | null
           campaign_cluster: string | null
+          canonical_fingerprint: string | null
           category: string | null
           channel: string | null
           channel_platform: string | null
@@ -1939,96 +2044,6 @@ export type Database = {
           source_platform: string | null
           strategist_takeaway: string | null
           times_seen: number | null
-        }
-        Insert: {
-          ad_title?: string | null
-          ad_type?: string | null
-          advertiser_name?: string | null
-          buyer_stage?: string | null
-          campaign_cluster?: string | null
-          category?: string | null
-          channel?: string | null
-          channel_platform?: string | null
-          confidence_score?: number | null
-          created_at?: string | null
-          creative_hash?: string | null
-          creative_url?: string | null
-          days_running?: number | null
-          description?: string | null
-          detected_cta?: string | null
-          domain?: string | null
-          emotional_driver?: string | null
-          extracted_offer?: string | null
-          first_seen?: string | null
-          headline?: string | null
-          hook?: string | null
-          hook_analysis?: string | null
-          id?: number | null
-          landing_url?: string | null
-          last_seen?: string | null
-          market_signal?: string | null
-          media_url?: string | null
-          normalized_product?: never
-          offer_signal?: string | null
-          offer_theme?: string | null
-          offer_type?: string | null
-          page_description?: string | null
-          page_title?: string | null
-          primary_cta?: string | null
-          product_category?: string | null
-          product_type?: string | null
-          raw?: Json | null
-          raw_copy?: string | null
-          scan_id?: number | null
-          source_archive_url?: string | null
-          source_platform?: string | null
-          strategist_takeaway?: string | null
-          times_seen?: number | null
-        }
-        Update: {
-          ad_title?: string | null
-          ad_type?: string | null
-          advertiser_name?: string | null
-          buyer_stage?: string | null
-          campaign_cluster?: string | null
-          category?: string | null
-          channel?: string | null
-          channel_platform?: string | null
-          confidence_score?: number | null
-          created_at?: string | null
-          creative_hash?: string | null
-          creative_url?: string | null
-          days_running?: number | null
-          description?: string | null
-          detected_cta?: string | null
-          domain?: string | null
-          emotional_driver?: string | null
-          extracted_offer?: string | null
-          first_seen?: string | null
-          headline?: string | null
-          hook?: string | null
-          hook_analysis?: string | null
-          id?: number | null
-          landing_url?: string | null
-          last_seen?: string | null
-          market_signal?: string | null
-          media_url?: string | null
-          normalized_product?: never
-          offer_signal?: string | null
-          offer_theme?: string | null
-          offer_type?: string | null
-          page_description?: string | null
-          page_title?: string | null
-          primary_cta?: string | null
-          product_category?: string | null
-          product_type?: string | null
-          raw?: Json | null
-          raw_copy?: string | null
-          scan_id?: number | null
-          source_archive_url?: string | null
-          source_platform?: string | null
-          strategist_takeaway?: string | null
-          times_seen?: number | null
         }
         Relationships: [
           {
@@ -2243,16 +2258,6 @@ export type Database = {
           missing_advertisers: number | null
           ready_advertisers: number | null
           total_advertisers: number | null
-        }
-        Relationships: []
-      }
-      positioning_matrix: {
-        Row: {
-          buyer_stage: string | null
-          domain: string | null
-          emotional_driver: string | null
-          normalized_product: string | null
-          placements: number | null
         }
         Relationships: []
       }
