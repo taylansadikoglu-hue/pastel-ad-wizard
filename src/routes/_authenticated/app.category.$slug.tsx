@@ -13,6 +13,8 @@ import {
 } from "@/lib/categoryIntel";
 import { isDemoAdvertiserAllowed } from "@/lib/demo-account";
 import { useDemoAccount } from "@/contexts/DemoAccountContext";
+import { DataProvenanceBar } from "@/components/adpalette/DataProvenanceBar";
+import type { DataProvenance } from "@/lib/dataTrust";
 import { displayBrand, spendLevel } from "@/utils/brandDisplay";
 
 export const Route = createFileRoute("/_authenticated/app/category/$slug")({
@@ -76,6 +78,13 @@ function CategoryDetailPage() {
   const canOpenBrand = (domain: string) =>
     subscribed.has(domain) || (isDemo && isDemoAdvertiserAllowed(domain));
   const unlockedCount = brandRows.filter((r) => canOpenBrand(r.domain)).length;
+  const provenance: DataProvenance = {
+    sampleSize: totalAds,
+    source: isPreview ? "Benchmark layout" : "AdLibrary category index",
+    confidence: isPreview ? "Preview" : totalAds > 0 ? "Medium" : "Low",
+    note: isPreview ? "Share % hidden until ads are indexed for this category" : undefined,
+  };
+
   const blurredCount = brandRows.length - unlockedCount;
 
   const subtitle =
@@ -106,12 +115,9 @@ function CategoryDetailPage() {
         </div>
       ) : (
         <>
-          {isPreview && (
-            <div className="mb-4 card-flat p-4 bg-amber-50 border-amber-200 text-sm text-amber-950">
-              <strong>Category preview</strong> — benchmark brands for {categoryName}. Share and spend are directional
-              until ads are indexed for this category.
-            </div>
-          )}
+          <div className="mb-4">
+            <DataProvenanceBar provenance={provenance} />
+          </div>
 
           <div className="mb-6 grid gap-3 md:grid-cols-4">
             <SummaryCard label="Category leader" value={intel?.leading ?? fallback?.leading ?? "—"} />
@@ -179,16 +185,30 @@ function CategoryDetailPage() {
                         </>
                       )}
                     </div>
-                    <div className="font-semibold">{r.sov.toFixed(1)}%</div>
+                    <div className="font-semibold">
+                      {r.preview || isPreview ? (
+                        <span className="mono text-[10px] uppercase tracking-widest text-amber-800">Preview</span>
+                      ) : (
+                        `${r.sov.toFixed(1)}%`
+                      )}
+                    </div>
                     <div>
-                      {unlocked ? (
+                      {r.preview || isPreview ? (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      ) : unlocked ? (
                         <SpendIndex level={spendLevel(r.spend)} label="" />
                       ) : (
                         <span className="text-muted-foreground text-xs">Add to view</span>
                       )}
                     </div>
-                    <div className={r.trendUp ? "text-emerald-700" : "text-rose-700"}>
-                      {r.trendUp ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                    <div className={r.preview || isPreview ? "text-muted-foreground" : r.trendUp ? "text-emerald-700" : "text-rose-700"}>
+                      {r.preview || isPreview ? (
+                        <span className="text-xs">—</span>
+                      ) : r.trendUp ? (
+                        <ArrowUp size={16} />
+                      ) : (
+                        <ArrowDown size={16} />
+                      )}
                     </div>
                     <div>
                       {unlocked ? (

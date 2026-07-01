@@ -29,6 +29,8 @@ import {
   radWhitespaceBite,
 } from "@/lib/radReportVoice";
 import { displayBrand } from "@/utils/brandDisplay";
+import { dedupeActions, shortActionHeadline } from "@/lib/dataTrust";
+import { DataProvenanceBar } from "@/components/adpalette/DataProvenanceBar";
 import type { DataModuleId } from "@/components/adpalette/strategist/data-module-types";
 import type { MarketIntelSectionId } from "@/lib/dashboardViewPrefs";
 
@@ -275,18 +277,29 @@ export function MarketIntelReport({
     competitorRisers[0]?.deltas.wow ?? null,
   );
   const whitespaceBite = radWhitespaceBite(whitespaceCards[0]?.title ?? biggestOpportunity);
+  const heroMoveRaw = recommendedMove ?? recommendedActions[0] ?? null;
+  const heroMove = shortActionHeadline(heroMoveRaw);
   const curatedActions = useMemo(
     () =>
-      curateRecommendedActions({
-        recommendedActions,
-        topChannel: topChannels.first,
-        underWeightedChannel: topChannels.second,
-        topProduct: productThemes[0]?.label ?? null,
-        biggestThreat,
-        whitespace: whitespaceCards.map((w) => ({ title: w.title, action: w.action })),
-      }),
-    [recommendedActions, topChannels.first, topChannels.second, productThemes, biggestThreat, whitespaceCards],
+      dedupeActions(
+        curateRecommendedActions({
+          recommendedActions,
+          topChannel: topChannels.first,
+          underWeightedChannel: topChannels.second,
+          topProduct: productThemes[0]?.label ?? null,
+          biggestThreat,
+          whitespace: whitespaceCards.map((w) => ({ title: w.title, action: w.action })),
+        }),
+        heroMoveRaw,
+      ),
+    [recommendedActions, topChannels.first, topChannels.second, productThemes, biggestThreat, whitespaceCards, heroMoveRaw],
   );
+  const marketProvenance = {
+    sampleSize: confidence.ads ?? 0,
+    source: "AdLibrary market index",
+    confidence: (confidence.ads ?? 0) >= 50 ? "High" : (confidence.ads ?? 0) >= 10 ? "Medium" : "Low",
+    note: confidence.brands != null ? `${confidence.brands} brands in watchlist` : undefined,
+  } as const;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -345,6 +358,8 @@ export function MarketIntelReport({
       )}
 
       {show("kpis") ? (
+      <>
+      <DataProvenanceBar provenance={marketProvenance} />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
         <KpiTile
           label="Brands tracked"
@@ -370,6 +385,7 @@ export function MarketIntelReport({
           suffix={confidence.ads != null ? ` · ${confidence.ads.toLocaleString()} ads` : undefined}
         />
       </div>
+      </>
       ) : null}
 
       {show("heroSignals") ? (
@@ -389,7 +405,7 @@ export function MarketIntelReport({
         <HeroCard
           emoji="🎯"
           label="Recommended move"
-          value={recommendedMove ?? recommendedActions[0] ?? "—"}
+          value={heroMove}
           onEvidence={() => onEvidence("pitch")}
           highlight
         />
@@ -612,7 +628,9 @@ export function MarketIntelReport({
                 >
                   {i + 1}
                 </span>
-                <p style={{ margin: 0, fontSize: 14, color: "#1C1C1A", lineHeight: 1.5, fontWeight: i === 0 ? 600 : 500 }}>{action}</p>
+                <p style={{ margin: 0, fontSize: 14, color: "#1C1C1A", lineHeight: 1.5, fontWeight: i === 0 ? 600 : 500 }}>
+                  {shortActionHeadline(action, 14)}
+                </p>
               </div>
             ))}
           </div>

@@ -8,6 +8,8 @@ import type { AdvertiserStrategistIntel } from "@/lib/advertiserStrategistIntel"
 import type { CampaignIntelligence } from "@/lib/campaignIntelligence";
 import type { ChannelMixResult } from "@/lib/channelMix";
 import type { AdvertiserVisualScan as VisualScanData } from "@/lib/advertiserVisualSignals";
+import type { DataProvenance } from "@/lib/dataTrust";
+import { DataProvenanceBar } from "@/components/adpalette/DataProvenanceBar";
 
 type Props = {
   brand: string;
@@ -31,6 +33,7 @@ type Props = {
   creativeScore: number;
   creativeTier: "fresh" | "maturing" | "fatigued";
   creativeLabel: string;
+  provenance?: DataProvenance;
 };
 
 function KpiTile({
@@ -109,11 +112,15 @@ export function AdvertiserCommandDashboard({
   creativeScore,
   creativeTier,
   creativeLabel,
+  provenance,
 }: Props) {
   const tierColour = creativeTier === "fresh" ? "#2D7D46" : creativeTier === "maturing" ? "#C9963A" : "#C0392B";
   const campaigns = campaignIntel?.currentCampaigns?.slice(0, 4) ?? [];
   const leadChannel = visualScan.channels[0];
   const channelHeadline = leadChannel ? `${leadChannel.name} ${leadChannel.pct}%` : "—";
+  const showReach = reachLabel !== "—";
+  const showFreq = frequencyLabel !== "—";
+  const kpiCount = 4 + (showReach ? 1 : 0) + (showFreq ? 1 : 0);
 
   const dnaChips = [
     strategistIntel?.positioningArchetype && { label: "Archetype", value: strategistIntel.positioningArchetype },
@@ -125,15 +132,16 @@ export function AdvertiserCommandDashboard({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 10 }}>
+      {provenance ? <DataProvenanceBar provenance={provenance} /> : null}
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${kpiCount}, minmax(0, 1fr))`, gap: 10 }}>
         <KpiTile
           value={totalAds.toLocaleString()}
           label="Ads"
           sub={adsThisWeek > 0 ? `+${adsThisWeek} wk` : undefined}
           trendUp={adsThisWeek > 0 ? true : null}
         />
-        <KpiTile value={reachLabel} label="Reach" />
-        <KpiTile value={frequencyLabel} label="Freq" />
+        {showReach ? <KpiTile value={reachLabel} label="Reach" /> : null}
+        {showFreq ? <KpiTile value={frequencyLabel} label="Freq" /> : null}
         <div
           style={{
             background: "linear-gradient(180deg, #FFFFFF 0%, #F7F6F3 100%)",
