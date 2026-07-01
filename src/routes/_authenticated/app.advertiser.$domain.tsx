@@ -491,6 +491,7 @@ function AdvertiserPage() {
   );
 
   const totalAds = intelWar.total_ads ?? intelWar.recent_ads?.length ?? 0;
+  const analyzedCount = campaignStory?.rowCount ?? placementRowCount;
   void (intelWar.total_sightings ?? 0);
   const adsThisWeek = intelWar.ads_this_week ?? 0;
   const daysRunning = useMemo(() => {
@@ -710,7 +711,13 @@ function AdvertiserPage() {
                 {brand}
               </div>
               <div style={{ fontSize: 13, color: "#6B6B62", marginTop: 4 }}>
-                {category} · {totalAds.toLocaleString()} ads indexed
+                {category}
+                {analyzedCount > 0
+                  ? ` · ${analyzedCount.toLocaleString()} creatives analyzed`
+                  : ` · ${totalAds.toLocaleString()} ads indexed`}
+                {analyzedCount > 0 && totalAds > analyzedCount
+                  ? ` · ${totalAds.toLocaleString()} in library`
+                  : ""}
                 {updatedAgo ? ` · Updated ${updatedAgo}` : ""}
               </div>
             </div>
@@ -749,7 +756,8 @@ function AdvertiserPage() {
               brand={brand}
               category={category}
               updatedAgo={updatedAgo}
-              placementCount={campaignStory?.rowCount ?? placementRowCount}
+              placementCount={analyzedCount}
+              libraryAdCount={totalAds}
               totalAds={totalAds}
               adsThisWeek={adsThisWeek}
               daysRunning={daysRunning}
@@ -776,15 +784,15 @@ function AdvertiserPage() {
               creativeTier={creativeTier}
               creativeLabel={creativeLabel}
               provenance={{
-                sampleSize: campaignStory?.rowCount ?? placementRowCount,
-                source: "AdLibrary placements",
+                sampleSize: analyzedCount,
+                source: "Indexed placements",
                 confidence:
-                  (campaignStory?.rowCount ?? placementRowCount) >= 25
-                    ? "High"
-                    : (campaignStory?.rowCount ?? placementRowCount) >= 8
-                      ? "Medium"
-                      : "Low",
+                  analyzedCount >= 25 ? "High" : analyzedCount >= 8 ? "Medium" : analyzedCount > 0 ? "Low" : "Preview",
                 updatedLabel: updatedAgo ?? undefined,
+                note:
+                  totalAds > analyzedCount && analyzedCount > 0
+                    ? `${totalAds.toLocaleString()} ads in library · dashboard analyzes deduped placement rows`
+                    : undefined,
               }}
             />
           ) : null}
