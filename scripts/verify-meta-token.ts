@@ -111,7 +111,7 @@ async function main() {
 
   if (adsOk && valid) {
     console.log("Deploy to server:");
-    console.log("  META_ACCESS_TOKEN='…' REVENUAD_SSH_USER=seedd npm run meta:deploy-token\n");
+    console.log("  META_ACCESS_TOKEN='…' REVENUAD_SSH_USER=seed npm run meta:deploy-token\n");
   }
 
   process.exit(valid && adsOk ? 0 : valid ? 2 : 1);

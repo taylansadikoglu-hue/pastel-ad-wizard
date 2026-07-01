@@ -3,7 +3,7 @@
 #
 # Usage (from a machine with SSH key to the server):
 #   export REVENUAD_SSH_HOST=37.27.0.36
-#   export REVENUAD_SSH_USER=seedd
+#   export REVENUAD_SSH_USER=seed
 #   export META_ACCESS_TOKEN='your-token-here'
 #   ./scripts/deploy-meta-token-remote.sh
 #
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 HOST="${REVENUAD_SSH_HOST:-37.27.0.36}"
-USER="${REVENUAD_SSH_USER:-seedd}"
+USER="${REVENUAD_SSH_USER:-seed}"
 ENV_PATH="${REVENUAD_ENV_PATH:-/opt/revenuad/.env}"
 PM2_PROC="${REVENUAD_META_PM2:-revenuad-meta-source}"
 
