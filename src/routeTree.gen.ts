@@ -29,6 +29,7 @@ import { Route as AuthenticatedAppAdvertisersRouteImport } from './routes/_authe
 import { Route as ApiPublicHooksScanReadyRouteImport } from './routes/api/public/hooks/scan-ready'
 import { Route as ApiPublicHooksResendRouteImport } from './routes/api/public/hooks/resend'
 import { Route as AuthenticatedAppCategorySlugRouteImport } from './routes/_authenticated/app.category.$slug'
+import { Route as AuthenticatedAppBuildingJobIdRouteImport } from './routes/_authenticated/app.building.$jobId'
 import { Route as AuthenticatedAppAdvertiserDomainRouteImport } from './routes/_authenticated/app.advertiser.$domain'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -138,6 +139,12 @@ const AuthenticatedAppCategorySlugRoute =
     path: '/category/$slug',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppBuildingJobIdRoute =
+  AuthenticatedAppBuildingJobIdRouteImport.update({
+    id: '/building/$jobId',
+    path: '/building/$jobId',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAdvertiserDomainRoute =
   AuthenticatedAppAdvertiserDomainRouteImport.update({
     id: '/advertiser/$domain',
@@ -163,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/api/storage/cache-creative': typeof ApiStorageCacheCreativeRoute
   '/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
+  '/app/building/$jobId': typeof AuthenticatedAppBuildingJobIdRoute
   '/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
   '/api/public/hooks/resend': typeof ApiPublicHooksResendRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
@@ -185,6 +193,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/api/storage/cache-creative': typeof ApiStorageCacheCreativeRoute
   '/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
+  '/app/building/$jobId': typeof AuthenticatedAppBuildingJobIdRoute
   '/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
   '/api/public/hooks/resend': typeof ApiPublicHooksResendRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
@@ -209,6 +218,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/api/storage/cache-creative': typeof ApiStorageCacheCreativeRoute
   '/_authenticated/app/advertiser/$domain': typeof AuthenticatedAppAdvertiserDomainRoute
+  '/_authenticated/app/building/$jobId': typeof AuthenticatedAppBuildingJobIdRoute
   '/_authenticated/app/category/$slug': typeof AuthenticatedAppCategorySlugRoute
   '/api/public/hooks/resend': typeof ApiPublicHooksResendRoute
   '/api/public/hooks/scan-ready': typeof ApiPublicHooksScanReadyRoute
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/api/storage/cache-creative'
     | '/app/advertiser/$domain'
+    | '/app/building/$jobId'
     | '/app/category/$slug'
     | '/api/public/hooks/resend'
     | '/api/public/hooks/scan-ready'
@@ -255,6 +266,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/api/storage/cache-creative'
     | '/app/advertiser/$domain'
+    | '/app/building/$jobId'
     | '/app/category/$slug'
     | '/api/public/hooks/resend'
     | '/api/public/hooks/scan-ready'
@@ -278,6 +290,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/api/storage/cache-creative'
     | '/_authenticated/app/advertiser/$domain'
+    | '/_authenticated/app/building/$jobId'
     | '/_authenticated/app/category/$slug'
     | '/api/public/hooks/resend'
     | '/api/public/hooks/scan-ready'
@@ -436,6 +449,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCategorySlugRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/building/$jobId': {
+      id: '/_authenticated/app/building/$jobId'
+      path: '/building/$jobId'
+      fullPath: '/app/building/$jobId'
+      preLoaderRoute: typeof AuthenticatedAppBuildingJobIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/advertiser/$domain': {
       id: '/_authenticated/app/advertiser/$domain'
       path: '/advertiser/$domain'
@@ -458,6 +478,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppSentimentRoute: typeof AuthenticatedAppSentimentRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppAdvertiserDomainRoute: typeof AuthenticatedAppAdvertiserDomainRoute
+  AuthenticatedAppBuildingJobIdRoute: typeof AuthenticatedAppBuildingJobIdRoute
   AuthenticatedAppCategorySlugRoute: typeof AuthenticatedAppCategorySlugRoute
 }
 
@@ -473,6 +494,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppSentimentRoute: AuthenticatedAppSentimentRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppAdvertiserDomainRoute: AuthenticatedAppAdvertiserDomainRoute,
+  AuthenticatedAppBuildingJobIdRoute: AuthenticatedAppBuildingJobIdRoute,
   AuthenticatedAppCategorySlugRoute: AuthenticatedAppCategorySlugRoute,
 }
 
@@ -503,3 +525,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
