@@ -30,6 +30,8 @@ import { normalizeClientDomain } from "@/lib/clientWorkspace";
 import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
 import { formatTimeAgo } from "@/utils/timeAgo";
+import { ctaFromPlacement } from "@/lib/placementCta";
+import { isSkipTagValue } from "@/lib/soWhatQuality";
 import { displayBrand } from "@/utils/brandDisplay";
 import { CampaignIntelligenceBlock } from "@/components/adpalette/CampaignIntelligenceBlock";
 import { CampaignStoryBlock } from "@/components/adpalette/CampaignStoryBlock";
@@ -425,9 +427,22 @@ function AdvertiserPage() {
         setSpend(null);
         setChannels(null);
         const newsField = (w as { news?: unknown } | null)?.news;
-        const newsValue: News | null = Array.isArray(newsField)
+        let newsValue: News | null = Array.isArray(newsField)
           ? ({ articles: newsField } as News)
           : (newsField as News | undefined) ?? null;
+        if (!newsValue?.articles?.length) {
+          const fallbackArticles = await fetchNewsFeed(domain, resolved);
+          if (fallbackArticles.length) {
+            newsValue = {
+              articles: fallbackArticles.map((a) => ({
+                title: a.title,
+                url: a.url,
+                source: a.source,
+                publishedAt: a.publishedAt,
+              })),
+            };
+          }
+        }
         setNews(newsValue);
         if (w?.advertiser) setBrand(displayBrand(w.advertiser));
       } catch (err) {
@@ -472,7 +487,7 @@ function AdvertiserPage() {
       warroomChannels,
     }),
     spend: buildAdvertiserSpendBand(intelWar),
-    products: buildProductsPromoted(intelWar),
+    products: buildProductsPromoted(intelWar, brand),
     audiences: buildAudiencesPersonas(intelWar),
     saying: buildWhatTheyreSaying(intelWar),
     missing: buildWhatTheyreMissing(brand, intelWar),
@@ -504,11 +519,18 @@ function AdvertiserPage() {
   const [channelFilter, setChannelFilter] = useState<string>("all");
   const filteredAds = useMemo(() => {
     const ads = intelWar.placements ?? intelWar.recent_ads ?? [];
-    if (channelFilter === "all") return ads;
-    const aliases = CHANNEL_TAB_MAP[channelFilter] ?? [];
-    return ads.filter((ad) => {
-      const platform = String(ad.channel_platform ?? ad.channel ?? "").toLowerCase();
-      return aliases.some((v) => platform.includes(v.toLowerCase()));
+    const filtered =
+      channelFilter === "all"
+        ? ads
+        : ads.filter((ad) => {
+            const platform = String(ad.channel_platform ?? ad.channel ?? "").toLowerCase();
+            const aliases = CHANNEL_TAB_MAP[channelFilter] ?? [];
+            return aliases.some((v) => platform.includes(v.toLowerCase()));
+          });
+    return [...filtered].sort((a, b) => {
+      const ta = a.last_seen ? new Date(a.last_seen).getTime() : 0;
+      const tb = b.last_seen ? new Date(b.last_seen).getTime() : 0;
+      return tb - ta;
     });
   }, [intelWar.placements, intelWar.recent_ads, channelFilter]);
 
@@ -530,6 +552,7 @@ function AdvertiserPage() {
         campaignIntel,
         strategistIntel,
         advertiserBrief?.saying,
+        brand,
       ),
     [campaignIntel, strategistIntel, advertiserBrief?.saying],
   );
@@ -542,6 +565,7 @@ function AdvertiserPage() {
         campaignIntel,
         strategistIntel,
         adsThisWeek,
+        brand,
       ),
     [intelWar, advertiserBrief?.channelMix, campaignIntel, strategistIntel, adsThisWeek],
   );
@@ -774,6 +798,7 @@ function AdvertiserPage() {
               }
               spendMonthly={spend?.estimated_monthly_spend ?? 0}
               spendBandLabel={advertiserBrief.spend.label || null}
+              spendChannelBreakdown={advertiserBrief.spend.channelBreakdown}
               visualScan={visualScan}
               messagingFingerprint={messagingFingerprint}
               channelMix={advertiserBrief.channelMix}
@@ -797,7 +822,7 @@ function AdvertiserPage() {
             />
           ) : null}
 
-          <Card title="Live creatives">
+          <Card title="Live creatives · newest last seen first">
             <div style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}>
               {[
                 { k: "all", l: "All" },
@@ -836,7 +861,7 @@ function AdvertiserPage() {
                   gap: 12,
                 }}
               >
-                {filteredAds.slice(0, 4).map((ad, i) => (
+                {filteredAds.slice(0, 8).map((ad, i) => (
                   <RecentAdRow key={ad.id ?? i} ad={ad} brand={brand} variant="card" />
                 ))}
               </div>
@@ -863,6 +888,11 @@ function AdvertiserPage() {
                 <div style={{ fontSize: 20, fontWeight: 600, color: "#1C1C1A", letterSpacing: "-0.02em" }}>
                   {advertiserBrief.spend.label}
                 </div>
+                {advertiserBrief.spend.channelBreakdown ? (
+                  <div style={{ fontSize: 13, color: "#6B6B62", marginTop: 8 }}>
+                    Observed channel split: {advertiserBrief.spend.channelBreakdown}
+                  </div>
+                ) : null}
                 <p style={{ fontSize: 12, color: "#9E9D94", margin: "8px 0 0", lineHeight: 1.5 }}>
                   {advertiserBrief.spend.disclaimer}
                 </p>
@@ -897,10 +927,6 @@ function AdvertiserPage() {
                   </p>
                 )}
               </InsightSection>
-              )}
-
-              {showInsight("messaging") && (
-              <MessagingFingerprintPanel fingerprint={messagingFingerprint} />
               )}
 
               {showInsight("audiences") && (
@@ -1180,7 +1206,10 @@ function RecentAdRow({ ad, brand, variant = "row" }: { ad: RecentAd; brand: stri
   if (!imgSrc && ad.image_url) imgSrc = proxyImage(ad.image_url);
 
   const sightings = Number(ad.times_seen ?? ad.sighting_count ?? 0);
-  const pills = [ad.emotional_driver, ad.offer_type, ad.buyer_stage].filter(isUsableCopy);
+  const pills = [ad.emotional_driver, ad.offer_type, ad.buyer_stage].filter(
+    (v) => isUsableCopy(v) && !isSkipTagValue(v),
+  );
+  const ctaLabel = ctaFromPlacement(ad, brand);
   const title = isUsableCopy(ad.ad_title)
     ? ad.ad_title
     : isUsableCopy(ad.headline)
@@ -1340,24 +1369,50 @@ function RecentAdRow({ ad, brand, variant = "row" }: { ad: RecentAd; brand: stri
         {takeawayShort && variant !== "card" ? (
           <div style={{ fontSize: 12, color: "#6B6B62", lineHeight: 1.45, marginBottom: 4 }}>{takeawayShort}</div>
         ) : null}
-        <div style={{ fontSize: 12, color: "#6B6B62" }}>
-          {ad.first_seen ? formatTimeAgo(ad.first_seen) : "—"}
-          {ad.last_seen ? ` → ${formatTimeAgo(ad.last_seen)}` : ""}
-          {sightings > 0 && ` · ${sightings.toLocaleString()} impressions`}
-          {archiveUrl && (
-            <>
-              {" · "}
-              <a
-                href={archiveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#A07830", textDecoration: "none" }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                View in ad library
-              </a>
-            </>
+        <div style={{ fontSize: 12, color: "#6B6B62", lineHeight: 1.5 }}>
+          {ad.first_seen ? (
+            <span>First seen {formatObservedDate(ad.first_seen) ?? formatTimeAgo(ad.first_seen)}</span>
+          ) : (
+            <span>First seen —</span>
           )}
+          {ad.last_seen ? (
+            <span> · Last seen {formatObservedDate(ad.last_seen) ?? formatTimeAgo(ad.last_seen)}</span>
+          ) : null}
+          {sightings > 0 ? <span> · {sightings.toLocaleString()} impressions</span> : null}
+        </div>
+        {ctaLabel ? (
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#4285F4", marginTop: 4 }}>CTA: {ctaLabel}</div>
+        ) : null}
+        {ad.landing_url ? (
+          <div style={{ fontSize: 11, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <a
+              href={ad.landing_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#A07830", textDecoration: "none" }}
+            >
+              {(() => {
+                try {
+                  return new URL(ad.landing_url).hostname + new URL(ad.landing_url).pathname.slice(0, 40);
+                } catch {
+                  return ad.landing_url;
+                }
+              })()}
+            </a>
+          </div>
+        ) : null}
+        <div style={{ fontSize: 11, color: "#9E9D94", marginTop: 4 }}>
+          {archiveUrl ? (
+            <a
+              href={archiveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "#9E9D94", textDecoration: "underline" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              Transparency archive
+            </a>
+          ) : null}
         </div>
       </div>
       {pills.length > 0 && (

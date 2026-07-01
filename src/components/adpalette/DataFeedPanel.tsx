@@ -262,8 +262,11 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
 
           {intel.similarCompetitors.length > 0 && (
             <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#6B6B62", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6B6B62", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Audience-overlap rivals
+              </div>
+              <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 10, lineHeight: 1.45 }}>
+                Sites that share audience with this brand (Similarweb) — useful for conquest pitches, not media spend.
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
                 {intel.similarCompetitors.slice(0, 8).map((peer) => (
@@ -287,7 +290,7 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
                         {peer.domain}
                       </div>
                       <div style={{ fontSize: 12, color: "#6B6B62", marginTop: 4 }}>
-                        {peer.affinity != null ? `${Math.round(peer.affinity * 100)}% overlap` : "Peer"}
+                        {peer.affinity != null ? `${Math.round(peer.affinity * 100)}% shared audience` : "Peer"}
                         {peer.categoryRank != null ? ` · #${peer.categoryRank} ${peer.category ?? "category"}` : ""}
                       </div>
                     </div>
@@ -299,8 +302,11 @@ export function DataFeedPanel({ domain, brandLabel }: Props) {
 
           {t?.topAdPublishers && t.topAdPublishers.length > 0 && (
             <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#6B6B62", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6B6B62", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                 Ad destinations
+              </div>
+              <div style={{ fontSize: 12, color: "#9E9D94", marginBottom: 8, lineHeight: 1.45 }}>
+                Publisher sites where their display ads appeared — context for programmatic reach, not landing pages.
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {t.topAdPublishers.map((pub) => (
