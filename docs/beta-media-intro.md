@@ -35,10 +35,12 @@ You’ll see a gold banner: *“This is a live demo environment…”* — that�
 
 ## 15-minute walkthrough (do this in order)
 
-**Pre-flight:** on the server or CI with Supabase secrets:
+**Pre-flight:** on the Seed server with real secrets (`ADLIBRARY_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`):
 
 ```bash
-npm run beta:smoke-test
+npm run data:perfection
+# or audit-only from CI:
+npm run data:perfection -- --audit-only
 ```
 
 All checks green before you send invites.

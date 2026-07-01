@@ -5,7 +5,11 @@
  * npm run data-quality:audit
  * npm run data-quality:audit -- --domain commbank.com.au --json
  */
-import { getSupabaseAdmin } from "./lib/supabaseAdmin.ts";
+import {
+  getSupabaseAdmin,
+  getSupabaseRead,
+  hasWritableSupabase,
+} from "./lib/supabaseAdmin.ts";
 import { argBool, argString, parseArgs } from "./lib/parseArgs.ts";
 import { auditPlacementRow } from "../src/lib/soWhatQuality.ts";
 import { fingerprintFromPlacementRow } from "../src/lib/placementFingerprint.ts";
@@ -39,37 +43,78 @@ async function main() {
   const jsonOut = argBool(args, "json");
   const limit = Number(argString(args, "limit") ?? "2000");
   const save = argBool(args, "save");
+  const rawTable = argBool(args, "raw");
 
-  const supabase = getSupabaseAdmin();
+  const readClient = getSupabaseRead();
+  const adminClient = hasWritableSupabase() ? getSupabaseAdmin() : null;
   const findings: Finding[] = [];
   const startedAt = new Date().toISOString();
 
   // ── Pass 1: Schema & connections ─────────────────────────────────────────
-  const tables = ["ad_placements", "placement_sources", "adlibrary_advertiser_candidates"] as const;
-  for (const table of tables) {
-    const { error } = await supabase.from(table).select("*").limit(1);
-    if (error) {
-      findings.push({
-        pass: 1,
-        passName: PASS_NAMES[0],
-        severity: "error",
-        code: "TABLE_UNAVAILABLE",
-        message: `Cannot read ${table}: ${error.message}`,
-      });
-    }
+  const { error: normProbeErr } = await readClient.from("normalized_ad_placements").select("id").limit(1);
+  if (normProbeErr) {
+    findings.push({
+      pass: 1,
+      passName: PASS_NAMES[0],
+      severity: "error",
+      code: "VIEW_UNAVAILABLE",
+      message: `Cannot read normalized_ad_placements: ${normProbeErr.message}`,
+    });
   }
 
-  let query = supabase.from("ad_placements").select("*").limit(limit);
-  if (domainFilter) query = query.ilike("domain", `%${domainFilter}%`);
+  if (adminClient) {
+    const tables = ["ad_placements", "placement_sources", "adlibrary_advertiser_candidates"] as const;
+    for (const table of tables) {
+      const { error } = await adminClient.from(table).select("*").limit(1);
+      if (error) {
+        findings.push({
+          pass: 1,
+          passName: PASS_NAMES[0],
+          severity: "warn",
+          code: "TABLE_UNAVAILABLE",
+          message: `Cannot read ${table}: ${error.message}`,
+        });
+      }
+    }
+  } else {
+    findings.push({
+      pass: 1,
+      passName: PASS_NAMES[0],
+      severity: "info",
+      code: "READ_ONLY_AUDIT",
+      message:
+        "No writable service_role key — auditing deduped normalized_ad_placements only (pass 3 raw dupes skipped)",
+    });
+  }
+
+  const sourceTable = rawTable && adminClient ? "ad_placements" : "normalized_ad_placements";
+  const supabase = rawTable && adminClient ? adminClient : readClient;
+
+  let query = supabase.from(sourceTable).select("*").limit(limit);
+  if (domainFilter) {
+    const root = domainFilter.split(".")[0] ?? domainFilter;
+    query = query.or(`domain.ilike.%${root}%,domain.ilike.%${domainFilter}%`);
+  }
 
   const { data: rawRows, error: rowsErr } = await query;
   if (rowsErr) {
-    console.error("Failed to load placements:", rowsErr.message);
+    console.error(`Failed to load ${sourceTable}:`, rowsErr.message);
     process.exit(1);
   }
 
   const rows = (rawRows ?? []) as Record<string, unknown>[];
   const domains = new Set(rows.map((r) => String(r.domain ?? "")));
+
+  if (domainFilter && rows.length === 0) {
+    findings.push({
+      pass: 1,
+      passName: PASS_NAMES[0],
+      severity: "error",
+      code: "NO_PLACEMENTS",
+      message: `No placements found for ${domainFilter} — run npm run demo:ingest-showcase -- --domain ${domainFilter}`,
+      domain: domainFilter,
+    });
+  }
 
   // ── Pass 2: Fingerprint coverage ───────────────────────────────────────────
   const missingFp = rows.filter((r) => !r.canonical_fingerprint && !r.creative_hash);
@@ -101,9 +146,20 @@ async function main() {
     });
   }
 
-  // ── Pass 3: Duplicate groups ───────────────────────────────────────────────
+  // ── Pass 3: Duplicate groups (meaningful on raw ad_placements only) ────────
   const fpGroups = new Map<string, Record<string, unknown>[]>();
+  if (sourceTable === "normalized_ad_placements" && rows.length > 0) {
+    findings.push({
+      pass: 3,
+      passName: PASS_NAMES[2],
+      severity: "info",
+      code: "DEDUPED_VIEW",
+      message: `Pass 3 skipped — ${rows.length} rows already deduped via normalized_ad_placements (use --raw with service_role for raw dupes)`,
+    });
+  }
+
   for (const row of rows) {
+    if (sourceTable === "normalized_ad_placements") break;
     const fp =
       (row.canonical_fingerprint as string) ??
       (row.creative_hash as string) ??
@@ -174,10 +230,11 @@ async function main() {
   // ── Pass 7: Count integrity ────────────────────────────────────────────────
   let normalizedCount: number | null = null;
   if (domainFilter) {
-    const { count } = await supabase
+    const root = domainFilter.split(".")[0] ?? domainFilter;
+    const { count } = await readClient
       .from("normalized_ad_placements")
       .select("id", { count: "exact", head: true })
-      .ilike("domain", `%${domainFilter}%`);
+      .or(`domain.ilike.%${root}%,domain.ilike.%${domainFilter}%`);
     normalizedCount = count ?? null;
   }
 
@@ -255,6 +312,7 @@ async function main() {
     console.log(JSON.stringify(report, null, 2));
   } else {
     console.log("\n═══ Data Quality Guardian — 7-pass audit ═══\n");
+    console.log(`Source: ${sourceTable}`);
     console.log(`Placements sampled: ${rows.length} · Domains: ${domains.size}`);
     console.log(`Canonical coverage: ${coveragePct}% · Duplicate groups: ${duplicateGroups}`);
     console.log(`Errors: ${errors} · Warnings: ${warnings}\n`);
@@ -276,9 +334,9 @@ async function main() {
     console.log(errors > 0 ? "\n❌ Audit FAILED — fix errors before client demo\n" : "\n✅ Audit passed (review warnings)\n");
   }
 
-  if (save) {
+  if (save && adminClient) {
     try {
-      await supabase.from("data_quality_runs").insert({
+      await adminClient.from("data_quality_runs").insert({
         finished_at: new Date().toISOString(),
         pass_count: 7,
         errors,

@@ -7,7 +7,7 @@
  */
 import { backfillCanonicalFingerprints } from "./lib/canonicalPlacementUpsert.ts";
 import { mergeDuplicatePlacements } from "./lib/mergeDuplicatePlacements.ts";
-import { getSupabaseAdmin } from "./lib/supabaseAdmin.ts";
+import { requireWritableSupabase } from "./lib/supabaseAdmin.ts";
 import { argBool, argString, parseArgs } from "./lib/parseArgs.ts";
 
 async function main() {
@@ -16,7 +16,7 @@ async function main() {
   const dryRun = argBool(args, "dryRun");
   const limit = Number(argString(args, "limit") ?? "5000");
 
-  const supabase = getSupabaseAdmin();
+  const supabase = requireWritableSupabase();
 
   console.log(dryRun ? "\n[DRY RUN] Resolve fingerprint collisions\n" : "\nResolve fingerprint collisions\n");
 
