@@ -81,6 +81,46 @@ export async function mergeDuplicatePlacements(
       const solo = groupRows[0];
       const fp = fingerprintFromPlacementRow(solo);
       if (!solo.canonical_fingerprint && fp && !dryRun) {
+        const domainRoot = String(solo.domain ?? "").toLowerCase();
+        const { data: collision } = await supabase
+          .from("ad_placements")
+          .select("*")
+          .eq("canonical_fingerprint", fp)
+          .neq("id", solo.id as number)
+          .ilike("domain", `%${domainRoot.split(".")[0]}%`)
+          .limit(1)
+          .maybeSingle();
+
+        if (collision) {
+          stats.groupsFound++;
+          const keeper = collision as Record<string, unknown>;
+          const merged = mergePlacementRow(keeper, solo);
+          merged.canonical_fingerprint = fp;
+          const keeperId = keeper.id as number;
+          const soloId = solo.id as number;
+
+          await supabase
+            .from("placement_sources")
+            .update({ placement_id: keeperId })
+            .eq("placement_id", soloId);
+
+          const { error: delErr } = await supabase.from("ad_placements").delete().eq("id", soloId);
+          if (delErr) stats.errors.push(`collision delete ${soloId}: ${delErr.message}`);
+          else {
+            stats.rowsDeleted++;
+            const { error: upErr } = await supabase
+              .from("ad_placements")
+              .update(merged)
+              .eq("id", keeperId);
+            if (upErr) stats.errors.push(`collision merge ${keeperId}: ${upErr.message}`);
+            else {
+              stats.rowsMerged++;
+              stats.fingerprintsSet++;
+            }
+          }
+          continue;
+        }
+
         const { error: upErr } = await supabase
           .from("ad_placements")
           .update({ canonical_fingerprint: fp })

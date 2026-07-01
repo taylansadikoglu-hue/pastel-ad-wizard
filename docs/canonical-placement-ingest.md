@@ -1,106 +1,98 @@
 # Canonical placement ingest — worker integration
 
-Use this in `/api/ingest` and PM2 source processes (`revenuad-display-source`, `revenuad-meta-source`, etc.).
+All PM2 ingest workers (`revenuad-display-source`, `revenuad-meta-source`, `revenuad-youtube-source`, SERP scripts) and `/api/ingest` should use the shared module — **not** raw `ad_placements.insert()`.
 
-## Before you insert
-
-```javascript
-// Copy logic from scripts/lib/canonicalPlacementUpsert.ts
-// Or import if worker shares this repo:
-
-import {
-  computeCanonicalFingerprint,
-  shouldSkipRedundantSource,
-  resolveChannelBucket,
-} from './placementFingerprint.js';
-import { upsertCanonicalPlacement } from './canonicalPlacementUpsert.js';
-```
-
-## Per incoming ad row
+## Quick start (Seed server `/opt/revenuad`)
 
 ```javascript
-async function ingestPlacement(supabase, incomingRow) {
-  const channel = resolveChannelBucket({
-    domain: incomingRow.domain,
-    channelPlatform: incomingRow.channel_platform,
-  });
+// ESM worker (Node 20+)
+const { ingestPlacementRow } = await import("./scripts/lib/ingestPlacement.ts");
 
-  // Skip redundant Meta from Apify when AdLibrary already owns this channel
-  if (incomingRow.source_platform === 'apify' && channel === 'Meta') {
-  const { data: existing } = await supabase
-    .from('placement_sources')
-    .select('source_platform')
-    .eq('source_platform', 'adlibrary')
-    .limit(1);
-  // Better: lookup by domain + fingerprint first, then check sources
+async function persistPlacement(supabase, row) {
+  const { result, skipped, reason } = await ingestPlacementRow(supabase, row);
+  if (skipped) {
+    console.log("[ingest] skipped:", reason);
+    return "skipped";
   }
-
-  incomingRow.canonical_fingerprint = computeCanonicalFingerprint({
-    domain: incomingRow.domain,
-    channelPlatform: incomingRow.channel_platform,
-    channel: incomingRow.channel,
-    sourcePlatform: incomingRow.source_platform,
-    adKey: incomingRow.raw?.ad_key,
-    archiveId: incomingRow.raw?.library_id ?? incomingRow.raw?.ad_archive_id,
-    sourceArchiveUrl: incomingRow.source_archive_url,
-    mediaUrl: incomingRow.media_url,
-    creativeUrl: incomingRow.creative_url,
-    landingUrl: incomingRow.landing_url,
-    headline: incomingRow.headline ?? incomingRow.ad_title,
-    rawCopy: incomingRow.raw_copy,
-    raw: incomingRow.raw,
-  });
-
-  const result = await upsertCanonicalPlacement(supabase, incomingRow, false);
-  // result: 'inserted' | 'updated' | 'merged' | 'skipped'
-  return result;
+  return result; // inserted | updated | merged
 }
 ```
 
-## Source authority (stop double-pulling)
-
-| Channel | Primary writer | Skip redundant |
-|---------|---------------|----------------|
-| Meta | `adlibrary` | `apify` Meta scrape |
-| TikTok, LinkedIn | `adlibrary` | — |
-| YouTube video | `adlibrary` | DataForSEO if same creative |
-| Google Search, Display | `dataforseo` | — |
-
-**Recommendation:** Pause `revenuad-meta-source` while AdLibrary ingest runs for the same advertisers.
-
-## DataForSEO row mapping
+Replace every:
 
 ```javascript
-incomingRow.source_platform = 'dataforseo';
-incomingRow.raw = {
-  ...incomingRow.raw,
-  serp_creative_id: serpResult.id,  // use as archiveId in fingerprint
-};
+await supabase.from("ad_placements").insert(row);
 ```
 
-## Apify row mapping
+## What it does
+
+1. Normalizes `domain` and computes `canonical_fingerprint`
+2. Looks up existing row by fingerprint (or legacy `creative_hash`)
+3. Skips redundant secondary sources when primary already owns the channel (same fingerprint)
+4. Merges enrichment fields on match; inserts only net-new creatives
+5. Writes `placement_sources` receipt
+
+**Module:** `scripts/lib/ingestPlacement.ts`  
+**Example:** `scripts/engine/ingest-worker.example.ts`
+
+## Source authority
+
+| Channel | Primary writer | Skip redundant (same creative) |
+|---------|---------------|-------------------------------|
+| Meta | `adlibrary` | `apify` Meta scrape |
+| TikTok, LinkedIn | `adlibrary` | — |
+| YouTube video | `adlibrary` | `dataforseo` if same creative |
+| Google Search, Display | `dataforseo` | — |
+
+**Ops:** Keep `pm2 stop revenuad-meta-source` while AdLibrary covers Meta — don't rely on ingest skip alone for brand-new Apify rows.
+
+## Row mapping by source
+
+### DataForSEO
 
 ```javascript
-incomingRow.source_platform = 'apify';
+incomingRow.source_platform = "dataforseo";
+incomingRow.raw = {
+  ...incomingRow.raw,
+  serp_creative_id: serpResult.id,
+};
+await ingestPlacementRow(supabase, incomingRow);
+```
+
+### Apify (Meta)
+
+```javascript
+incomingRow.source_platform = "apify";
 incomingRow.raw = {
   ...incomingRow.raw,
   library_id: metaAd.adArchiveId,
   ad_archive_id: metaAd.adArchiveId,
 };
+await ingestPlacementRow(supabase, incomingRow);
 ```
 
-## After migration
+### AdLibrary
 
-Run backfill for existing rows:
+Already wired via `scripts/lib/adlibraryPlacementUpsert.ts` → `ingestPlacementRow`.
+
+## After deploy on Seed
 
 ```bash
-npx tsx scripts/backfill-canonical-fingerprints.ts --limit 5000
+cd /opt/revenuad
+git pull origin main
+pm2 restart revenuad-display-source revenuad-youtube-source --update-env
+# meta-source should stay stopped if AdLibrary owns Meta
 ```
 
-## Verify dedup
+## Fix fingerprint collisions (CommBank stragglers)
 
 ```bash
+npm run data-quality:resolve-collisions -- --domain commbank.com.au
 npm run data-quality:audit -- --domain commbank.com.au
 ```
 
-Look for `duplicate_groups: 0` and `canonical_coverage_pct` near 100%.
+## Pre-beta smoke test
+
+```bash
+npm run beta:smoke-test
+```
