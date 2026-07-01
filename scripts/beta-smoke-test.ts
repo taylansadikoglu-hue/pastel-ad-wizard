@@ -15,7 +15,10 @@ import { argBool, parseArgs } from "./lib/parseArgs.ts";
 import { getSupabaseRead, hasWritableSupabase } from "./lib/supabaseAdmin.ts";
 
 const APP_URL = process.env.APP_URL ?? "https://revenuad.com";
-const API_BASE = process.env.VITE_ENGINE_URL ?? "https://api.revenuad.com";
+const API_BASE = (process.env.VITE_ENGINE_URL ?? "https://api.revenuad.com").replace(
+  "api.revenuead.com",
+  "api.revenuad.com",
+);
 
 type Check = {
   name: string;
@@ -91,10 +94,12 @@ async function main() {
 
     checks.push(
       await check(`${brand} placements (deduped)`, async () => {
-        const fetch = await fetchAdvertiserPlacements(supabase, domain);
-        if (fetch.error) throw new Error(fetch.error);
-        if (fetch.rows.length === 0) throw new Error("0 placement rows — demo will look empty");
-        return `${fetch.rows.length} rows via ${fetch.source}`;
+        const placementFetch = await fetchAdvertiserPlacements(supabase, domain);
+        if (placementFetch.error) throw new Error(placementFetch.error);
+        if (placementFetch.rows.length === 0) {
+          throw new Error("0 placement rows — demo will look empty");
+        }
+        return `${placementFetch.rows.length} rows via ${placementFetch.source}`;
       }),
     );
 

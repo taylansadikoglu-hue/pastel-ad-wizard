@@ -97,6 +97,9 @@ async function main() {
 
       const merge = npmRun("data-quality:merge-dupes", ["--domain", d]);
       phases.push({ phase: `Merge dupes ${d}`, ok: merge.ok, detail: merge.detail });
+
+      const sanitize = npmRun("data-quality:sanitize-tags", ["--domain", d]);
+      phases.push({ phase: `Sanitize tags ${d}`, ok: sanitize.ok, detail: sanitize.detail });
     }
 
     const audit = npmRun("data-quality:audit", ["--domain", d]);
