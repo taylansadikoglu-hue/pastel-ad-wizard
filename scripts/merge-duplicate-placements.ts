@@ -7,7 +7,7 @@
  * npm run data-quality:merge-dupes -- --dry-run
  */
 import { mergeDuplicatePlacements } from "./lib/mergeDuplicatePlacements.ts";
-import { getSupabaseAdmin } from "./lib/supabaseAdmin.ts";
+import { requireWritableSupabase } from "./lib/supabaseAdmin.ts";
 import { argBool, argString, parseArgs } from "./lib/parseArgs.ts";
 
 async function main() {
@@ -16,7 +16,7 @@ async function main() {
   const dryRun = argBool(args, "dryRun");
   const limit = Number(argString(args, "limit") ?? "5000");
 
-  const supabase = getSupabaseAdmin();
+  const supabase = requireWritableSupabase();
   const stats = await mergeDuplicatePlacements(supabase, { domain: domain ?? undefined, dryRun, limit });
 
   console.log(dryRun ? "\n[DRY RUN] Merge duplicate placements\n" : "\nMerge duplicate placements\n");
