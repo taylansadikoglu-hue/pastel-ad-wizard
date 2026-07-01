@@ -9,6 +9,7 @@ import {
   Linkedin,
 } from "lucide-react";
 import { WorkspaceShell } from "@/components/adpalette/WorkspaceShell";
+import { ClientSearch } from "@/components/ClientSearch";
 import { SpendIndex } from "@/components/adpalette/SpendIndex";
 import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
 import { normalizeClientDomain } from "@/lib/clientWorkspace";
@@ -170,7 +171,9 @@ function AdvertisersPage() {
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 1200 }}>
-        {/* Search bar */}
+        <ClientSearch />
+
+        {/* Filter existing library */}
         <div style={{ position: "relative" }}>
           <SearchIcon size={16} style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "#9E9D94" }} />
           <input
