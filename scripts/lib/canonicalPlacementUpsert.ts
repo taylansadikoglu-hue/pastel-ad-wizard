@@ -157,8 +157,13 @@ export async function backfillCanonicalFingerprints(
       .from("ad_placements")
       .update({ canonical_fingerprint: fp })
       .eq("id", (row as { id: number }).id);
-    if (upErr) errors.push(`id ${(row as { id: number }).id}: ${upErr.message}`);
-    else updated++;
+    if (upErr) {
+      if (upErr.message.includes("duplicate") || upErr.code === "23505") {
+        errors.push(`id ${(row as { id: number }).id}: duplicate fingerprint — run npm run data-quality:merge-dupes`);
+      } else {
+        errors.push(`id ${(row as { id: number }).id}: ${upErr.message}`);
+      }
+    } else updated++;
   }
 
   return { updated, errors };

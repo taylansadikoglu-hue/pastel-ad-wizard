@@ -10,6 +10,7 @@ import type { ChannelMixResult } from "@/lib/channelMix";
 import type { AdvertiserVisualScan as VisualScanData } from "@/lib/advertiserVisualSignals";
 import type { DataProvenance } from "@/lib/dataTrust";
 import { DataProvenanceBar } from "@/components/adpalette/DataProvenanceBar";
+import { isSkipTagValue } from "@/lib/soWhatQuality";
 
 type Props = {
   brand: string;
@@ -130,11 +131,11 @@ export function AdvertiserCommandDashboard({
   const showHealth = creativeScore > 0;
 
   const dnaChips = [
-    strategistIntel?.positioningArchetype && { label: "Archetype", value: strategistIntel.positioningArchetype },
-    strategistIntel?.funnelFocus && { label: "Funnel", value: strategistIntel.funnelFocus },
-    strategistIntel?.topEmotion && { label: "Emotion", value: strategistIntel.topEmotion },
-    strategistIntel?.topBuyerStage && { label: "Stage", value: strategistIntel.topBuyerStage },
-    strategistIntel?.topCta && { label: "CTA", value: strategistIntel.topCta },
+    strategistIntel?.positioningArchetype && !isSkipTagValue(strategistIntel.positioningArchetype) && { label: "Archetype", value: strategistIntel.positioningArchetype },
+    strategistIntel?.funnelFocus && !isSkipTagValue(strategistIntel.funnelFocus) && { label: "Funnel", value: strategistIntel.funnelFocus },
+    strategistIntel?.topEmotion && !isSkipTagValue(strategistIntel.topEmotion) && { label: "Emotion", value: strategistIntel.topEmotion },
+    strategistIntel?.topBuyerStage && !isSkipTagValue(strategistIntel.topBuyerStage) && { label: "Stage", value: strategistIntel.topBuyerStage },
+    strategistIntel?.topCta && !isSkipTagValue(strategistIntel.topCta) && { label: "CTA", value: strategistIntel.topCta },
   ].filter(Boolean) as { label: string; value: string }[];
 
   return (

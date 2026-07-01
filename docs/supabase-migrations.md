@@ -25,6 +25,8 @@ supabase db push
 After push, backfill fingerprints:
 
 ```bash
+npm run data-quality:merge-dupes -- --domain commbank.com.au --dry-run
+npm run data-quality:merge-dupes -- --domain commbank.com.au
 npm run data-quality:backfill -- --limit 5000
 npm run data-quality:audit -- --domain commbank.com.au --save
 ```

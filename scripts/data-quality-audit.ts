@@ -172,6 +172,15 @@ async function main() {
   }
 
   // ── Pass 7: Count integrity ────────────────────────────────────────────────
+  let normalizedCount: number | null = null;
+  if (domainFilter) {
+    const { count } = await supabase
+      .from("normalized_ad_placements")
+      .select("id", { count: "exact", head: true })
+      .ilike("domain", `%${domainFilter}%`);
+    normalizedCount = count ?? null;
+  }
+
   for (const domain of domains) {
     if (!domain) continue;
     const domainRows = rows.filter((r) => String(r.domain ?? "").toLowerCase().includes(domain.toLowerCase()));
@@ -194,8 +203,29 @@ async function main() {
         passName: PASS_NAMES[6],
         severity: inflationPct > 20 ? "error" : "warn",
         code: "COUNT_INFLATION",
-        message: `${domain}: ${domainRows.length} raw rows vs ${uniqueFp.size} unique creatives (+${inflationPct}% inflation)`,
+        message: `${domain}: ${domainRows.length} raw rows vs ${uniqueFp.size} unique creatives (+${inflationPct}% inflation)${normalizedCount != null ? ` · normalized view: ${normalizedCount}` : ""}`,
         domain,
+      });
+    }
+  }
+
+  if (domainFilter && normalizedCount != null && rows.length > 0) {
+    const uniqueSize = new Set(
+      rows.map(
+        (r) =>
+          (r.canonical_fingerprint as string) ??
+          (r.creative_hash as string) ??
+          fingerprintFromPlacementRow(r),
+      ),
+    ).size;
+    if (normalizedCount <= uniqueSize && rows.length > uniqueSize) {
+      findings.push({
+        pass: 7,
+        passName: PASS_NAMES[6],
+        severity: "info",
+        code: "UI_SHOULD_USE_NORMALIZED",
+        message: `UI/analyzed count should be ${normalizedCount} (normalized view), not ${rows.length} raw rows`,
+        domain: domainFilter,
       });
     }
   }
