@@ -775,6 +775,17 @@ function AdvertiserPage() {
               creativeScore={creativeScore}
               creativeTier={creativeTier}
               creativeLabel={creativeLabel}
+              provenance={{
+                sampleSize: campaignStory?.rowCount ?? placementRowCount,
+                source: "AdLibrary placements",
+                confidence:
+                  (campaignStory?.rowCount ?? placementRowCount) >= 25
+                    ? "High"
+                    : (campaignStory?.rowCount ?? placementRowCount) >= 8
+                      ? "Medium"
+                      : "Low",
+                updatedLabel: updatedAgo ?? undefined,
+              }}
             />
           ) : null}
 

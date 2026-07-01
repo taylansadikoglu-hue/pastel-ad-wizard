@@ -1,6 +1,7 @@
 import type { CampaignIntelligence } from "@/lib/campaignIntelligence";
 import type { AdvertiserStrategistIntel } from "@/lib/advertiserStrategistIntel";
 import type { SayingSection } from "@/lib/radAdvertiserBrief";
+import { isUsableHeadline, normalizeCtaLabel } from "@/lib/dataTrust";
 
 export type MessagingSlice = {
   label: string;
@@ -43,9 +44,13 @@ function mapSlices(
 
 function pickHeadline(saying: SayingSection | null | undefined): string | null {
   if (!saying) return null;
-  for (const raw of [...saying.hooks, ...saying.copySnippets]) {
-    const short = shortMessagingLabel(raw, 6);
-    if (short && short.length <= 42) return short;
+  for (const raw of saying.copySnippets) {
+    const usable = isUsableHeadline(raw);
+    if (usable) return usable;
+  }
+  for (const raw of saying.hooks) {
+    const usable = isUsableHeadline(raw);
+    if (usable) return usable;
   }
   return null;
 }
@@ -68,13 +73,17 @@ export function buildMessagingFingerprint(
   }
 
   const ctas = mapSlices(
-    (campaignIntel?.ctaBreakdown ?? []).map((r) => ({ label: r.label, pct: r.pct })),
+    (campaignIntel?.ctaBreakdown ?? []).map((r) => ({
+      label: normalizeCtaLabel(r.label) ?? r.label,
+      pct: r.pct,
+    })),
   );
 
   if (!ctas.length && strategistIntel?.topCta) {
+    const cta = normalizeCtaLabel(strategistIntel.topCta) ?? strategistIntel.topCta;
     ctas.push({
-      label: strategistIntel.topCta,
-      shortLabel: shortMessagingLabel(strategistIntel.topCta),
+      label: cta,
+      shortLabel: shortMessagingLabel(cta),
       pct: 100,
     });
   }

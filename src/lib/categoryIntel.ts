@@ -8,6 +8,7 @@ import {
 } from "@/lib/categoryCatalog";
 import { normaliseChannelBadge, bucketChannel, DISPLAY_CHANNELS } from "@/lib/channels";
 import type { ChannelMixResult } from "@/lib/channelMix";
+import { previewSovWeights } from "@/lib/dataTrust";
 
 export type CategoryBrandRow = {
   domain: string;
@@ -178,6 +179,7 @@ export async function fetchCategoryIntel(
 
   if (core && merged.size === 0) {
     isPreview = true;
+    const weights = previewSovWeights(CORE_CATEGORY_SEED_BRANDS[core].length);
     for (const [index, seed] of CORE_CATEGORY_SEED_BRANDS[core].entries()) {
       const domain = normalizeDomain(seed.domain);
       merged.set(domain, {
@@ -185,10 +187,10 @@ export async function fetchCategoryIntel(
         brand: seed.name,
         adCount: 0,
         impressions: 0,
-        sov: Math.max(8, 32 - index * 5),
-        spend: 12000 - index * 1500,
+        sov: weights[index] ?? 0,
+        spend: 0,
         theme: index === 0 ? "Trust" : index === 1 ? "Value" : "Innovation",
-        trendUp: index % 2 === 0,
+        trendUp: false,
         preview: true,
         platforms: [],
       });
@@ -199,10 +201,15 @@ export async function fetchCategoryIntel(
   const totalAds = brands.reduce((sum, b) => sum + b.adCount, 0);
   const totalImpressions = brands.reduce((sum, b) => sum + b.impressions, 0);
 
-  for (const brand of brands) {
-    if (totalAds > 0 && brand.adCount > 0) {
-      brand.sov = (brand.adCount / totalAds) * 100;
-    }
+  if (totalAds > 0) {
+    const withAds = brands.filter((b) => b.adCount > 0);
+    const rounded = withAds.map((b) => ({
+      brand: b,
+      sov: Math.round((b.adCount / totalAds) * 1000) / 10,
+    }));
+    const drift = Math.round((100 - rounded.reduce((a, r) => a + r.sov, 0)) * 10) / 10;
+    if (rounded.length && Math.abs(drift) >= 0.1) rounded[0].sov = Math.round((rounded[0].sov + drift) * 10) / 10;
+    for (const { brand, sov } of rounded) brand.sov = sov;
   }
 
   brands.sort((a, b) => b.sov - a.sov || b.adCount - a.adCount);

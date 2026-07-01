@@ -5,6 +5,13 @@
 
 import type { AdvertiserIntelWar, AdvertiserPlacementRow } from "@/lib/advertiserPlacements";
 import { normaliseChannelBadge, placementCount } from "@/lib/advertiserPlacements";
+import {
+  campaignGroupKey,
+  formatObservedDate,
+  mergeDistributionRows,
+  normalizeCampaignLabel,
+  normalizeCtaLabel,
+} from "@/lib/dataTrust";
 
 const MS_PER_DAY = 86_400_000;
 const RECENT_DAYS = 7;
@@ -21,10 +28,7 @@ function parseTime(iso?: string | null): number | null {
 }
 
 function fmtShortDate(iso?: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (!Number.isFinite(d.getTime())) return "—";
-  return d.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+  return formatObservedDate(iso) ?? "—";
 }
 
 function daysAgo(iso?: string | null): number | null {
@@ -46,12 +50,18 @@ function usableLabel(value: string | null | undefined): string | null {
 }
 
 function campaignKey(row: AdvertiserPlacementRow): string {
-  return (
+  const raw =
     usableLabel(row.campaign_cluster)
     ?? usableLabel(row.product_type)
     ?? usableLabel(row.normalized_product)
-    ?? "General activity"
-  );
+    ?? "General activity";
+  return normalizeCampaignLabel(raw);
+}
+
+function normalizeEmotionLabel(raw: string): string | null {
+  const t = raw.trim();
+  if (!t || /^(unspecified|unknown|other|none)$/i.test(t)) return null;
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 }
 
 function campaignSummary(row: AdvertiserPlacementRow): string | null {
@@ -78,16 +88,17 @@ export type CampaignGroup = {
 };
 
 export function buildCampaignGroups(placements: AdvertiserPlacementRow[]): CampaignGroup[] {
-  const map = new Map<string, AdvertiserPlacementRow[]>();
+  const map = new Map<string, { displayKey: string; rows: AdvertiserPlacementRow[] }>();
   for (const row of placements) {
-    const key = campaignKey(row);
-    const bucket = map.get(key) ?? [];
-    bucket.push(row);
-    map.set(key, bucket);
+    const displayKey = campaignKey(row);
+    const gkey = campaignGroupKey(displayKey);
+    const bucket = map.get(gkey) ?? { displayKey, rows: [] };
+    bucket.rows.push(row);
+    map.set(gkey, bucket);
   }
 
   return [...map.entries()]
-    .map(([key, groupRows]) => {
+    .map(([, { displayKey, rows: groupRows }]) => {
       const times = groupRows
         .flatMap((r) => [parseTime(r.first_seen), parseTime(r.last_seen)])
         .filter((t): t is number => t != null);
@@ -103,7 +114,7 @@ export function buildCampaignGroups(placements: AdvertiserPlacementRow[]): Campa
         firstSeen != null ? Math.max(1, Math.floor((Date.now() - new Date(firstSeen).getTime()) / MS_PER_DAY)) : null;
 
       return {
-        key,
+        key: displayKey,
         rows: groupRows,
         firstSeen,
         lastSeen,
@@ -250,13 +261,19 @@ export function buildCampaignIntelligence(
     soWhat: soWhatForCampaign(g, brand),
   }));
 
-  const messagingRaw = distribution(placements, (r) => r.emotional_driver);
+  const messagingRaw = mergeDistributionRows(
+    distribution(placements, (r) => r.emotional_driver),
+    (label) => normalizeEmotionLabel(label),
+  );
   const messagingBreakdown: DistributionRow[] = messagingRaw.map((d) => ({
     ...d,
     soWhat: soWhatForEmotion(d.label, d.pct, brand),
   }));
 
-  const ctaRaw = distribution(placements, (r) => r.primary_cta);
+  const ctaRaw = mergeDistributionRows(
+    distribution(placements, (r) => r.primary_cta),
+    (label) => normalizeCtaLabel(label),
+  );
   const ctaBreakdown: DistributionRow[] = ctaRaw.map((d) => ({
     ...d,
     soWhat: soWhatForCta(d.label, d.pct),
