@@ -74,6 +74,7 @@ import {
   type AdlibraryAdvertiserIntel,
 } from "@/lib/adlibraryCoverage";
 import { safeOptional } from "@/lib/safeQuery";
+import { ENGINE_URL } from "@/lib/engine";
 import { useDemoAccount } from "@/contexts/DemoAccountContext";
 import { DemoAdvertiserRestricted } from "@/components/adpalette/DemoRestricted";
 import { isDemoAdvertiserAllowed } from "@/lib/demo-account";
@@ -82,7 +83,7 @@ import {
   type AdvertiserStrategistIntel,
 } from "@/lib/advertiserStrategistIntel";
 
-const API_BASE = "https://api.revenuad.com";
+const API_BASE = ENGINE_URL;
 
 const EMPTY_AGENCY_CTX: AgencyContext = { agencyId: null, entries: [], domains: new Set() };
 
@@ -325,7 +326,7 @@ function AdvertiserPage() {
       try {
         const safe = async <T,>(url: string): Promise<T | null> => {
           try {
-            const r = await fetch(url);
+            const r = await fetch(url, { signal: AbortSignal.timeout(25_000) });
             if (!r.ok) return null;
             return (await r.json()) as T;
           } catch {
@@ -426,9 +427,7 @@ function AdvertiserPage() {
         setStrategistIntel(strategistFetch);
         setAdlibraryIntel(adlibraryFetch);
         setWar(merged);
-        setLoadStatus(status);
-        setSpend(null);
-        setChannels(null);
+
         const newsField = (w as { news?: unknown } | null)?.news;
         let newsValue: News | null = Array.isArray(newsField)
           ? ({ articles: newsField } as News)
@@ -450,6 +449,18 @@ function AdvertiserPage() {
             console.warn("[advertiser page] news fallback failed:", newsErr);
           }
         }
+
+        if (!alive) return;
+
+        // Warroom is optional when indexed placements exist — don't block the page on engine hiccups.
+        if (placementFetch.rows.length > 0) {
+          status.warroom = { ok: true };
+          status.placements = { ok: true };
+        }
+
+        setLoadStatus(status);
+        setSpend(null);
+        setChannels(null);
         setNews(newsValue);
         if (w?.advertiser) setBrand(displayBrand(w.advertiser));
       } catch (err) {
@@ -484,7 +495,22 @@ function AdvertiserPage() {
   }, [domain]);
 
   const placementIntelUnavailable = placementRowCount === 0;
-  const intelWar = war ?? EMPTY_WAR;
+  const intelWar = useMemo(() => {
+    const base = war ?? EMPTY_WAR;
+    return (
+      mergeAdvertiserIntel(base, placementRows, brand, domain) ?? {
+        ...EMPTY_WAR,
+        advertiser: brand,
+        name: brand,
+        domain,
+        placements: placementRows,
+        recent_ads: placementRows,
+        total_ads: placementRows.length,
+      }
+    );
+  }, [war, placementRows, brand, domain]);
+
+  const hasIndexedPlacements = placementRowCount > 0 || hasPlacementIntel(intelWar);
 
   const advertiserBrief = useMemo(() => safeBuild("advertiserBrief", () => ({
     marketingRead: buildCurrentMarketingRead(brand, intelWar),
@@ -512,7 +538,12 @@ function AdvertiserPage() {
     [intelWar, brand, strategistIntel],
   );
 
-  const totalAds = intelWar.total_ads ?? intelWar.recent_ads?.length ?? 0;
+  const totalAds = Math.max(
+    placementRowCount,
+    intelWar.total_ads ?? 0,
+    intelWar.placements?.length ?? 0,
+    intelWar.recent_ads?.length ?? 0,
+  );
   const analyzedCount = campaignStory?.rowCount ?? placementRowCount;
   void (intelWar.total_sightings ?? 0);
   const adsThisWeek = intelWar.ads_this_week ?? 0;
@@ -658,14 +689,18 @@ function AdvertiserPage() {
         <ArrowLeft size={14} /> Back to Ad Library
       </Link>
 
-      {!loadStatus.warroom.ok && loadStatus.warroom.reason ? (
+      {!loadStatus.warroom.ok && loadStatus.warroom.reason && !hasIndexedPlacements ? (
         <QueryStatusCard title="Engine warroom" reason={loadStatus.warroom.reason} />
       ) : null}
 
-      {!loadStatus.placements.ok && loadStatus.placements.reason ? (
+      {!loadStatus.placements.ok && loadStatus.placements.reason && !hasIndexedPlacements ? (
         <QueryStatusCard
           title="Placement intelligence"
-          reason={loadStatus.placements.reason}
+          reason={
+            isDemo
+              ? "Live placement index is still loading or empty for this showcase. Demo accounts are read-only — scans are disabled."
+              : loadStatus.placements.reason
+          }
           action={
             canScan
               ? { label: scanning ? "Running scan…" : "Run Scan", onClick: handleRunScan, loading: scanning }
@@ -674,7 +709,7 @@ function AdvertiserPage() {
         />
       ) : null}
 
-      {scanError ? (
+      {scanError && canScan ? (
         <QueryStatusCard title="Scan failed" reason={scanError} />
       ) : null}
 
