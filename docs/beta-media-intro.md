@@ -35,6 +35,14 @@ You’ll see a gold banner: *“This is a live demo environment…”* — that�
 
 ## 15-minute walkthrough (do this in order)
 
+**Pre-flight:** on the server or CI with Supabase secrets:
+
+```bash
+npm run beta:smoke-test
+```
+
+All checks green before you send invites.
+
 ### 1. CommBank War Room (~5 min)
 
 1. Sign in → sidebar **CommBank War Room**

@@ -2,7 +2,7 @@ import type { AdLibraryAd } from "./adlibraryClient.ts";
 import { buildEnrichmentRequest } from "./adlibraryClient.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeCanonicalFingerprint } from "../../src/lib/placementFingerprint.ts";
-import { upsertCanonicalPlacement } from "./canonicalPlacementUpsert.ts";
+import { ingestPlacementRow } from "./ingestPlacement.ts";
 
 export type PlacementUpsertStats = {
   inserted: number;
@@ -129,9 +129,9 @@ export async function upsertAdlibraryPlacement(
   const creativeHash = row.creative_hash as string | null;
   if (!creativeHash && !row.canonical_fingerprint) return "skipped";
 
-  const result = await upsertCanonicalPlacement(supabase, row, dryRun);
+  const { result, skipped } = await ingestPlacementRow(supabase, row, dryRun);
+  if (skipped || result === "skipped") return "skipped";
   if (result === "merged") return "updated";
-  if (result === "skipped") return "skipped";
   return result;
 }
 
