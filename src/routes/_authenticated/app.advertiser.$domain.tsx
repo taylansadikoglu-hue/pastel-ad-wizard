@@ -29,6 +29,7 @@ import { useClientWorkspace } from "@/contexts/ClientWorkspaceContext";
 import { normalizeClientDomain } from "@/lib/clientWorkspace";
 import { runMockScan } from "@/lib/mock-scan.functions";
 import { DataFeedPanel } from "@/components/adpalette/DataFeedPanel";
+import { fetchNewsFeed } from "@/lib/feeds/newspi";
 import { formatTimeAgo } from "@/utils/timeAgo";
 import { ctaFromPlacement } from "@/lib/placementCta";
 import { isSkipTagValue } from "@/lib/soWhatQuality";
@@ -319,6 +320,7 @@ function AdvertiserPage() {
 
       const status = defaultLoadStatus();
       const resolvedBrand = displayBrand(domain);
+      let loadedPlacementCount = 0;
 
       try {
         const safe = async <T,>(url: string): Promise<T | null> => {
@@ -413,7 +415,8 @@ function AdvertiserPage() {
 
         if (!alive) return;
 
-        setPlacementRowCount(placementFetch.rows.length);
+        loadedPlacementCount = placementFetch.rows.length;
+        setPlacementRowCount(loadedPlacementCount);
         setPlacementRows(placementFetch.rows);
         setWarroomChannels(
           Array.isArray(w?.channels) && w.channels.length
@@ -431,16 +434,20 @@ function AdvertiserPage() {
           ? ({ articles: newsField } as News)
           : (newsField as News | undefined) ?? null;
         if (!newsValue?.articles?.length) {
-          const fallbackArticles = await fetchNewsFeed(domain, resolved);
-          if (fallbackArticles.length) {
-            newsValue = {
-              articles: fallbackArticles.map((a) => ({
-                title: a.title,
-                url: a.url,
-                source: a.source,
-                publishedAt: a.publishedAt,
-              })),
-            };
+          try {
+            const fallbackArticles = await fetchNewsFeed(domain, resolved);
+            if (fallbackArticles.length) {
+              newsValue = {
+                articles: fallbackArticles.map((a) => ({
+                  title: a.title,
+                  url: a.url,
+                  source: a.source,
+                  publishedAt: a.publishedAt,
+                })),
+              };
+            }
+          } catch (newsErr) {
+            console.warn("[advertiser page] news fallback failed:", newsErr);
           }
         }
         setNews(newsValue);
@@ -448,24 +455,24 @@ function AdvertiserPage() {
       } catch (err) {
         console.error("[advertiser page] load failed:", err);
         if (!alive) return;
-        setWar({
-          ...EMPTY_WAR,
-          advertiser: resolvedBrand,
-          name: resolvedBrand,
-          domain,
-        });
-        setStrategistIntel(EMPTY_STRATEGIST_INTEL);
-        setAdlibraryIntel(EMPTY_ADVERTISER_INTEL);
-        setLoadStatus({
-          warroom: { ok: false, reason: "Advertiser intelligence bundle failed to load." },
-          placements: {
-            ok: false,
-            reason: err instanceof Error ? err.message : "Unexpected error while loading advertiser data.",
-          },
-          strategist: { ok: false, reason: "Strategist intelligence could not be loaded." },
-          adlibrary: { ok: false, reason: "AdLibrary coverage could not be loaded." },
-          agency: { ok: true },
-        });
+        const message = err instanceof Error ? err.message : "Unexpected error while loading advertiser data.";
+        setLoadStatus((prev) => ({
+          ...prev,
+          placements: prev.placements.ok
+            ? prev.placements
+            : { ok: false, reason: message },
+          warroom: prev.warroom.ok
+            ? prev.warroom
+            : { ok: false, reason: "Advertiser intelligence bundle failed to load." },
+        }));
+        if (!loadedPlacementCount) {
+          setWar({
+            ...EMPTY_WAR,
+            advertiser: resolvedBrand,
+            name: resolvedBrand,
+            domain,
+          });
+        }
       } finally {
         if (alive) {
           setLoading(false);
