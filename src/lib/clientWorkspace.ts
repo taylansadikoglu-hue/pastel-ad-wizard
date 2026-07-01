@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getAgencyContext } from "@/lib/agency-watchlist";
 import { resolveDemoUser } from "@/lib/demo-account";
 
 export const ACTIVE_CLIENT_WORKSPACE_KEY = "revenuad_active_client_workspace_id";
@@ -159,7 +160,16 @@ export async function createClientWorkspace(
     return { workspace: null, error: "Demo accounts cannot create workspaces." };
   }
 
+  const { agencyId } = await getAgencyContext();
+  if (!agencyId) {
+    return {
+      workspace: null,
+      error: "No agency linked to your account — contact support to finish onboarding.",
+    };
+  }
+
   const payload = {
+    agency_id: agencyId,
     client_name: input.client_name.trim(),
     client_domain: normalizeClientDomain(input.client_domain),
     category: input.category.trim(),
