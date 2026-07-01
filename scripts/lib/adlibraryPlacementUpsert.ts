@@ -1,6 +1,8 @@
 import type { AdLibraryAd } from "./adlibraryClient.ts";
 import { buildEnrichmentRequest } from "./adlibraryClient.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { computeCanonicalFingerprint } from "../../src/lib/placementFingerprint.ts";
+import { upsertCanonicalPlacement } from "./canonicalPlacementUpsert.ts";
 
 export type PlacementUpsertStats = {
   inserted: number;
@@ -65,7 +67,7 @@ export function mapAdToPlacement(input: MapAdInput): Record<string, unknown> {
   const isVideo = adType === "Video" || Boolean(videoUrl);
   const mediaUrl = isVideo ? videoUrl ?? imageUrl : imageUrl ?? videoUrl;
 
-  return {
+  const baseRow = {
     domain: domain ?? slugDomain(advertiserName),
     advertiser_name: ad.advertiser_name ?? advertiserName,
     category,
@@ -99,6 +101,24 @@ export function mapAdToPlacement(input: MapAdInput): Record<string, unknown> {
     },
     data_quality: "adlibrary_ingest",
   };
+
+  const canonical_fingerprint = computeCanonicalFingerprint({
+    domain: String(baseRow.domain),
+    channel: baseRow.channel,
+    channelPlatform: baseRow.channel_platform,
+    sourcePlatform: "adlibrary",
+    adKey,
+    sourceArchiveUrl: baseRow.source_archive_url,
+    mediaUrl: baseRow.media_url,
+    creativeUrl: baseRow.creative_url,
+    landingUrl: baseRow.landing_url,
+    headline: baseRow.headline,
+    rawCopy: baseRow.raw_copy,
+    adTitle: baseRow.ad_title,
+    raw: baseRow.raw,
+  });
+
+  return { ...baseRow, canonical_fingerprint };
 }
 
 export async function upsertAdlibraryPlacement(
@@ -107,38 +127,12 @@ export async function upsertAdlibraryPlacement(
   dryRun: boolean,
 ): Promise<"inserted" | "updated" | "skipped"> {
   const creativeHash = row.creative_hash as string | null;
-  if (!creativeHash) return "skipped";
+  if (!creativeHash && !row.canonical_fingerprint) return "skipped";
 
-  if (dryRun) return "inserted";
-
-  if (!supabase) {
-    throw new Error("Supabase client required for non-dry-run upsert");
-  }
-
-  const { data: existing, error: fetchErr } = await supabase
-    .from("ad_placements")
-    .select("*")
-    .eq("creative_hash", creativeHash)
-    .maybeSingle();
-
-  if (fetchErr) {
-    throw new Error(`Placement fetch failed: ${fetchErr.message}`);
-  }
-
-  if (!existing) {
-    const { error: insertErr } = await supabase.from("ad_placements").insert(row);
-    if (insertErr) throw new Error(`Placement insert failed: ${insertErr.message}`);
-    return "inserted";
-  }
-
-  const patch = mergePlacementRow(existing as Record<string, unknown>, row);
-  const { error: updateErr } = await supabase
-    .from("ad_placements")
-    .update(patch)
-    .eq("id", (existing as { id: number }).id);
-
-  if (updateErr) throw new Error(`Placement update failed: ${updateErr.message}`);
-  return "updated";
+  const result = await upsertCanonicalPlacement(supabase, row, dryRun);
+  if (result === "merged") return "updated";
+  if (result === "skipped") return "skipped";
+  return result;
 }
 
 const GPT_FIELDS = [

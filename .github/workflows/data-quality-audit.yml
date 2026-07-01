@@ -1,0 +1,49 @@
+name: Data Quality Guardian
+
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: Optional domain to scope audit (e.g. commbank.com.au)
+        required: false
+        type: string
+  schedule:
+    # Daily at 06:00 UTC — after DataForSEO budget reset window
+    - cron: "0 6 * * *"
+  pull_request:
+    paths:
+      - "src/lib/placementFingerprint.ts"
+      - "src/lib/soWhatQuality.ts"
+      - "scripts/lib/canonicalPlacementUpsert.ts"
+      - "scripts/lib/adlibraryPlacementUpsert.ts"
+      - "scripts/data-quality-audit.ts"
+      - "supabase/migrations/**"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run 7-pass data quality audit
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Supabase secrets not configured — skipping live audit"
+            npm run build
+            exit 0
+          fi
+          DOMAIN_FLAG=""
+          if [ -n "${{ github.event.inputs.domain }}" ]; then
+            DOMAIN_FLAG="--domain ${{ github.event.inputs.domain }}"
+          fi
+          npm run data-quality:audit -- $DOMAIN_FLAG --json

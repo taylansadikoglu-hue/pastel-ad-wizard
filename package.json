@@ -19,6 +19,8 @@
     "adlibrary:daily": "npx tsx scripts/adlibrary-daily.ts",
     "adlibrary:weekly-discovery": "npx tsx scripts/adlibrary-weekly-discovery.ts",
     "adlibrary:commbank-report": "npx tsx scripts/adlibrary-commbank-evaluation.ts",
+    "data-quality:audit": "npx tsx scripts/data-quality-audit.ts",
+    "data-quality:backfill": "npx tsx scripts/backfill-canonical-fingerprints.ts",
     "email:test": "npx tsx scripts/email-send-test.ts",
     "email:verify-dns": "npx tsx scripts/email-verify-dns.ts",
     "email:set-secrets": "bash scripts/email-set-secrets.sh",
