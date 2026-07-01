@@ -1413,12 +1413,12 @@ function RecentAdRow({ ad, brand, variant = "row" }: { ad: RecentAd; brand: stri
         ) : null}
         <div style={{ fontSize: 12, color: "#6B6B62", lineHeight: 1.5 }}>
           {ad.first_seen ? (
-            <span>First seen {formatObservedDate(ad.first_seen) ?? formatTimeAgo(ad.first_seen)}</span>
+            <span>First seen {fmtDate(ad.first_seen)}</span>
           ) : (
             <span>First seen —</span>
           )}
           {ad.last_seen ? (
-            <span> · Last seen {formatObservedDate(ad.last_seen) ?? formatTimeAgo(ad.last_seen)}</span>
+            <span> · Last seen {fmtDate(ad.last_seen)}</span>
           ) : null}
           {sightings > 0 ? <span> · {sightings.toLocaleString()} impressions</span> : null}
         </div>
