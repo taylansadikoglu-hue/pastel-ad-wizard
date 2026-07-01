@@ -81,10 +81,20 @@ pm2 stop revenuad-meta-source   # until token fixed, or permanently if AdLibrary
 
 AdLibrary already indexed Meta ads for 100 brands (ANZ, Westpac, NAB, etc.).
 
+## Verify token (recommended)
+
+```bash
+META_ACCESS_TOKEN='…' npm run meta:verify-token
+```
+
+Prints identity, scopes, expiry, and whether Ad Library ToS is accepted (`2332002` = still blocked).
+
+A fast `/me` response (~300–500ms) only proves the token is alive — **not** that Ad Library works.
+
 ## Verify Ad Library API access
 
 ```bash
-curl -G "https://graph.facebook.com/v21.0/ads_archive" \
+curl -G "https://graph.facebook.com/v25.0/ads_archive" \
   --data-urlencode "access_token=$META_ACCESS_TOKEN" \
   --data-urlencode 'ad_reached_countries=["AU"]' \
   --data-urlencode "search_terms=commbank" \

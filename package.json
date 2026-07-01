@@ -23,6 +23,7 @@
     "data-quality:backfill": "npx tsx scripts/backfill-canonical-fingerprints.ts",
     "data-quality:merge-dupes": "npx tsx scripts/merge-duplicate-placements.ts",
     "meta:refresh-token": "npx tsx scripts/refresh-meta-token.ts",
+    "meta:verify-token": "npx tsx scripts/verify-meta-token.ts",
     "meta:deploy-token": "bash scripts/deploy-meta-token-remote.sh",
     "email:test": "npx tsx scripts/email-send-test.ts",
     "email:verify-dns": "npx tsx scripts/email-verify-dns.ts",
