@@ -22,6 +22,7 @@
     "data-quality:audit": "npx tsx scripts/data-quality-audit.ts",
     "data-quality:backfill": "npx tsx scripts/backfill-canonical-fingerprints.ts",
     "meta:refresh-token": "npx tsx scripts/refresh-meta-token.ts",
+    "meta:deploy-token": "bash scripts/deploy-meta-token-remote.sh",
     "email:test": "npx tsx scripts/email-send-test.ts",
     "email:verify-dns": "npx tsx scripts/email-verify-dns.ts",
     "email:set-secrets": "bash scripts/email-set-secrets.sh",
