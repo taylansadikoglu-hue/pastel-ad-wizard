@@ -74,7 +74,12 @@ async function main() {
   const r2Ok = audits.some((a) => a.checks.find((c) => c.label === "r2_buckets")?.ok);
 
   if (!workersOk) {
-    console.log("Frontend deploy blocked — create a token with Account → Workers Scripts → Edit");
+    console.log("Frontend deploy blocked — token needs ALL of:");
+    console.log("  • Account → Workers Scripts → Edit");
+    console.log("  • Account → Workers Routes → Edit  (if using custom domains)");
+    console.log("  • User → User Details → Read  (wrangler membership check)");
+    console.log("\nEdit token: https://dash.cloudflare.com/profile/api-tokens");
+    console.log("Or use template: Edit Cloudflare Workers\n");
     console.log("Then: CLOUDFLARE_WORKERS_API_TOKEN=cfat_... npm run deploy:frontend\n");
   } else {
     console.log("Workers deploy ready: npm run deploy:frontend\n");

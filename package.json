@@ -27,6 +27,7 @@
     "meta:deploy-token": "bash scripts/deploy-meta-token-remote.sh",
     "deploy:frontend": "bash scripts/deploy-frontend-remote.sh",
     "deploy:launch": "bash scripts/launch-deploy-remote.sh",
+    "deploy:seed-sync": "bash scripts/seed-server-sync.sh",
     "email:test": "npx tsx scripts/email-send-test.ts",
     "email:verify-dns": "npx tsx scripts/email-verify-dns.ts",
     "email:set-secrets": "bash scripts/email-set-secrets.sh",
