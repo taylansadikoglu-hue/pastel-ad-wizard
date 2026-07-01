@@ -16,7 +16,19 @@ supabase db push
 
 **Always create migration files with `supabase migration new` on the same machine you push from.** Applying SQL in the dashboard first, then adding files later, causes timestamp drift (ghost remote IDs ~2s off from local filenames).
 
-## Check status
+## Recent migrations
+
+| File | Purpose |
+|------|---------|
+| `20260701000000_canonical_placement_dedup.sql` | `canonical_fingerprint`, `placement_sources`, deduped `normalized_ad_placements` view, `data_quality_runs` |
+
+After push, backfill fingerprints:
+
+```bash
+npm run data-quality:backfill -- --limit 5000
+npm run data-quality:audit -- --domain commbank.com.au --save
+```
+
 
 ```bash
 supabase migration list
