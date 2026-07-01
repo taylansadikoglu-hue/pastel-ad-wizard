@@ -102,7 +102,6 @@ export async function mergeDuplicatePlacements(
     let merged = { ...keeper };
     for (const dupe of dupes) {
       merged = mergePlacementRow(merged, dupe);
-      stats.rowsMerged++;
     }
     merged.canonical_fingerprint = canonicalFingerprint;
 
@@ -111,19 +110,11 @@ export async function mergeDuplicatePlacements(
       continue;
     }
 
-    const { error: updateErr } = await supabase
-      .from("ad_placements")
-      .update(merged)
-      .eq("id", keeper.id as number);
-    if (updateErr) {
-      stats.errors.push(`keeper ${keeper.id}: ${updateErr.message}`);
-      continue;
-    }
-    stats.fingerprintsSet++;
+    const keeperId = keeper.id as number;
 
+    // Delete dupes BEFORE setting canonical_fingerprint on keeper — unique index on (domain, fingerprint)
     for (const dupe of dupes) {
       const dupeId = dupe.id as number;
-      const keeperId = keeper.id as number;
 
       await supabase
         .from("placement_sources")
@@ -134,6 +125,17 @@ export async function mergeDuplicatePlacements(
       if (delErr) stats.errors.push(`delete ${dupeId}: ${delErr.message}`);
       else stats.rowsDeleted++;
     }
+
+    const { error: updateErr } = await supabase
+      .from("ad_placements")
+      .update(merged)
+      .eq("id", keeperId);
+    if (updateErr) {
+      stats.errors.push(`keeper ${keeperId}: ${updateErr.message}`);
+      continue;
+    }
+    stats.fingerprintsSet++;
+    stats.rowsMerged += dupes.length;
   }
 
   return stats;
