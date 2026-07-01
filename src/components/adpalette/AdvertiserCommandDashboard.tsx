@@ -1,7 +1,7 @@
-import { ArrowDown, ArrowUp, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { ChannelMixBars } from "@/components/adpalette/ChannelMixBars";
 import { SpendIndex } from "@/components/adpalette/SpendIndex";
-import { AdvertiserVisualScan, VisualMoveCards } from "@/components/adpalette/AdvertiserVisualScan";
+import { AdvertiserVisualScan } from "@/components/adpalette/AdvertiserVisualScan";
 import { MessagingFingerprintPanel } from "@/components/adpalette/MessagingFingerprint";
 import type { MessagingFingerprint } from "@/lib/messagingFingerprint";
 import type { AdvertiserStrategistIntel } from "@/lib/advertiserStrategistIntel";
@@ -11,6 +11,7 @@ import type { AdvertiserVisualScan as VisualScanData } from "@/lib/advertiserVis
 import type { DataProvenance } from "@/lib/dataTrust";
 import { DataProvenanceBar } from "@/components/adpalette/DataProvenanceBar";
 import { isSkipTagValue } from "@/lib/soWhatQuality";
+import { formatActiveDuration } from "@/lib/formatDuration";
 
 type Props = {
   brand: string;
@@ -27,6 +28,7 @@ type Props = {
   spendSignal?: number;
   spendMonthly?: number;
   spendBandLabel?: string | null;
+  spendChannelBreakdown?: string | null;
   visualScan: VisualScanData;
   messagingFingerprint: MessagingFingerprint;
   channelMix: ChannelMixResult;
@@ -107,6 +109,7 @@ export function AdvertiserCommandDashboard({
   spendSignal,
   spendMonthly = 0,
   spendBandLabel,
+  spendChannelBreakdown,
   visualScan,
   messagingFingerprint,
   channelMix,
@@ -131,12 +134,13 @@ export function AdvertiserCommandDashboard({
   const showHealth = creativeScore > 0;
 
   const dnaChips = [
-    strategistIntel?.positioningArchetype && !isSkipTagValue(strategistIntel.positioningArchetype) && { label: "Archetype", value: strategistIntel.positioningArchetype },
+    strategistIntel?.positioningArchetype && !isSkipTagValue(strategistIntel.positioningArchetype) && { label: "Position", value: strategistIntel.positioningArchetype },
     strategistIntel?.funnelFocus && !isSkipTagValue(strategistIntel.funnelFocus) && { label: "Funnel", value: strategistIntel.funnelFocus },
-    strategistIntel?.topEmotion && !isSkipTagValue(strategistIntel.topEmotion) && { label: "Emotion", value: strategistIntel.topEmotion },
+    strategistIntel?.topEmotion && !isSkipTagValue(strategistIntel.topEmotion) && { label: "Tone", value: strategistIntel.topEmotion },
     strategistIntel?.topBuyerStage && !isSkipTagValue(strategistIntel.topBuyerStage) && { label: "Stage", value: strategistIntel.topBuyerStage },
     strategistIntel?.topCta && !isSkipTagValue(strategistIntel.topCta) && { label: "CTA", value: strategistIntel.topCta },
   ].filter(Boolean) as { label: string; value: string }[];
+  const positioningSoWhat = strategistIntel?.strategistSummary?.trim();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -147,7 +151,7 @@ export function AdvertiserCommandDashboard({
           label={placementCount > 0 ? "Creatives analyzed" : "Ads"}
           sub={
             showLibraryNote
-              ? `${libraryCount.toLocaleString()} in library`
+              ? `${libraryCount.toLocaleString()} in AdLibrary — we deep-read ${analyzedCount} unique`
               : adsThisWeek > 0
                 ? `+${adsThisWeek} wk`
                 : undefined
@@ -167,15 +171,23 @@ export function AdvertiserCommandDashboard({
             justifyContent: "center",
           }}
         >
-          <SpendIndex level={spendSignal && spendSignal > 0 ? spendSignal : undefined} spend={spendMonthly} />
-          {spendBandLabel ? (
+          <SpendIndex
+            level={spendSignal && spendSignal > 0 ? spendSignal : undefined}
+            spend={spendMonthly}
+            labelOnly
+          />
+          {spendChannelBreakdown ? (
+            <div style={{ fontSize: 10, color: "#6B6B62", marginTop: 6, lineHeight: 1.35 }}>
+              By channel: {spendChannelBreakdown}
+            </div>
+          ) : spendBandLabel ? (
             <div style={{ fontSize: 10, color: "#9E9D94", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>
               {spendBandLabel.replace(/\(.*\)/, "").trim()}
             </div>
           ) : null}
         </div>
-        <KpiTile value={channelHeadline} label="Lead ch." />
-        <KpiTile value={`${daysRunning}d`} label="Active" sub={category} />
+        <KpiTile value={channelHeadline} label="Lead channel" />
+        <KpiTile value={formatActiveDuration(daysRunning)} label="Longest running" sub={category} />
       </div>
 
       <AdvertiserVisualScan
@@ -207,9 +219,12 @@ export function AdvertiserCommandDashboard({
 
       <div style={{ display: "grid", gridTemplateColumns: showHealth ? "2fr 1fr 120px" : "2fr 1fr", gap: 12, alignItems: "stretch" }}>
         <div style={{ background: "#FFFFFF", border: "1px solid #EBE9E4", borderLeft: "4px solid #1C1C1A", borderRadius: 10, padding: "14px 18px" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#1C1C1A", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>
-            DNA tags
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#1C1C1A", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>
+            Positioning signals
           </div>
+          {positioningSoWhat ? (
+            <div style={{ fontSize: 12, color: "#6B6B62", marginBottom: 10, lineHeight: 1.45 }}>{positioningSoWhat}</div>
+          ) : null}
           {dnaChips.length ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {dnaChips.map((chip) => (
@@ -324,18 +339,6 @@ export function AdvertiserCommandDashboard({
               );
             })}
           </div>
-        </div>
-      ) : null}
-
-      {visualScan.moves.length > 0 ? (
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-            <Zap size={14} color="#C9963A" />
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#A07830", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              Play angles
-            </span>
-          </div>
-          <VisualMoveCards moves={visualScan.moves} />
         </div>
       ) : null}
     </div>

@@ -27,9 +27,11 @@ type Props = {
   /** Optional label override (kept for back-compat); ignored otherwise. */
   label?: string;
   showCaption?: boolean;
+  /** Hide dot scale — show band label + range only (clearer for AMs). */
+  labelOnly?: boolean;
 };
 
-export function SpendIndex({ level, spend, showCaption = true }: Props) {
+export function SpendIndex({ level, spend, showCaption = true, labelOnly = false }: Props) {
   const lvl = Math.max(
     1,
     Math.min(7, Math.round(level ?? (spend != null ? getSpendLevel(spend) : 1))),
@@ -43,13 +45,19 @@ export function SpendIndex({ level, spend, showCaption = true }: Props) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      <div style={{ letterSpacing: "3px", fontSize: 14, lineHeight: 1 }}>
-        {Array.from({ length: 7 }).map((_, i) => (
-          <span key={i} style={{ color: i < lvl ? "#C9963A" : "#EBE9E4" }}>
-            ●
-          </span>
-        ))}
-      </div>
+      {!labelOnly ? (
+        <div style={{ letterSpacing: "3px", fontSize: 14, lineHeight: 1 }}>
+          {Array.from({ length: 7 }).map((_, i) => (
+            <span key={i} style={{ color: i < lvl ? "#C9963A" : "#EBE9E4" }}>
+              ●
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#1C1C1A", letterSpacing: "-0.02em" }}>
+          {tier.label}
+        </div>
+      )}
       {showCaption && (
         <div
           style={{
@@ -60,7 +68,7 @@ export function SpendIndex({ level, spend, showCaption = true }: Props) {
             marginTop: 3,
           }}
         >
-          {tier.label} · {tier.range}
+          {labelOnly ? tier.range : `${tier.label} · ${tier.range}`}
         </div>
       )}
       {hover && (

@@ -198,7 +198,11 @@ export function MessagingFingerprintPanel({ fingerprint, variant = "light", comp
             ))}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div style={{ fontSize: 12, color: subtext, lineHeight: 1.45 }}>
+          CTAs not extracted from indexed copy — check landing URLs on creatives below.
+        </div>
+      )}
 
       {headline ? (
         <div

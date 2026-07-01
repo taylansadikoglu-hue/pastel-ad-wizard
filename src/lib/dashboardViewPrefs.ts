@@ -201,7 +201,7 @@ export type AdvertiserViewPreset = "essentials" | "pitch" | "full" | "custom";
 
 const ADVERTISER_PRESETS: Record<Exclude<AdvertiserViewPreset, "custom">, AdvertiserInsightSectionId[]> = {
   essentials: [],
-  pitch: ["marketingRead", "spend", "messaging", "audiences", "nextMoves", "talkingPoints"],
+  pitch: ["marketingRead", "spend", "audiences", "gaps", "talkingPoints"],
   full: ADVERTISER_INSIGHT_SECTIONS.map((s) => s.id),
 };
 

@@ -12,6 +12,7 @@ import {
   normalizeCampaignLabel,
   normalizeCtaLabel,
 } from "@/lib/dataTrust";
+import { ctaFromPlacement } from "@/lib/placementCta";
 
 const MS_PER_DAY = 86_400_000;
 const RECENT_DAYS = 7;
@@ -271,7 +272,7 @@ export function buildCampaignIntelligence(
   }));
 
   const ctaRaw = mergeDistributionRows(
-    distribution(placements, (r) => r.primary_cta),
+    distribution(placements, (r) => ctaFromPlacement(r, brand)),
     (label) => normalizeCtaLabel(label),
   );
   const ctaBreakdown: DistributionRow[] = ctaRaw.map((d) => ({
